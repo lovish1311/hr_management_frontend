@@ -24,16 +24,35 @@ Centralize all colors, typography, and box decorations. **Do not hardcode styles
 * **Text (Primary):** `#333333` - *Headings.*
 * **Text (Secondary):** `#444444` - *Body text.*
 
-### Example `AppColors.dart`
-```dart
-import 'package:flutter/material.dart';
+### Color Palette File
+The global design system colors are implemented in [colors.dart](file:///c:/Users/Lovish/flutter-projects/hr_management/lib/core/constants/colors.dart). Feel free to import it in your widgets and themes.
+ 
 
-class AppColors {
-  static const Color primaryAccent = Color(0xFF1DABC0);
-  static const Color background = Color(0xFFF5F5F5);
-  static const Color cardWhite = Color(0xFFFFFFFF);
-  static const Color accentBlue = Color(0xFFE0F7FA);
-  static const Color accentGreen = Color(0xFFE8F5E9);
-  static const Color textPrimary = Color(0xFF333333);
-  static const Color textSecondary = Color(0xFF444444);
+ import 'package:flutter/material.dart';
+
+class ResponsiveLayout extends StatelessWidget {
+  final Widget mobile;
+  final Widget web; // Tablet/Desktop layout
+
+  const ResponsiveLayout({
+    Key? key,
+    required this.mobile,
+    required this.web,
+  }) : super(key: key);
+
+  static bool isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < 800;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 800) {
+          return web;
+        } else {
+          return mobile;
+        }
+      },
+    );
+  }
 }

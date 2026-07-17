@@ -33,8 +33,17 @@ lib/
 
     dashboard/
       data/
+        repositories/
+          dashboard_repository_impl.dart
       domain/
+        entities/
+          dashboard_stats.dart
+        repositories/
+          dashboard_repository.dart
       presentation/
+        pages/
+          dashboard_page.dart
+
 
     employees/
       data/
