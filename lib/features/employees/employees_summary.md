@@ -62,15 +62,21 @@ Based on the provided mockups, the Employee section consists of two primary view
 ### What has been done
 *   [x] Initial visualization and requirements breakdown completed.
 *   [x] Created this markdown file to track progress.
+*   [x] **Setup**: Created directory structure for the employees feature.
+*   [x] **Routing**: Configured routes for `/employees` and `/employee_profile` in `app/router.dart`.
+*   [x] **Navigation**: Updated `HrDrawer` with active state highlighting (Teal coloring) and proper routing.
+*   [x] **UI - Directory Page**: Built Search/Add header, department filter pills row, and responsive `GridView` with initials-based `EmployeeCard`s.
+*   [x] **UI - Profile Page**: Created responsive split layout with summary card (left) and tabs + read-only field boxes & mini-stats (right).
+*   [x] **Database & API Integration**: Added additional employee fields to the Spring Boot backend (`Employee.java`), configured database seeder (`DatabaseSeeder.java`), updated controller endpoint (`/api/v1/employees`), and implemented `EmployeeRepositoryImpl` on the frontend for live HTTP data fetching.
 
 ### What needs to be done
-*   [ ] **Setup**: Create `lib/features/employees/` directory structure (presentation, domain, data).
-*   [ ] **Routing**: Add routes in `app/router.dart` for `/employees` and `/employee_profile`.
-*   [ ] **Navigation**: Update the existing `HrDrawer` to link to the new `/employees` route and handle active state highlighting.
-*   [ ] **UI - Directory Page**: Build the top bar, filter list, and the responsive `GridView` for employee cards.
-*   [ ] **UI - Profile Page**: Build the split layout, summary card, tab bar, and profile details fields.
-*   [ ] **Mock Data**: Create a dummy data provider to populate the UI before backend integration.
-*   [ ] **Assets**: Add placeholder avatars to `assets/images/` and update `pubspec.yaml`.
+*   [x] **Setup**: Create `lib/features/employees/` directory structure (presentation, domain, data).
+*   [x] **Routing**: Add routes in `app/router.dart` for `/employees` and `/employee_profile`.
+*   [x] **Navigation**: Update the existing `HrDrawer` to link to the new `/employees` route and handle active state highlighting.
+*   [x] **UI - Directory Page**: Build the top bar, filter list, and the responsive `GridView` for employee cards.
+*   [x] **UI - Profile Page**: Build the split layout, summary card, tab bar, and profile details fields.
+*   [x] **Mock Data**: Create a dummy data provider to populate the UI before backend integration.
+*   [x] **Assets**: Add placeholder avatars to `assets/images/` and update `pubspec.yaml`.
 
 ### What to remove/refactor
-*   [ ] The current `HrDrawer` needs refactoring to support the collapsed "icon-only" state seen in the Employee Profile view, or we need to design the layout to automatically handle this responsiveness.
+*   [x] Replaced the temporary `DummyEmployeeRepository` with live REST client repository `EmployeeRepositoryImpl`.

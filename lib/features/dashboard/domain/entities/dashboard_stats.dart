@@ -14,13 +14,16 @@ class DashboardStats {
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
+    final pendingLeavesJson = json['pendingLeaves'];
     return DashboardStats(
-      totalEmployees: json['totalEmployees'] as int,
-      presentToday: json['presentToday'] as int,
-      onLeaveToday: json['onLeaveToday'] as int,
-      pendingLeaves: (json['pendingLeaves'] as List<dynamic>)
-          .map((e) => LeaveRequest.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      totalEmployees: json['totalEmployees'] as int? ?? 0,
+      presentToday: json['presentToday'] as int? ?? 0,
+      onLeaveToday: json['onLeaveToday'] as int? ?? 0,
+      pendingLeaves: pendingLeavesJson is List
+          ? pendingLeavesJson
+              .map((e) => LeaveRequest.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : [],
     );
   }
 }

@@ -41,17 +41,18 @@ class EmployeeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(
             color: isDark ? Colors.white12 : Colors.grey.shade200,
-            width: 1.5,
+            width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Menu Button at top right
             Align(
@@ -62,34 +63,23 @@ class EmployeeCard extends StatelessWidget {
                   color: theme.colorScheme.primary.withOpacity(0.6),
                 ),
                 onPressed: () {},
-                padding: const EdgeInsets.all(8.0),
-                constraints: const BoxConstraints(), // Reduces padding
+                padding: const EdgeInsets.only(top: 8.0, right: 8.0),
+                constraints: const BoxConstraints(),
               ),
             ),
+            const SizedBox(height: 4),
             // Avatar
-            Expanded(
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: avatarColor.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials.isNotEmpty ? initials : '?',
-                  style: TextStyle(
-                    color: avatarColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
-                ),
+            CircleAvatar(
+              radius: 42, // 84 diameter
+              backgroundColor: avatarColor.withOpacity(0.12),
+              backgroundImage: NetworkImage(
+                'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name)}',
               ),
             ),
             const SizedBox(height: 12),
             // Name
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: Text(
                 employee.name,
                 textAlign: TextAlign.center,
@@ -105,7 +95,7 @@ class EmployeeCard extends StatelessWidget {
             const SizedBox(height: 4),
             // Role
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: Text(
                 employee.role,
                 textAlign: TextAlign.center,
@@ -117,19 +107,19 @@ class EmployeeCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             // Status Pill
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 5.0),
               margin: const EdgeInsets.only(bottom: 16.0),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.15),
+                color: isDark ? Colors.green.withOpacity(0.2) : Colors.green.shade100,
                 borderRadius: BorderRadius.circular(20.0),
               ),
               child: Text(
                 employee.status,
-                style: const TextStyle(
-                  color: Colors.green,
+                style: TextStyle(
+                  color: isDark ? Colors.greenAccent : Colors.green.shade900,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                 ),

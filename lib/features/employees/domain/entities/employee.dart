@@ -30,4 +30,23 @@ class Employee {
     required this.attendanceRate,
     required this.leaveBalance,
   });
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      id: (json['id'] ?? '').toString(),
+      name: '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'.trim(),
+      role: json['role'] ?? '',
+      department: json['department'] ?? '',
+      status: json['status'] ?? 'Active',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      managerName: json['managerName'] ?? '',
+      dateOfBirth: json['dateOfBirth'] ?? '',
+      location: json['location'] ?? '',
+      emergencyContactName: json['emergencyContactName'] ?? '',
+      emergencyContactPhone: json['emergencyContactPhone'] ?? '',
+      attendanceRate: json['attendanceRate'] ?? 100,
+      leaveBalance: json['leaveBalance'] ?? 15,
+    );
+  }
 }

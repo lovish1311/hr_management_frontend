@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/widgets/hr_drawer.dart';
-import 'package:hr_management/features/employees/data/repositories/dummy_employee_repository.dart';
+import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
+import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/presentation/widgets/employee_card.dart';
 
@@ -12,7 +13,7 @@ class EmployeeDirectoryPage extends StatefulWidget {
 }
 
 class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
-  final DummyEmployeeRepository _repository = DummyEmployeeRepository();
+  final EmployeeRepository _repository = EmployeeRepositoryImpl();
   List<Employee> _employees = [];
   bool _isLoading = true;
   String _selectedDepartment = 'All';
@@ -79,8 +80,19 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  color: isDark ? Colors.white10 : Colors.white,
                   borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(
+                    color: isDark ? Colors.white24 : Colors.grey.shade200,
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: TextField(
                   decoration: InputDecoration(
@@ -183,7 +195,7 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                                   crossAxisCount: crossAxisCount,
                                   crossAxisSpacing: 24,
                                   mainAxisSpacing: 24,
-                                  childAspectRatio: 0.75, // Adjust for card proportions
+                                  childAspectRatio: 0.85, // Adjust for card proportions (more compact)
                                 ),
                                 itemCount: _employees.length,
                                 itemBuilder: (context, index) {
