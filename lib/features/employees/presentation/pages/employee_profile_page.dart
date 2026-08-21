@@ -5,7 +5,7 @@ import 'package:hr_management/features/employees/domain/repositories/employee_re
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 
 class EmployeeProfilePage extends StatefulWidget {
-  const EmployeeProfilePage({Key? key}) : super(key: key);
+  const EmployeeProfilePage({super.key});
 
   @override
   State<EmployeeProfilePage> createState() => _EmployeeProfilePageState();
@@ -108,7 +108,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: 'Search',
-                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
                     prefixIcon: Icon(Icons.search, color: primaryColor, size: 20),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -123,7 +123,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 16,
-              backgroundColor: primaryColor.withOpacity(0.2),
+              backgroundColor: primaryColor.withValues(alpha: 0.2),
               child: const Icon(Icons.person, size: 18),
             ),
           ],
@@ -169,7 +169,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   Widget _buildSummaryCard(BuildContext context, Employee emp, bool isWideScreen) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final avatarColor = _getAvatarColor(emp.name);
 
     return Container(
@@ -181,7 +180,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         borderRadius: BorderRadius.circular(16.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -193,7 +192,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundColor: avatarColor.withOpacity(0.12),
+            backgroundColor: avatarColor.withValues(alpha: 0.12),
             backgroundImage: NetworkImage(
               'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(emp.name)}',
             ),
@@ -206,7 +205,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           const SizedBox(height: 4),
           Text(
             '${emp.role} | ${emp.department}',
-            style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7), fontSize: 13),
+            style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 13),
           ),
           const SizedBox(height: 24),
           // Manager
@@ -224,7 +223,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
               const Spacer(),
               CircleAvatar(
                 radius: 12,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
                 child: const Icon(Icons.person, size: 14),
               ),
             ],
@@ -273,7 +272,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: theme.colorScheme.primary, size: 16),
@@ -499,7 +498,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -545,8 +544,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                       topRight: Radius.circular(12.0),
                     ),
                   ),
-                  child: Row(
-                    children: const [
+                  child: const Row(
+                    children: [
                       Expanded(child: Text('Date', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
                       Expanded(child: Text('Clock-In', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
                       Expanded(child: Text('Clock-Out', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
@@ -572,7 +571,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                     ),
                     if (records.last != r) Divider(height: 1, color: theme.brightness == Brightness.dark ? Colors.white12 : Colors.grey.shade200),
                   ],
-                )).toList(),
+                )),
               ],
             ),
           );
@@ -647,7 +646,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100, width: 1.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -716,8 +715,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                       topRight: Radius.circular(12.0),
                     ),
                   ),
-                  child: Row(
-                    children: const [
+                  child: const Row(
+                    children: [
                       Expanded(flex: 2, child: Text('Leave Type', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
                       Expanded(flex: 2, child: Text('Start Date', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
                       Expanded(flex: 2, child: Text('End Date', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12))),
@@ -743,7 +742,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                     ),
                     if (records.last != r) Divider(height: 1, color: theme.brightness == Brightness.dark ? Colors.white12 : Colors.grey.shade200),
                   ],
-                )).toList(),
+                )),
               ],
             ),
           );
@@ -802,7 +801,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 12,
-            color: theme.textTheme.bodyLarge?.color?.withOpacity(0.8),
+            color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 6),
@@ -821,7 +820,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             value,
             style: TextStyle(
               fontSize: 14,
-              color: theme.textTheme.bodyLarge?.color?.withOpacity(0.85),
+              color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.85),
             ),
           ),
         ),
@@ -847,7 +846,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
               Text(value, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 24)),
             ],
           ),
-          Icon(icon, color: textColor.withOpacity(0.5), size: 36),
+          Icon(icon, color: textColor.withValues(alpha: 0.5), size: 36),
         ],
       ),
     );
@@ -857,7 +856,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 class StatusPill extends StatelessWidget {
   final String status;
 
-  const StatusPill({Key? key, required this.status}) : super(key: key);
+  const StatusPill({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -869,21 +868,21 @@ class StatusPill extends StatelessWidget {
 
     switch (status.toLowerCase()) {
       case 'on time':
-        bgColor = isDark ? Colors.green.withOpacity(0.2) : Colors.green.shade100;
+        bgColor = isDark ? Colors.green.withValues(alpha: 0.2) : Colors.green.shade100;
         textColor = isDark ? Colors.greenAccent : Colors.green.shade900;
         break;
       case 'approved':
-        bgColor = theme.colorScheme.primary.withOpacity(0.15);
+        bgColor = theme.colorScheme.primary.withValues(alpha: 0.15);
         textColor = theme.colorScheme.primary;
         break;
       case 'late':
       case 'pending':
-        bgColor = isDark ? Colors.amber.withOpacity(0.2) : Colors.amber.shade100;
+        bgColor = isDark ? Colors.amber.withValues(alpha: 0.2) : Colors.amber.shade100;
         textColor = isDark ? Colors.amberAccent : Colors.amber.shade900;
         break;
       case 'absent':
       case 'rejected':
-        bgColor = isDark ? Colors.red.withOpacity(0.2) : Colors.red.shade100;
+        bgColor = isDark ? Colors.red.withValues(alpha: 0.2) : Colors.red.shade100;
         textColor = isDark ? Colors.redAccent : Colors.red.shade900;
         break;
       default:

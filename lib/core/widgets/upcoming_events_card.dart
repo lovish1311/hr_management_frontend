@@ -1,41 +1,76 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 
 class UpcomingEventsCard extends StatelessWidget {
-  const UpcomingEventsCard({Key? key}) : super(key: key);
+  const UpcomingEventsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Soft teal/cyan theme matching the mockup
-    final cardBgColor = isDark ? const Color(0xFF00363A) : const Color(0xFFE0F7FA);
-    final textColor = isDark ? const Color(0xFFB2EBF2) : const Color(0xFF006064);
-    final buttonColor = const Color(0xFF00acc1);
-    final onButtonColor = Colors.white;
+    final gradientColors = isDark
+        ? [const Color(0xFF0F2B3C), const Color(0xFF0D3B4C)]
+        : [const Color(0xFFE0F2FE), const Color(0xFFE0F7FA)];
+
+    final primaryTextColor = isDark ? const Color(0xFFF0F9FF) : const Color(0xFF0369A1);
+    final secondaryTextColor = isDark ? const Color(0xFFBAE6FD) : const Color(0xFF0284C7);
 
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(22.0),
       decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(16.0),
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.0),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E40AF).withValues(alpha: 0.3) : const Color(0xFFBAE6FD),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Upcoming Culture Events',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Culture & Events',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: primaryTextColor,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'THIS WEEK',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0284C7),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          // Rich Custom Painter Illustration representing Cake and Balloons
           SizedBox(
-            height: 140,
+            height: 130,
             width: double.infinity,
             child: CustomPaint(
               painter: CakeAndBalloonsPainter(isDark: isDark),
@@ -52,41 +87,42 @@ class UpcomingEventsCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface,
+                      color: primaryTextColor,
                     ),
                   ),
-                  const Text(
-                    '👀',
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  const Text('🎉', style: TextStyle(fontSize: 16)),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                'Get the co-worker birthdays this week!',
+                'Celebrate 3 team birthdays & work anniversaries this week!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                  color: secondaryTextColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
-              foregroundColor: onButtonColor,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0284C7),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
               ),
-            ),
-            onPressed: () {},
-            child: const Text(
-              'Learn more',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              onPressed: () {},
+              icon: const Icon(Icons.celebration_rounded, size: 18),
+              label: const Text(
+                'View Celebrations',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ),
           ),
         ],
@@ -114,8 +150,8 @@ class CakeAndBalloonsPainter extends CustomPainter {
     _drawBalloon(canvas, rightBalloonCenter2, Colors.lightBlueAccent, 0.25);
 
     // 2. Draw Birthday Cake in the center
-    final cakeWidth = 70.0;
-    final cakeHeight = 45.0;
+    const cakeWidth = 70.0;
+    const cakeHeight = 45.0;
 
     final cakeRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: center, width: cakeWidth, height: cakeHeight),
@@ -169,8 +205,8 @@ class CakeAndBalloonsPainter extends CustomPainter {
     );
 
     // 3. Draw 3 Candles on Top
-    final candleWidth = 4.0;
-    final candleHeight = 16.0;
+    const candleWidth = 4.0;
+    const candleHeight = 16.0;
 
     final candlePaint = Paint()
       ..color = Colors.deepPurpleAccent
@@ -218,7 +254,7 @@ class CakeAndBalloonsPainter extends CustomPainter {
 
     // Balloon body
     final balloonPaint = Paint()
-      ..color = color.withOpacity(0.85)
+      ..color = color.withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
     
     canvas.save();

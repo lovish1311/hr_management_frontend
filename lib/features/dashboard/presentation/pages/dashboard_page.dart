@@ -9,7 +9,7 @@ import 'package:hr_management/features/dashboard/domain/repositories/dashboard_r
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({Key? key}) : super(key: key);
+  const DashboardPage({super.key});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -123,28 +123,73 @@ class _DashboardPageState extends State<DashboardPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final greenCardColor = isDark ? const Color(0xFF1B5E20) : AppColors.accentGreen;
-    final blueCardColor = isDark ? const Color(0xFF006064) : AppColors.accentBlue;
-
-    final attendanceColor = isDark ? Colors.greenAccent : const Color(0xFF2E7D32);
-    final applyLeaveColor = isDark ? Colors.blueAccent : const Color(0xFF1565C0);
-
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.white : const Color(0xFF0F172A)).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Friday, Aug 21',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(Icons.notifications_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {},
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Dashboard',
             onPressed: () {
               setState(() {
                 _isLoading = true;
               });
               _fetchStats();
             },
-          )
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       drawer: const HrDrawer(),
@@ -167,7 +212,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.error),
                               ),
                               const SizedBox(height: 8),
-                              Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7))),
+                              Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7))),
                               const SizedBox(height: 24),
                               ElevatedButton(
                                 onPressed: () {
@@ -187,99 +232,188 @@ class _DashboardPageState extends State<DashboardPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Good Morning, HR Team!',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
+                            // Welcome Hero Banner
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(24.0),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0D9488)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(24.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.bolt, color: Color(0xFFFACC15), size: 14),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'LIVE HR METRICS',
+                                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'Good Morning, HR Team 👋',
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Here is what is happening across your organization today.',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.white.withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 24),
+
+                            // KPI Stat Cards Section
                             Row(
                               children: [
                                 KpiCard(
                                   title: 'Total Employees',
                                   value: (_stats?.totalEmployees ?? 0).toString(),
-                                  icon: Icons.people_outline,
-                                  backgroundColor: theme.colorScheme.surface,
+                                  icon: Icons.people_alt_rounded,
+                                  gradient: AppColors.totalEmployeesGradient,
+                                  trendText: '+12.4%',
+                                  isTrendPositive: true,
                                 ),
                                 const SizedBox(width: 16),
                                 KpiCard(
                                   title: 'Present Today',
                                   value: (_stats?.presentToday ?? 0).toString(),
-                                  icon: Icons.check_circle_outline,
-                                  backgroundColor: greenCardColor,
+                                  icon: Icons.verified_user_rounded,
+                                  gradient: AppColors.presentTodayGradient,
+                                  trendText: '96.2%',
+                                  isTrendPositive: true,
                                 ),
                                 const SizedBox(width: 16),
                                 KpiCard(
-                                  title: 'On Leave',
+                                  title: 'On Leave Today',
                                   value: (_stats?.onLeaveToday ?? 0).toString(),
-                                  icon: Icons.event_busy,
-                                  backgroundColor: blueCardColor,
+                                  icon: Icons.event_busy_rounded,
+                                  gradient: AppColors.onLeaveGradient,
+                                  trendText: '${_pendingLeaves.length} pending',
+                                  isTrendPositive: false,
                                 ),
                               ],
                             ),
                             const SizedBox(height: 32),
+
+                            // Quick Actions
                             Text(
                               'Quick Actions',
                               style: TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w800,
                                 color: theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildQuickAction(
-                                  context,
-                                  icon: Icons.person_add_alt_1_rounded,
-                                  label: 'Add Employee',
-                                  color: theme.colorScheme.primary,
-                                  onTap: () {},
-                                ),
-                                _buildQuickAction(
-                                  context,
-                                  icon: Icons.rule_rounded,
-                                  label: 'Attendance',
-                                  color: attendanceColor,
-                                  onTap: () {},
-                                ),
-                                _buildQuickAction(
-                                  context,
-                                  icon: Icons.date_range_rounded,
-                                  label: 'Apply Leave',
-                                  color: applyLeaveColor,
-                                  onTap: () {},
-                                ),
-                                _buildQuickAction(
-                                  context,
-                                  icon: Icons.post_add_rounded,
-                                  label: 'Create Job',
-                                  color: theme.colorScheme.secondary,
-                                  onTap: () {},
-                                ),
-                              ],
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildQuickActionCard(
+                                        context,
+                                        icon: Icons.person_add_alt_1_rounded,
+                                        title: 'Add Employee',
+                                        subtitle: 'Onboard new hire',
+                                        gradient: [const Color(0xFF0D9488), const Color(0xFF0F766E)],
+                                        onTap: () => Navigator.pushNamed(context, '/employees'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildQuickActionCard(
+                                        context,
+                                        icon: Icons.rule_rounded,
+                                        title: 'Attendance',
+                                        subtitle: 'Mark log today',
+                                        gradient: [const Color(0xFF10B981), const Color(0xFF059669)],
+                                        onTap: () => Navigator.pushNamed(context, '/attendance'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildQuickActionCard(
+                                        context,
+                                        icon: Icons.beach_access_rounded,
+                                        title: 'Apply Leave',
+                                        subtitle: 'Time off request',
+                                        gradient: [const Color(0xFF0284C7), const Color(0xFF0369A1)],
+                                        onTap: () => Navigator.pushNamed(context, '/leaves'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildQuickActionCard(
+                                        context,
+                                        icon: Icons.post_add_rounded,
+                                        title: 'Create Job',
+                                        subtitle: 'Post new opening',
+                                        gradient: [const Color(0xFF6366F1), const Color(0xFF4F46E5)],
+                                        onTap: () => Navigator.pushNamed(context, '/recruitment'),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 32),
+
+                            // Responsive Main Grid (Pending Leaves + Culture Events)
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 final screenWidth = MediaQuery.of(context).size.width;
-                                final isWideScreen = screenWidth > 800;
+                                final isWideScreen = screenWidth > 850;
 
                                 if (isWideScreen) {
                                   return Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
-                                        flex: 2,
+                                        flex: 5,
                                         child: _buildPendingLeaveSection(theme, isDark),
                                       ),
                                       const SizedBox(width: 24),
                                       const Expanded(
-                                        flex: 1,
+                                        flex: 3,
                                         child: UpcomingEventsCard(),
                                       ),
                                     ],
@@ -302,9 +436,9 @@ class _DashboardPageState extends State<DashboardPage> {
             // Centered Action Loading Spinner Overlay
             if (_isActionLoading)
               Container(
-                color: Colors.black.withOpacity(0.2), // Semi-transparent overlay to prevent clicks
+                color: Colors.black.withValues(alpha: 0.3),
                 child: const Center(
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(color: Color(0xFF0D9488)),
                 ),
               ),
           ],
@@ -315,34 +449,63 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildPendingLeaveSection(ThemeData theme, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(22.0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.0),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20.0),
         border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade300,
-          width: 1.5,
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Pending Leave Approvals',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Pending Leave Approvals',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_pendingLeaves.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D9488),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, '/leaves'),
+                child: const Text('View All', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           _buildPendingLeavesList(),
         ],
       ),
@@ -351,9 +514,20 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildPendingLeavesList() {
     if (_pendingLeaves.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24.0),
-        child: Text('No pending leave requests.'),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 36.0),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.check_circle_outline_rounded, size: 44, color: Colors.grey.shade400),
+              const SizedBox(height: 10),
+              Text(
+                'All leave requests are cleared!',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return AnimatedList(
@@ -365,7 +539,7 @@ class _DashboardPageState extends State<DashboardPage> {
         if (index >= _pendingLeaves.length) return const SizedBox();
         final leave = _pendingLeaves[index];
         final slideInAnimation = Tween<Offset>(
-          begin: const Offset(1.0, 0.0), // Enter from the right
+          begin: const Offset(1.0, 0.0),
           end: const Offset(0.0, 0.0),
         ).animate(CurvedAnimation(
           parent: animation,
@@ -388,11 +562,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildQuickAction(
+  Widget _buildQuickActionCard(
     BuildContext context, {
     required IconData icon,
-    required String label,
-    required Color color,
+    required String title,
+    required String subtitle,
+    required List<Color> gradient,
     required VoidCallback onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -400,29 +575,64 @@ class _DashboardPageState extends State<DashboardPage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: (MediaQuery.of(context).size.width - 48 - 24) / 4,
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(isDark ? 0.2 : 0.1),
-                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient.first.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: Colors.white, size: 22),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              label,
-              textAlign: TextAlign.center,
+              title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
               ),
             ),
           ],

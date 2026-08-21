@@ -6,7 +6,7 @@ import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/presentation/widgets/employee_card.dart';
 
 class EmployeeDirectoryPage extends StatefulWidget {
-  const EmployeeDirectoryPage({Key? key}) : super(key: key);
+  const EmployeeDirectoryPage({super.key});
 
   @override
   State<EmployeeDirectoryPage> createState() => _EmployeeDirectoryPageState();
@@ -88,7 +88,7 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -97,7 +97,7 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: 'Search by name, role...',
-                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
                     prefixIcon: Icon(Icons.search, color: primaryColor, size: 20),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10.0),

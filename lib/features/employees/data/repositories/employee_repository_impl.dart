@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 
@@ -19,7 +20,10 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<List<Employee>> getEmployees({String? departmentFilter}) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees');
     try {
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: AuthStorage.authHeaders,
+      );
       
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -44,7 +48,10 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<Employee?> getEmployeeById(String id) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/$id');
     try {
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: AuthStorage.authHeaders,
+      );
       
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
