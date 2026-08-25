@@ -346,9 +346,19 @@ class _DashboardPageState extends State<DashboardPage> {
                             const SizedBox(height: 16),
                             LayoutBuilder(
                               builder: (context, constraints) {
-                                return Row(
+                                final isMobile = constraints.maxWidth < 600;
+                                final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 900;
+                                
+                                final crossAxisCount = isMobile ? 2 : (isTablet ? 2 : 4);
+                                const spacing = 12.0;
+                                final cardWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+
+                                return Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
                                   children: [
-                                    Expanded(
+                                    SizedBox(
+                                      width: cardWidth,
                                       child: _buildQuickActionCard(
                                         context,
                                         icon: Icons.person_add_alt_1_rounded,
@@ -358,8 +368,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         onTap: () => Navigator.pushNamed(context, '/employees'),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
+                                    SizedBox(
+                                      width: cardWidth,
                                       child: _buildQuickActionCard(
                                         context,
                                         icon: Icons.rule_rounded,
@@ -369,8 +379,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         onTap: () => Navigator.pushNamed(context, '/attendance'),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
+                                    SizedBox(
+                                      width: cardWidth,
                                       child: _buildQuickActionCard(
                                         context,
                                         icon: Icons.beach_access_rounded,
@@ -380,8 +390,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         onTap: () => Navigator.pushNamed(context, '/leaves'),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
+                                    SizedBox(
+                                      width: cardWidth,
                                       child: _buildQuickActionCard(
                                         context,
                                         icon: Icons.post_add_rounded,

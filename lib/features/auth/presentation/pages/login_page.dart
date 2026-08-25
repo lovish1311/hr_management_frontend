@@ -67,12 +67,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
 
       if (response['token'] != null) {
-        AuthStorage.setAuth(
+        await AuthStorage.setAuth(
           token: response['token'],
           email: response['email'],
           role: response['role'],
+          employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
         );
       }
+
 
       if (!mounted) return;
 

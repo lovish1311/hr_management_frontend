@@ -11,69 +11,72 @@ class EmployeeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _getAvatarColor(String name) {
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    final colors = [
-      Colors.teal,
-      Colors.blue,
-      Colors.indigo,
-      Colors.purple,
-      Colors.orange,
-      Colors.pink,
-      Colors.deepOrange,
-    ];
-    return colors[hash % colors.length];
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final avatarColor = _getAvatarColor(employee.name);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16.0),
+      borderRadius: BorderRadius.circular(20.0),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.0),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20.0),
           border: Border.all(
-            color: isDark ? Colors.white12 : Colors.grey.shade200,
-            width: 1.0,
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
               blurRadius: 12,
-              offset: const Offset(0, 6),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Menu Button at top right
+            // Top Action Menu
             Align(
               alignment: Alignment.topRight,
               child: IconButton(
                 icon: Icon(
-                  Icons.more_horiz,
-                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                  Icons.more_horiz_rounded,
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                  size: 20,
                 ),
                 onPressed: () {},
                 padding: const EdgeInsets.only(top: 8.0, right: 8.0),
                 constraints: const BoxConstraints(),
               ),
             ),
-            const SizedBox(height: 4),
-            // Avatar
-            CircleAvatar(
-              radius: 42, // 84 diameter
-              backgroundColor: avatarColor.withValues(alpha: 0.12),
-              backgroundImage: NetworkImage(
-                'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name)}',
-              ),
+            const SizedBox(height: 2),
+            // Avatar with Status Badge
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 38,
+                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  backgroundImage: NetworkImage(
+                    'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name)}',
+                  ),
+                ),
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 13,
+                    height: 13,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? const Color(0xFF1E293B) : Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             // Name
@@ -85,42 +88,44 @@ class EmployeeCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   fontSize: 15,
-                  color: theme.textTheme.bodyLarge?.color,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             // Role
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: Text(
-                employee.role,
+                '${employee.role} • ${employee.department}',
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
               ),
             ),
             const SizedBox(height: 12),
             // Status Pill
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 5.0),
-              margin: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+              margin: const EdgeInsets.only(bottom: 14.0),
               decoration: BoxDecoration(
-                color: isDark ? Colors.green.withValues(alpha: 0.2) : Colors.green.shade100,
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20.0),
               ),
               child: Text(
-                employee.status,
-                style: TextStyle(
-                  color: isDark ? Colors.greenAccent : Colors.green.shade900,
+                employee.status.toUpperCase(),
+                style: const TextStyle(
+                  color: Color(0xFF10B981),
                   fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),

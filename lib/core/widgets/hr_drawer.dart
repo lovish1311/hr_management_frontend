@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hr_management/core/services/auth_storage.dart';
 
 class HrDrawer extends StatelessWidget {
   const HrDrawer({super.key});
@@ -99,6 +100,14 @@ class HrDrawer extends StatelessWidget {
                   route: '/leaves',
                   currentRoute: currentRoute,
                 ),
+                if (AuthStorage.isHr)
+                  _buildDrawerItem(
+                    context: context,
+                    icon: Icons.admin_panel_settings_rounded,
+                    title: 'Leave Policy & Quotas',
+                    route: '/hr_leave_settings',
+                    currentRoute: currentRoute,
+                  ),
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.payments_rounded,
@@ -113,13 +122,7 @@ class HrDrawer extends StatelessWidget {
                   route: '/recruitment',
                   currentRoute: currentRoute,
                 ),
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.trending_up_rounded,
-                  title: 'Performance',
-                  route: '/performance',
-                  currentRoute: currentRoute,
-                ),
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(height: 28, thickness: 1),
@@ -143,41 +146,101 @@ class HrDrawer extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Color(0xFF0D9488),
-                  child: Text('AD', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Admin User',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/employee_profile',
+                        arguments: AuthStorage.employeeId?.toString(),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Color(0xFF0D9488),
+                            child: Text('AD', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  AuthStorage.userEmail ?? 'User',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Container(
+                                  margin: const EdgeInsets.only(top: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AuthStorage.isSuperAdmin
+                                        ? const Color(0xFF8B5CF6)
+                                        : AuthStorage.isHr
+                                            ? const Color(0xFF0D9488)
+                                            : AuthStorage.isManager
+                                                ? const Color(0xFF3B82F6)
+                                                : const Color(0xFF64748B),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    (AuthStorage.userRole ?? 'EMPLOYEE').replaceAll('ROLE_', ''),
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        'admin@company.com',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/login');
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Confirm Logout'),
+                        content: const Text('Are you sure you want to log out of the HR portal?'),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+                    
+                    if (confirm == true && context.mounted) {
+                      await AuthStorage.clear();
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
+                    }
                   },
                 ),
+
               ],
             ),
           ),
@@ -185,6 +248,7 @@ class HrDrawer extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _buildDrawerItem({
     required BuildContext context,

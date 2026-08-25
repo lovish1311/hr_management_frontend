@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/hr_drawer.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
@@ -70,20 +71,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     }
   }
 
-  Color _getAvatarColor(String name) {
-    final hash = name.codeUnits.fold(0, (prev, elem) => prev + elem);
-    final colors = [
-      Colors.teal,
-      Colors.blue,
-      Colors.indigo,
-      Colors.purple,
-      Colors.orange,
-      Colors.pink,
-      Colors.deepOrange,
-    ];
-    return colors[hash % colors.length];
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -136,7 +123,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             : _employee == null
                 ? const Center(child: Text('Employee not found.'))
                 : DefaultTabController(
-                    length: 4,
+                    length: 3,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final isWideScreen = constraints.maxWidth > 850;
@@ -169,20 +156,23 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   Widget _buildSummaryCard(BuildContext context, Employee emp, bool isWideScreen) {
     final theme = Theme.of(context);
-    final avatarColor = _getAvatarColor(emp.name);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      width: isWideScreen ? 300 : double.infinity,
-      margin: const EdgeInsets.all(24.0),
-      padding: const EdgeInsets.all(24.0),
+      width: isWideScreen ? 320 : double.infinity,
+      margin: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.0),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -190,80 +180,432 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: avatarColor.withValues(alpha: 0.12),
-            backgroundImage: NetworkImage(
-              'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(emp.name)}',
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            emp.name,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${emp.role} | ${emp.department}',
-            style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 13),
-          ),
-          const SizedBox(height: 24),
-          // Manager
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Direct Manager',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textTheme.bodyLarge?.color),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(emp.managerName, style: const TextStyle(fontSize: 13)),
-              const Spacer(),
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-                child: const Icon(Icons.person, size: 14),
+          // Gradient Hero Header Accent Bar
+          Container(
+            height: 70,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF0D9488), Color(0xFF3B82F6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24.0),
+                topRight: Radius.circular(24.0),
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          // Contact Info
-          Align(
-            alignment: Alignment.centerLeft,
+          Transform.translate(
+            offset: const Offset(0, -35),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildContactRow(context, 'Email', emp.email, Icons.email),
-                const SizedBox(height: 12),
-                _buildContactRow(context, 'Phone', emp.phone, Icons.phone),
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 46,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 42,
+                        backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                        backgroundImage: NetworkImage(
+                          'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(emp.name)}',
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 2,
+                      right: 4,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  emp.name,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${emp.role} • ${emp.department}',
+                    style: const TextStyle(
+                      color: Color(0xFF0D9488),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Quick Links
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Quick Links',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textTheme.bodyLarge?.color),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Manager
+                Text(
+                  'Direct Manager',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(emp.managerName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                      const Spacer(),
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                        child: const Icon(Icons.person, size: 14, color: Color(0xFF3B82F6)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Contact Info
+                _buildContactRow(context, 'Email', emp.email, Icons.email_outlined),
+                const SizedBox(height: 10),
+                _buildContactRow(context, 'Phone', emp.phone, Icons.phone_outlined),
+                const SizedBox(height: 20),
+                // Quick Links & HR Actions
+                Text(
+                  'Management Actions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 10),
+                if (AuthStorage.isHr) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showAssignManagerDialog(emp),
+                      icon: const Icon(Icons.supervisor_account_rounded, size: 16),
+                      label: const Text('Assign Manager / Approver', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: Color(0xFF0D9488)),
+                        foregroundColor: const Color(0xFF0D9488),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (AuthStorage.isSuperAdmin) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showElevateRoleDialog(emp),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8B5CF6),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.security_rounded, size: 16),
+                      label: const Text('Elevate / Change Role', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Edit Profile', style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color)),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Emergency Info', style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color)),
           ),
         ],
       ),
     );
   }
+
+  void _showAssignManagerDialog(Employee emp) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        Employee? selectedPrimaryManager;
+        final List<Employee> selectedSecondaryApprovers = [];
+        List<Employee> availableEmployees = [];
+        bool isLoadingList = true;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            if (isLoadingList) {
+              _repository.getEmployees().then((list) {
+                if (context.mounted) {
+                  setDialogState(() {
+                    availableEmployees = list.where((e) => e.id != emp.id).toList();
+                    if (availableEmployees.isNotEmpty) {
+                      try {
+                        selectedPrimaryManager = availableEmployees.firstWhere((e) => e.name == emp.managerName);
+                      } catch (_) {
+                        selectedPrimaryManager = availableEmployees.first;
+                      }
+                    }
+                    isLoadingList = false;
+                  });
+                }
+              });
+            }
+
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            return Dialog(
+              backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              insetPadding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.supervisor_account_rounded, color: Color(0xFF0D9488), size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Assign Manager & Leave Approvers', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 2),
+                                Text('Set reporting lead and optional secondary approvers for ${emp.name}.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(height: 1),
+                      const SizedBox(height: 16),
+
+                      if (isLoadingList)
+                        const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))))
+                      else ...[
+                        Text('1. Primary Reporting Manager*', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<Employee>(
+                              value: selectedPrimaryManager,
+                              isExpanded: true,
+                              icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF0D9488)),
+                              dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              items: availableEmployees.map((mgr) {
+                                return DropdownMenuItem<Employee>(
+                                  value: mgr,
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                        child: Text(mgr.name.isNotEmpty ? mgr.name[0] : 'E', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text('${mgr.name} (${mgr.role} • ${mgr.department})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setDialogState(() => selectedPrimaryManager = val);
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('2. Secondary Co-Approvers (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text('${selectedSecondaryApprovers.length} Selected', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
+                            child: ListView.builder(
+                              itemCount: availableEmployees.length,
+                              itemBuilder: (context, index) {
+                                final candidate = availableEmployees[index];
+                                if (candidate.id == selectedPrimaryManager?.id) {
+                                  return const SizedBox.shrink();
+                                }
+                                final isChecked = selectedSecondaryApprovers.contains(candidate);
+                                return CheckboxListTile(
+                                  dense: true,
+                                  value: isChecked,
+                                  activeColor: const Color(0xFF0D9488),
+                                  title: Text(candidate.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                  subtitle: Text('${candidate.email} • ${candidate.role}', style: const TextStyle(fontSize: 11)),
+                                  secondary: CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                                    child: Text(candidate.name[0], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                                  ),
+                                  onChanged: (checked) {
+                                    setDialogState(() {
+                                      if (checked == true) {
+                                        selectedSecondaryApprovers.add(candidate);
+                                      } else {
+                                        selectedSecondaryApprovers.remove(candidate);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              if (selectedPrimaryManager != null) {
+                                await _repository.assignManager(emp.id, selectedPrimaryManager!.id);
+                              }
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Assigned ${selectedPrimaryManager?.name ?? "Manager"} as Leave Approver for ${emp.name}!'),
+                                    backgroundColor: const Color(0xFF0D9488),
+                                  ),
+                                );
+                                _fetchEmployee(emp.id);
+                              }
+                            },
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: const Text('Save Assignment', style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showElevateRoleDialog(Employee emp) {
+    String selectedRole = emp.role;
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Elevate User Role (Master Admin)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Change system permissions for ${emp.name}:'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedRole.contains('SUPER_ADMIN')
+                    ? 'SUPER_ADMIN'
+                    : selectedRole.contains('HR')
+                        ? 'HR'
+                        : selectedRole.contains('MANAGER')
+                            ? 'MANAGER'
+                            : 'EMPLOYEE',
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'System Role'),
+                items: const [
+                  DropdownMenuItem(value: 'SUPER_ADMIN', child: Text('Super Admin (Master Access)')),
+                  DropdownMenuItem(value: 'HR', child: Text('HR Admin')),
+                  DropdownMenuItem(value: 'MANAGER', child: Text('Manager / Team Lead')),
+                  DropdownMenuItem(value: 'EMPLOYEE', child: Text('Standard Employee')),
+                ],
+                onChanged: (val) => setDialogState(() => selectedRole = val!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${emp.name} role updated to $selectedRole!'), backgroundColor: const Color(0xFF8B5CF6)),
+                );
+                _fetchEmployee(emp.id);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
+              child: const Text('Update Role', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildContactRow(BuildContext context, String label, String value, IconData icon) {
     final theme = Theme.of(context);
@@ -318,7 +660,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
               Tab(text: 'Profile Details'),
               Tab(text: 'Attendance'),
               Tab(text: 'Leaves'),
-              Tab(text: 'Performance'),
             ],
           ),
           const SizedBox(height: 24),
@@ -328,7 +669,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 _buildProfileDetailsTab(context, emp),
                 _buildAttendanceTab(context),
                 _buildLeavesTab(context),
-                const Center(child: Text('Performance Details Placeholder')),
               ],
             ),
           ),
