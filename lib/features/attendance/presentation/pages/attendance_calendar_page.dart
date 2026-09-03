@@ -427,6 +427,76 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     );
   }
 
+  Future<void> _clearLeaveData({required bool clearAll}) async {
+    final targetName = clearAll
+        ? 'ALL employees'
+        : (_selectedEmployee?.name ?? 'selected employee');
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirm Data Clear (${clearAll ? "ALL Employees" : (_selectedEmployee?.name ?? "Selected Employee")})'),
+        content: Text(
+          clearAll
+              ? 'Are you sure you want to permanently delete ALL leave requests, permissions, short breaks, and reset leave balances for ALL employees?'
+              : 'Are you sure you want to permanently delete ALL leave requests and reset balances for ${_selectedEmployee?.name}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete / Clear Data', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final empId = _selectedEmployee?.id;
+      final url = clearAll
+          ? Uri.parse('$_baseUrl/api/v1/leaves/clear/all')
+          : Uri.parse('$_baseUrl/api/v1/leaves/clear/employee/$empId');
+
+      final res = await http.delete(
+        url,
+        headers: AuthStorage.authHeaders,
+      );
+
+      if (res.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully cleared leave data for $targetName!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+        _fetchCalendarData();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to clear leave data: ${res.statusCode} ${res.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error clearing leave data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _showApplyRequestOptionsForDate(AttendanceCalendarDay day) {
     showModalBottomSheet(
       context: context,
@@ -724,6 +794,61 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        PopupMenuButton<String>(
+                          tooltip: 'Clear Leave Data Options',
+                          onSelected: (val) {
+                            if (val == 'selected') {
+                              _clearLeaveData(clearAll: false);
+                            } else if (val == 'all') {
+                              _clearLeaveData(clearAll: true);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'selected',
+                              enabled: _selectedEmployee != null,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.person_remove_outlined, color: Colors.red, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _selectedEmployee != null
+                                        ? 'Clear ${_selectedEmployee!.name}\'s Leave Data'
+                                        : 'Select an employee to clear',
+                                    style: const TextStyle(fontSize: 13, color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'all',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_forever_outlined, color: Colors.red, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Clear ALL Employees\' Leave Data', style: TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.cleaning_services_rounded, color: Colors.red, size: 18),
+                                SizedBox(width: 6),
+                                Text('Clear Data', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
+                                Icon(Icons.arrow_drop_down_rounded, color: Colors.red, size: 18),
+                              ],
+                            ),
                           ),
                         ),
                       ],

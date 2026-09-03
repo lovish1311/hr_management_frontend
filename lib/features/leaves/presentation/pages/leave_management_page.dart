@@ -146,36 +146,32 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       final myLeavesRes = await http.get(Uri.parse('$_baseUrl/employee/$empId'), headers: headers);
       if (myLeavesRes.statusCode == 200) {
         final List<dynamic> decoded = json.decode(myLeavesRes.body);
-        if (decoded.isNotEmpty) {
-          _myLeaves = decoded.map((item) {
-            final rawType = (item['leaveType'] as String? ?? 'Casual Leave');
-            final formattedType = rawType
-                .replaceAll('_', ' ')
-                .toLowerCase()
-                .split(' ')
-                .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
-                .join(' ');
-            final leaveTitle = formattedType.contains('Leave') ? formattedType : '$formattedType Leave';
+        _myLeaves = decoded.map((item) {
+          final rawType = (item['leaveType'] as String? ?? 'Casual Leave');
+          final formattedType = rawType
+              .replaceAll('_', ' ')
+              .toLowerCase()
+              .split(' ')
+              .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+              .join(' ');
+          final leaveTitle = formattedType.contains('Leave') ? formattedType : '$formattedType Leave';
 
-            return {
-              'id': item['id'],
-              'leaveType': leaveTitle,
-              'category': 'Leave',
-              'totalDays': (item['totalDays'] as num?)?.toDouble() ?? 1.0,
-              'appliedOn': item['startDate'] ?? 'Today',
-              'startDate': item['startDate'] ?? 'Today',
-              'startSession': 'Session 1',
-              'endDate': item['endDate'] ?? 'Today',
-              'endSession': 'Session 2',
-              'reason': item['reason'] ?? 'Leave Request',
-              'status': item['status'] ?? 'PENDING',
-            };
-          }).toList();
-        } else {
-          _seedMockLeaves();
-        }
+          return {
+            'id': item['id'],
+            'leaveType': leaveTitle,
+            'category': 'Leave',
+            'totalDays': (item['totalDays'] as num?)?.toDouble() ?? 1.0,
+            'appliedOn': item['startDate'] ?? 'Today',
+            'startDate': item['startDate'] ?? 'Today',
+            'startSession': 'Session 1',
+            'endDate': item['endDate'] ?? 'Today',
+            'endSession': 'Session 2',
+            'reason': item['reason'] ?? 'Leave Request',
+            'status': item['status'] ?? 'PENDING',
+          };
+        }).toList();
       } else {
-        _seedMockLeaves();
+        _myLeaves = [];
       }
 
       // 3. Fetch pending approval requests for Manager / HR
@@ -183,15 +179,12 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       final pendingRes = await http.get(Uri.parse(endpoint), headers: headers);
       if (pendingRes.statusCode == 200) {
         final List<dynamic> pendingList = json.decode(pendingRes.body);
-        if (pendingList.isNotEmpty) {
-          _pendingApprovals = pendingList;
-        }
+        _pendingApprovals = pendingList;
+      } else {
+        _pendingApprovals = [];
       }
     } catch (e) {
-      // Log the real error so it's visible in the console — do NOT silently swallow
       debugPrint('[LEAVE FETCH ERROR] Failed to load leave data: $e');
-      // Only seed mock data for the request history list — never overwrite real balance from API
-      _seedMockLeaves();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

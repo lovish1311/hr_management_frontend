@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
@@ -77,6 +79,36 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   String? _attachedFileName;
   Employee? _selectedOnBehalfEmployee;
 
+  Map<String, double> _liveBalances = {};
+
+  Future<void> _fetchLiveBalance([int? targetEmpId]) async {
+    final empId = targetEmpId ??
+        (widget.targetEmployee != null
+            ? int.tryParse(widget.targetEmployee!.id) ?? 1
+            : _selectedOnBehalfEmployee != null
+                ? int.tryParse(_selectedOnBehalfEmployee!.id) ?? 1
+                : AuthStorage.employeeId ?? 1);
+
+    try {
+      final t = DateTime.now().millisecondsSinceEpoch;
+      final res = await http.get(
+        Uri.parse('http://localhost:8080/api/v1/leaves/balance/$empId?t=$t'),
+        headers: AuthStorage.authHeaders,
+      );
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> b = json.decode(res.body);
+        if (mounted) {
+          setState(() {
+            _liveBalances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 12.0;
+            _liveBalances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 10.0;
+            _liveBalances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 15.0;
+            _liveBalances['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +128,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       _currentStep = 1; // Take directly to Leave Type selection if date was pre-selected from calendar
     }
     _loadEmployees();
+    _fetchLiveBalance();
   }
 
   Future<void> _loadEmployees() async {
@@ -275,7 +308,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   ];
 
   List<LeaveTypeGridOption> get _leaveTypes {
-    final b = widget.initialBalance ?? {};
+    final b = _liveBalances.isNotEmpty ? _liveBalances : (widget.initialBalance ?? {});
     return [
       LeaveTypeGridOption(
         type: 'Earned Leave',
@@ -637,6 +670,9 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                     setState(() {
                       _selectedOnBehalfEmployee = emp;
                     });
+                    if (emp != null) {
+                      _fetchLiveBalance(int.tryParse(emp.id));
+                    }
                   },
                 ),
               ),
