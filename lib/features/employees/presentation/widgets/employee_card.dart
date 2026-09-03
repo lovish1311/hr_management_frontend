@@ -111,26 +111,77 @@ class EmployeeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Status Pill
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-              margin: const EdgeInsets.only(bottom: 14.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20.0),
-              ),
-              child: Text(
-                employee.status.toUpperCase(),
-                style: const TextStyle(
-                  color: Color(0xFF10B981),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
+            const SizedBox(height: 10),
+            // Live Today Attendance Status Badge
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14.0),
+              child: _buildTodayStatusBadge(employee.isAttendanceTracked ? employee.todayAttendanceStatus : 'EXEMPT'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTodayStatusBadge(String status) {
+    Color bg;
+    Color text;
+    String label;
+    IconData icon = Icons.circle;
+
+    switch (status.toUpperCase()) {
+      case 'PRESENT':
+        bg = const Color(0xFF10B981).withValues(alpha: 0.15);
+        text = const Color(0xFF10B981);
+        label = 'PRESENT TODAY';
+        break;
+      case 'LATE':
+        bg = const Color(0xFFF59E0B).withValues(alpha: 0.15);
+        text = const Color(0xFFD97706);
+        label = 'LATE TODAY';
+        break;
+      case 'ON_LEAVE':
+      case 'PAID_LEAVE':
+        bg = const Color(0xFF6366F1).withValues(alpha: 0.15);
+        text = const Color(0xFF6366F1);
+        label = 'ON LEAVE TODAY';
+        break;
+      case 'EXEMPT':
+      case 'UNTRACKED':
+        bg = Colors.amber.withValues(alpha: 0.15);
+        text = const Color(0xFFD97706);
+        label = 'UNTRACKED / EXEMPT';
+        icon = Icons.do_not_disturb_on_rounded;
+        break;
+      case 'ABSENT':
+      default:
+        bg = const Color(0xFFEF4444).withValues(alpha: 0.15);
+        text = const Color(0xFFEF4444);
+        label = 'ABSENT TODAY';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 8, color: text),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: text,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

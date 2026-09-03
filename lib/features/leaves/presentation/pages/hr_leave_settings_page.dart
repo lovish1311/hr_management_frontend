@@ -5,6 +5,8 @@ import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/hr_drawer.dart';
+import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 
@@ -120,7 +122,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Successfully granted $_grantDays day(s) of $_selectedLeaveType to all employees (${_excludedEmployees.length} excluded).'),
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: context.appTheme.primary,
       ),
     );
   }
@@ -152,7 +154,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Leave applied on behalf of ${_selectedEmployee!.name}! Date check bypassed.'),
-        backgroundColor: const Color(0xFF0D9488),
+        backgroundColor: context.appTheme.primary,
       ),
     );
   }
@@ -179,10 +181,10 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     showDialog(
       context: context,
       builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final t = context.appTheme;
 
         return Dialog(
-          backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+          backgroundColor: t.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           insetPadding: const EdgeInsets.all(20),
           child: ConstrainedBox(
@@ -198,37 +200,37 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                          color: t.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.verified_user_rounded, color: Color(0xFF3B82F6), size: 24),
+                        child: Icon(Icons.verified_user_rounded, color: t.primary, size: 24),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Confirm Leave Balance Edits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text('Confirm Leave Balance Edits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text)),
                             const SizedBox(height: 2),
-                            Text('Review changes for ${_selectedEmployee!.name} before saving to database.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text('Review changes for ${_selectedEmployee!.name} before saving to database.', style: TextStyle(fontSize: 12, color: t.textSecondary)),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: t.border),
                   const SizedBox(height: 16),
 
-                  const Text('Summary of Planned Adjustments:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('Summary of Planned Adjustments:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
                   const SizedBox(height: 10),
 
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      color: t.cardSoft,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                      border: Border.all(color: t.border),
                     ),
                     child: Column(
                       children: _pendingQuotaDeltas.entries.map((entry) {
@@ -244,20 +246,20 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                             children: [
                               Icon(
                                 isAddition ? Icons.add_circle_outline_rounded : Icons.remove_circle_outline_rounded,
-                                color: isAddition ? const Color(0xFF10B981) : Colors.red,
+                                color: isAddition ? t.success : t.danger,
                                 size: 18,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   '$leaveType: ${isAddition ? "Addition of +$delta" : "Deduction of $delta"} day(s)',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text),
                                 ),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: (isAddition ? const Color(0xFF10B981) : Colors.red).withValues(alpha: 0.12),
+                                  color: (isAddition ? t.success : t.danger).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -265,7 +267,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: isAddition ? const Color(0xFF10B981) : Colors.red,
+                                    color: isAddition ? t.success : t.danger,
                                   ),
                                 ),
                               ),
@@ -279,10 +281,11 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
                   TextField(
                     controller: noteController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'HR Audit Note / Reason (Optional)',
                       hintText: 'e.g. Performance credit / Policy adjustment',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      labelStyle: TextStyle(color: t.text),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -292,7 +295,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel & Edit'),
+                        child: Text('Cancel & Edit', style: TextStyle(color: t.textSecondary)),
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
@@ -301,7 +304,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                           await _commitQuotaAdjustments();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: t.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -356,7 +359,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Successfully updated leave balances for ${_selectedEmployee!.name}!'),
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: context.appTheme.success,
         ),
       );
     }
@@ -364,34 +367,32 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final t = context.appTheme;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+    return ResponsiveScaffold(
       appBar: AppBar(
-        title: const Text('Company Leave Policy & Quotas', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Company Leave Policy & Quotas', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         elevation: 0,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFF0D9488),
-          labelColor: const Color(0xFF0D9488),
-          unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.tune_rounded), text: '1. Company-Wide Leave Allocation'),
             Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Individual Employee Leave Management'),
           ],
         ),
       ),
-      drawer: const HrDrawer(),
+
       body: SafeArea(
         child: TabBarView(
           controller: _tabController,
           children: [
-            _buildSection1BulkGrants(isDark),
-            _buildSection2EmployeeOverrides(isDark),
+            _buildSection1BulkGrants(),
+            _buildSection2EmployeeOverrides(),
           ],
         ),
       ),
@@ -401,7 +402,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   // ---------------------------------------------------------------------------
   // SECTION 1: Organization Bulk Grants & Exclusions
   // ---------------------------------------------------------------------------
-  Widget _buildSection1BulkGrants(bool isDark) {
+  Widget _buildSection1BulkGrants() {
+    final t = context.appTheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Center(
@@ -415,15 +417,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF0D9488)],
+                  gradient: LinearGradient(
+                    colors: [t.primaryDark, t.primary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                      color: t.primary.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -463,24 +465,24 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  color: t.card,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                  border: Border.all(color: t.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Step 1: Select Grant Frequency
-                    const Text('Step 1: Select Allocation Schedule', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text('Step 1: Select Allocation Schedule', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 12,
                       children: _cycles.map((cycle) {
                         final isSelected = _selectedCycle == cycle;
                         return ChoiceChip(
-                          label: Text(cycle, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : null)),
+                          label: Text(cycle, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : t.text)),
                           selected: isSelected,
-                          selectedColor: const Color(0xFF0D9488),
+                          selectedColor: t.primary,
                           onSelected: (val) {
                             if (val) setState(() => _selectedCycle = cycle);
                           },
@@ -490,7 +492,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     const SizedBox(height: 24),
 
                     // Step 2: Select Leave Type & Quantity
-                    const Text('Step 2: Select Leave Category & Days', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text('Step 2: Select Leave Category & Days', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 10,
@@ -498,9 +500,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       children: _leaveTypes.map((type) {
                         final isSelected = _selectedLeaveType == type;
                         return FilterChip(
-                          label: Text(type, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : null)),
+                          label: Text(type, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : t.text)),
                           selected: isSelected,
-                          selectedColor: const Color(0xFF0D9488),
+                          selectedColor: t.primary,
                           onSelected: (val) {
                             if (val) setState(() => _selectedLeaveType = type);
                           },
@@ -510,10 +512,10 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Text('Allocation Days to Grant:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('Allocation Days to Grant:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: t.text)),
                         const SizedBox(width: 16),
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline_rounded, color: Color(0xFF0D9488)),
+                          icon: Icon(Icons.remove_circle_outline_rounded, color: t.primary),
                           onPressed: () {
                             if (_grantDays > 0.5) setState(() => _grantDays -= 0.5);
                           },
@@ -521,16 +523,16 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                            color: t.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '$_grantDays Days',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.primary),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0D9488)),
+                          icon: Icon(Icons.add_circle_outline_rounded, color: t.primary),
                           onPressed: () {
                             setState(() => _grantDays += 0.5);
                           },
@@ -543,34 +545,34 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Step 3: Employee Exclusions (Probation / Notice Period)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        Text('Step 3: Employee Exclusions (Probation / Notice Period)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.15),
+                            color: t.warning.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${_excludedEmployees.length} Excluded',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange),
+                            'Excluded',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.warning),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text('Selected employees will be skipped and will not receive this allocation grant.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('Selected employees will be skipped and will not receive this allocation grant.', style: TextStyle(fontSize: 12, color: t.textSecondary)),
                     const SizedBox(height: 12),
 
                     if (_isLoadingEmployees)
-                      const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
+                      Center(child: CircularProgressIndicator(color: t.primary))
                     else
                       Container(
                         constraints: const BoxConstraints(maxHeight: 180),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          color: t.cardSoft,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          border: Border.all(color: t.border),
                         ),
                         child: SingleChildScrollView(
                           child: Wrap(
@@ -581,13 +583,13 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                               return FilterChip(
                                 avatar: CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: isExcluded ? Colors.red : const Color(0xFF0D9488),
+                                  backgroundColor: isExcluded ? t.danger : t.primary,
                                   child: Text(emp.name[0], style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                 ),
-                                label: Text(emp.name, style: TextStyle(fontSize: 12, color: isExcluded ? Colors.red : null)),
+                                label: Text(emp.name, style: TextStyle(fontSize: 12, color: isExcluded ? t.danger : t.text)),
                                 selected: isExcluded,
-                                selectedColor: Colors.red.withValues(alpha: 0.15),
-                                checkmarkColor: Colors.red,
+                                selectedColor: t.danger.withValues(alpha: 0.15),
+                                checkmarkColor: t.danger,
                                 onSelected: (val) {
                                   setState(() {
                                     if (val) {
@@ -611,7 +613,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       child: ElevatedButton.icon(
                         onPressed: _executeBulkGrant,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488),
+                          backgroundColor: t.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
@@ -636,7 +638,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   // ---------------------------------------------------------------------------
   // SECTION 2: Employee Direct Overrides & Unrestricted Leave Applications
   // ---------------------------------------------------------------------------
-  Widget _buildSection2EmployeeOverrides(bool isDark) {
+  Widget _buildSection2EmployeeOverrides() {
+    final t = context.appTheme;
     final filtered = _employees.where((e) {
       final q = _searchQuery.toLowerCase();
       return e.name.toLowerCase().contains(q) || e.email.toLowerCase().contains(q) || e.department.toLowerCase().contains(q);
@@ -654,13 +657,13 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                   children: [
                     SizedBox(
                       width: 340,
-                      child: _buildEmployeeRosterList(filtered, isDark),
+                      child: _buildEmployeeRosterList(filtered),
                     ),
                     const SizedBox(width: 24),
                     Expanded(
                       child: _selectedEmployee == null
-                          ? const Center(child: Text('Select an employee to manage leaves.'))
-                          : _buildEmployeeManagementPanel(_selectedEmployee!, isDark),
+                          ? Center(child: Text('Select an employee to manage leaves.', style: TextStyle(color: t.textSecondary)))
+                          : _buildEmployeeManagementPanel(_selectedEmployee!),
                     ),
                   ],
                 )
@@ -669,10 +672,10 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     children: [
                       SizedBox(
                         height: 300,
-                        child: _buildEmployeeRosterList(filtered, isDark),
+                        child: _buildEmployeeRosterList(filtered),
                       ),
                       const SizedBox(height: 24),
-                      if (_selectedEmployee != null) _buildEmployeeManagementPanel(_selectedEmployee!, isDark),
+                      if (_selectedEmployee != null) _buildEmployeeManagementPanel(_selectedEmployee!),
                     ],
                   ),
                 ),
@@ -681,12 +684,13 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     );
   }
 
-  Widget _buildEmployeeRosterList(List<Employee> list, bool isDark) {
+  Widget _buildEmployeeRosterList(List<Employee> list) {
+    final t = context.appTheme;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: t.card,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        border: Border.all(color: t.border),
       ),
       child: Column(
         children: [
@@ -696,18 +700,19 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
                 hintText: 'Search employee...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                prefixIcon: Icon(Icons.search_rounded, size: 20, color: t.textSecondary),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                fillColor: t.cardSoft,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
+              style: TextStyle(color: t.text),
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: t.border),
           Expanded(
             child: list.isEmpty
-                ? const Center(child: Text('No employees found.', style: TextStyle(fontSize: 13, color: Colors.grey)))
+                ? Center(child: Text('No employees found.', style: TextStyle(fontSize: 13, color: t.textSecondary)))
                 : ListView.builder(
                     itemCount: list.length,
                     itemBuilder: (context, index) {
@@ -715,13 +720,13 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       final isSelected = _selectedEmployee?.id == emp.id;
                       return ListTile(
                         selected: isSelected,
-                        selectedTileColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                        selectedTileColor: t.primary.withValues(alpha: 0.12),
                         leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                          child: Text(emp.name[0], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                          backgroundColor: t.primary.withValues(alpha: 0.15),
+                          child: Text(emp.name[0], style: TextStyle(fontWeight: FontWeight.bold, color: t.primary)),
                         ),
-                        title: Text(emp.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        subtitle: Text('${emp.role} • ${emp.department}', style: const TextStyle(fontSize: 11)),
+                        title: Text(emp.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
+                        subtitle: Text('${emp.role} • ${emp.department}', style: TextStyle(fontSize: 11, color: t.textSecondary)),
                         onTap: () {
                           setState(() {
                             _selectedEmployee = emp;
@@ -737,7 +742,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     );
   }
 
-  Widget _buildEmployeeManagementPanel(Employee emp, bool isDark) {
+  Widget _buildEmployeeManagementPanel(Employee emp) {
+    final t = context.appTheme;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,16 +752,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-              ),
+              color: t.card,
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: t.border),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: const Color(0xFF0D9488),
+                  backgroundColor: t.primary,
                   child: Text(emp.name[0], style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 16),
@@ -763,9 +768,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(emp.name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(emp.name, style: TextStyle(color: t.text, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 2),
-                      Text('${emp.role} • ${emp.department} • ${emp.email}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text('${emp.role} • ${emp.department} • ${emp.email}', style: TextStyle(color: t.textSecondary, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -778,22 +783,22 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: t.card,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              border: Border.all(color: t.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.edit_calendar_rounded, color: Color(0xFF0D9488), size: 20),
-                    SizedBox(width: 10),
-                    Text('Apply Leave for Employee', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Icon(Icons.edit_calendar_rounded, color: t.primary, size: 20),
+                    const SizedBox(width: 10),
+                    Text('Apply Leave for Employee', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text('Submit official leave requests directly for team members who requested assistance.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                Text('Submit official leave requests directly for team members who requested assistance.', style: TextStyle(fontSize: 11, color: t.textSecondary)),
                 const SizedBox(height: 16),
 
                 Wrap(
@@ -803,6 +808,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     // Leave Type
                     DropdownButton<String>(
                       value: _onBehalfLeaveType,
+                      dropdownColor: t.cardSoft,
+                      style: TextStyle(color: t.text),
                       items: _leaveTypes.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13)))).toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => _onBehalfLeaveType = val);
@@ -844,17 +851,19 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
                 TextField(
                   controller: _onBehalfReasonController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Reason / Note for Leave',
                     hintText: 'e.g. Requested via phone / Medical emergency',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    labelStyle: TextStyle(color: t.text),
                   ),
+                  style: TextStyle(color: t.text),
                 ),
                 const SizedBox(height: 16),
 
                 ElevatedButton.icon(
                   onPressed: _applyOnBehalf,
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: t.primary, foregroundColor: Colors.white),
                   icon: const Icon(Icons.send_rounded, size: 16),
                   label: Text('Submit Leave Request for ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
@@ -867,9 +876,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: t.card,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              border: Border.all(color: t.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -877,29 +886,29 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.add_moderator_rounded, color: Color(0xFF3B82F6), size: 20),
-                        SizedBox(width: 10),
-                        Text('Adjust Employee Leave Balances', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        Icon(Icons.add_moderator_rounded, color: t.accent, size: 20),
+                        const SizedBox(width: 10),
+                        Text('Adjust Employee Leave Balances', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
                       ],
                     ),
                     if (_pendingQuotaDeltas.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                          color: t.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${_pendingQuotaDeltas.length} Pending Edits',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.accent),
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text('Click + or - to stage adjustments. Changes will require your explicit confirmation before saving.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                Text('Click + or - to stage adjustments. Changes will require your explicit confirmation before saving.', style: TextStyle(fontSize: 11, color: t.textSecondary)),
                 const SizedBox(height: 16),
 
                 Wrap(
@@ -916,13 +925,13 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: hasPending
-                            ? (isAddition ? const Color(0xFF10B981) : Colors.red).withValues(alpha: 0.08)
-                            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                            ? (isAddition ? t.success : t.danger).withValues(alpha: 0.08)
+                            : t.cardSoft,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: hasPending
-                              ? (isAddition ? const Color(0xFF10B981) : Colors.red)
-                              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              ? (isAddition ? t.success : t.danger)
+                              : t.border,
                           width: hasPending ? 1.5 : 1.0,
                         ),
                       ),
@@ -932,10 +941,10 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(type, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(type, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.text)),
                               Row(
                                 children: [
-                                  Text('$base Days', style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.w600)),
+                                  Text('$base Days', style: TextStyle(fontSize: 11, color: t.primary, fontWeight: FontWeight.w600)),
                                   if (hasPending) ...[
                                     const SizedBox(width: 6),
                                     Text(
@@ -943,7 +952,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
-                                        color: isAddition ? const Color(0xFF10B981) : Colors.red,
+                                        color: isAddition ? t.success : t.danger,
                                       ),
                                     ),
                                   ],
@@ -953,11 +962,11 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                           ),
                           const SizedBox(width: 12),
                           IconButton(
-                            icon: const Icon(Icons.remove_circle_rounded, color: Colors.red, size: 20),
+                            icon: Icon(Icons.remove_circle_rounded, color: t.danger, size: 20),
                             onPressed: () => _stageQuotaAdjustment(type, -1.0),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle_rounded, color: Color(0xFF10B981), size: 20),
+                            icon: Icon(Icons.add_circle_rounded, color: t.success, size: 20),
                             onPressed: () => _stageQuotaAdjustment(type, 1.0),
                           ),
                         ],
@@ -969,20 +978,20 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
                 // Confirmation Action Bar
                 if (_pendingQuotaDeltas.isNotEmpty) ...[
-                  const Divider(height: 1),
+                  Divider(height: 1, color: t.border),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
                         onPressed: () => setState(() => _pendingQuotaDeltas.clear()),
-                        icon: const Icon(Icons.close_rounded, size: 16, color: Colors.grey),
-                        label: const Text('Discard Edits', style: TextStyle(color: Colors.grey)),
+                        icon: Icon(Icons.close_rounded, size: 16, color: t.textSecondary),
+                        label: Text('Discard Edits', style: TextStyle(color: t.textSecondary)),
                       ),
                       ElevatedButton.icon(
                         onPressed: _showConfirmAdjustmentsModal,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: t.accent,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1005,3 +1014,5 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     );
   }
 }
+
+

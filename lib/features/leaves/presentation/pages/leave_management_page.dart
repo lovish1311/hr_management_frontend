@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../../../core/services/auth_storage.dart';
-import '../../../../core/widgets/hr_drawer.dart';
 import '../widgets/apply_leave_dialog.dart';
 
 class QuotaGridCardItem {
@@ -300,54 +300,63 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       }
     } catch (_) {}
 
-    final empId = AuthStorage.employeeId ?? 1;
+    final empId = data['onBehalfEmployeeId'] != null
+        ? int.tryParse(data['onBehalfEmployeeId'].toString()) ?? 1
+        : AuthStorage.employeeId ?? 1;
     final body = json.encode({
       'employeeId': empId,
       'startDate': fromDateStr,
       'endDate': toDateStr,
       'leaveType': type.toUpperCase().replaceAll(' ', '_'),
-      'totalDays': days.toInt(),
+      'totalDays': days,
       'reason': data['reason'] ?? '',
+      if (data['startTime'] != null) 'startTime': data['startTime'],
+      if (data['endTime'] != null) 'endTime': data['endTime'],
     });
 
     try {
+      final isAdminApply = AuthStorage.isHr && data['onBehalfEmployeeId'] != null;
+      final url = isAdminApply
+          ? Uri.parse('$_baseUrl/admin/apply-on-behalf')
+          : Uri.parse('$_baseUrl/apply');
+
       final res = await http.post(
-        Uri.parse('$_baseUrl/apply'),
+        url,
         headers: AuthStorage.authHeaders,
         body: body,
       );
       debugPrint('Apply leave response status: ${res.statusCode}');
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        // Refetch all data from backend for authoritative state
+        await _fetchLeaveData();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Applied for $days day(s) of $type successfully!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        final errorBody = res.body;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to apply: $errorBody'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Apply leave backend call exception: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error applying leave: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-
-    if (!mounted) return;
-    setState(() {
-      if (_balances.containsKey(type)) {
-        _balances[type] = (_balances[type]! - days).clamp(0.0, 999.0);
-      }
-
-      _myLeaves.insert(0, {
-        'id': DateTime.now().millisecondsSinceEpoch,
-        'leaveType': type,
-        'category': data['category'] ?? 'Leave',
-        'totalDays': days,
-        'appliedOn': 'Today',
-        'startDate': fromDateStr,
-        'startSession': fromSession,
-        'endDate': toDateStr,
-        'endSession': toSession,
-        'reason': data['reason'],
-        'status': 'PENDING',
-      });
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Applied for $days day(s) of $type. Remaining balance updated!'),
-        backgroundColor: const Color(0xFF10B981),
-      ),
-    );
   }
 
   void _withdrawLeave(dynamic leave) {
@@ -384,15 +393,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         headers: AuthStorage.authHeaders,
         body: body,
       );
+      // Refetch all data from backend so balances update after approval
+      await _fetchLeaveData();
     } catch (_) {}
 
     if (!mounted) return;
-    setState(() {
-      final index = _pendingApprovals.indexWhere((l) => l['id'] == leaveId);
-      if (index != -1) {
-        _pendingApprovals.removeAt(index);
-      }
-    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Leave request $status!'),
@@ -406,7 +411,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    return ResponsiveScaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Leave Management', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -421,34 +426,42 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           ),
           const SizedBox(width: 8),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF0D9488),
-          labelColor: const Color(0xFF0D9488),
-          unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
-          tabs: const [
-            Tab(icon: Icon(Icons.person_outline), text: 'My Leaves & Quotas'),
-            Tab(icon: Icon(Icons.approval_outlined), text: 'Team Approvals'),
-          ],
-        ),
+        bottom: AuthStorage.isHr
+            ? null
+            : TabBar(
+                controller: _tabController,
+                indicatorColor: const Color(0xFF0D9488),
+                labelColor: const Color(0xFF0D9488),
+                unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
+                tabs: const [
+                  Tab(icon: Icon(Icons.person_outline), text: 'My Leaves & Quotas'),
+                  Tab(icon: Icon(Icons.approval_outlined), text: 'Team Approvals'),
+                ],
+              ),
       ),
-      drawer: const HrDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showApplyLeaveDialog,
+        onPressed: _showApplyRequestOptions,
         backgroundColor: const Color(0xFF0D9488),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Apply Leave', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text(
+          // Admin always applies on behalf of an employee, not for themselves
+          AuthStorage.isHr ? 'Apply On Behalf of Employee' : 'Apply Request',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
-            : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildMyLeavesDashboard(isDark),
-                  _buildPendingApprovalsView(isDark),
-                ],
-              ),
+            : (AuthStorage.isHr
+                // Admin: directly shows the approvals view — no personal My Leaves tab
+                ? _buildPendingApprovalsView(isDark)
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildMyLeavesDashboard(isDark),
+                      _buildPendingApprovalsView(isDark),
+                    ],
+                  )),
       ),
     );
   }
@@ -587,7 +600,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           ),
           const SizedBox(width: 16),
           ElevatedButton.icon(
-            onPressed: _showApplyLeaveDialog,
+            onPressed: _showApplyRequestOptions,
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             style: ElevatedButton.styleFrom(
@@ -1264,11 +1277,129 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  void _showApplyLeaveDialog() {
+  void _showApplyRequestOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AuthStorage.isHr ? 'Apply Request on Behalf of Employee' : 'Apply Request',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _buildApplyOptionTile(
+                  icon: Icons.luggage_outlined,
+                  color: const Color(0xFF0284C7),
+                  title: 'Apply Leave',
+                  subtitle: AuthStorage.isHr ? 'Full/half-day leave on behalf of employee' : 'Full day or half day leave',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openApplyDialog('Leave');
+                  },
+                ),
+                // Time-based exemptions are personal (employee applies for themselves)
+                // Admin does NOT see these — they don't personally clock in/out
+                if (!AuthStorage.isHr) ...[
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.coffee_outlined,
+                    color: const Color(0xFFF59E0B),
+                    title: 'Apply Short Break',
+                    subtitle: 'Partial time off during shift',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog('Short Break');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.directions_run_outlined,
+                    color: const Color(0xFF8B5CF6),
+                    title: 'Apply Early Out',
+                    subtitle: 'Leave work earlier than schedule',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog('Early Out');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.watch_later_outlined,
+                    color: const Color(0xFFEF4444),
+                    title: 'Apply Late Arrival',
+                    subtitle: 'Permission for arriving after shift start',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog('Late Arrival');
+                    },
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildApplyOptionTile({required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: color, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openApplyDialog(String category) {
     showDialog(
       context: context,
       builder: (context) => ApplyLeaveDialog(
         initialBalance: _balances,
+        initialRequestCategory: category,
+        // Admin always applies on behalf of an employee — no self-service apply
+        // Employee applies for themselves (targetEmployee is null)
+        targetEmployee: null,
         onSubmit: (data) => _applyForLeaveFromMap(data),
       ),
     );

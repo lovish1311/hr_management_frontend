@@ -73,109 +73,108 @@ class LeaveRequestTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                // Avatar with ring badge
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [avatarColor.withValues(alpha: 0.2), avatarColor.withValues(alpha: 0.08)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: avatarColor.withValues(alpha: 0.4), width: 1.5),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 480;
+
+          final infoSection = Row(
+            children: [
+              // Avatar with ring badge
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [avatarColor.withValues(alpha: 0.2), avatarColor.withValues(alpha: 0.08)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    nameInitials.isNotEmpty ? nameInitials : '?',
-                    style: TextStyle(
-                      color: avatarColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: avatarColor.withValues(alpha: 0.4), width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  nameInitials.isNotEmpty ? nameInitials : '?',
+                  style: TextStyle(
+                    color: avatarColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              employeeName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: primaryTextColor,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            employeeName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: primaryTextColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: tagColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            leaveType,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: tagColor,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: tagColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              leaveType,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: tagColor,
-                              ),
-                            ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 12, color: secondaryTextColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          dates,
+                          style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 12, color: secondaryTextColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            dates,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('•', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            reason,
                             style: TextStyle(
                               color: secondaryTextColor,
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 8),
-                          Text('•', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              reason,
-                              style: TextStyle(
-                                color: secondaryTextColor,
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Row(
+              ),
+            ],
+          );
+
+          final actionButtons = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Decline Button
@@ -224,8 +223,31 @@ class LeaveRequestTile extends StatelessWidget {
                 ),
               ),
             ],
-          )
-        ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                infoSection,
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: actionButtons,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: infoSection),
+              const SizedBox(width: 12),
+              actionButtons,
+            ],
+          );
+        },
       ),
     );
   }

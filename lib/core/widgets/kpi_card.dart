@@ -1,65 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:hr_management/core/theme/theme_manager.dart';
+
+/// Semantic type enum for KPI cards.
+/// Determines which theme color is used for the gradient.
+enum KpiCardType { primary, success, warning }
 
 class KpiCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-  final Color? backgroundColor;
-  final List<Color>? gradient;
   final String? trendText;
   final bool isTrendPositive;
-  final Color? iconColor;
+  final KpiCardType cardType;
 
   const KpiCard({
     super.key,
     required this.title,
     required this.value,
     required this.icon,
-    this.backgroundColor,
-    this.gradient,
     this.trendText,
     this.isTrendPositive = true,
-    this.iconColor,
+    this.cardType = KpiCardType.primary,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final isGradient = gradient != null && gradient!.isNotEmpty;
+    final t = context.appTheme;
 
-    final primaryTextColor = isGradient
-        ? Colors.white
-        : (theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface);
-    final secondaryTextColor = isGradient
-        ? Colors.white.withValues(alpha: 0.85)
-        : (theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurfaceVariant);
+    // Pick gradient based on semantic card type (from colorsForApp.txt)
+    final List<Color> gradient;
+    switch (cardType) {
+      case KpiCardType.success:
+        gradient = [t.success, Color.lerp(t.success, Colors.black, 0.25)!];
+      case KpiCardType.warning:
+        gradient = [t.warning, Color.lerp(t.warning, Colors.black, 0.25)!];
+      case KpiCardType.primary:
+        gradient = [t.primary, t.primaryDark];
+    }
 
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(20.0),
         decoration: BoxDecoration(
-          color: isGradient ? null : (backgroundColor ?? theme.colorScheme.surface),
-          gradient: isGradient
-              ? LinearGradient(
-                  colors: gradient!,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          borderRadius: BorderRadius.circular(20.0),
-          border: isGradient
-              ? null
-              : Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                  width: 1.2,
-                ),
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: isGradient
-                  ? gradient!.first.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-              blurRadius: isGradient ? 16 : 12,
+              color: gradient.first.withValues(alpha: 0.35),
+              blurRadius: 16,
               offset: const Offset(0, 6),
             ),
           ],
@@ -72,28 +64,18 @@ class KpiCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10.0),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isGradient
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : (iconColor ?? theme.colorScheme.primary).withValues(alpha: 0.12),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    color: isGradient ? Colors.white : (iconColor ?? theme.colorScheme.primary),
-                    size: 24,
-                  ),
+                  child: Icon(icon, color: Colors.white, size: 24),
                 ),
                 if (trendText != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isGradient
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : (isTrendPositive
-                              ? const Color(0xFFD1FAE5)
-                              : const Color(0xFFFEE2E2)),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -102,19 +84,15 @@ class KpiCard extends StatelessWidget {
                         Icon(
                           isTrendPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
                           size: 14,
-                          color: isGradient
-                              ? Colors.white
-                              : (isTrendPositive ? const Color(0xFF047857) : const Color(0xFFB91C1C)),
+                          color: Colors.white,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           trendText!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isGradient
-                                ? Colors.white
-                                : (isTrendPositive ? const Color(0xFF047857) : const Color(0xFFB91C1C)),
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -125,10 +103,10 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
-                color: primaryTextColor,
+                color: Colors.white,
                 letterSpacing: -0.5,
               ),
             ),
@@ -138,7 +116,7 @@ class KpiCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: secondaryTextColor,
+                color: Colors.white.withValues(alpha: 0.85),
               ),
             ),
           ],

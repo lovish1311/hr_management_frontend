@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hr_management/core/widgets/hr_drawer.dart';
+import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
@@ -21,11 +21,12 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
   final List<String> _departments = [
     'All',
     'Engineering',
+    'Product',
     'Design',
-    'Manager',
+    'Sales',
     'Marketing',
-    'Finance',
-    'HR',
+    'Operations',
+    'Human Resources',
   ];
 
   @override
@@ -42,7 +43,10 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
       final employees = await _repository.getEmployees(departmentFilter: _selectedDepartment);
       if (mounted) {
         setState(() {
-          _employees = employees;
+          _employees = employees.where((emp) {
+            final r = emp.role.toUpperCase();
+            return r != 'SUPER_ADMIN' && r != 'ROLE_SUPER_ADMIN' && r != 'ADMIN';
+          }).toList();
           _isLoading = false;
         });
       }
@@ -68,7 +72,7 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
     final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
 
-    return Scaffold(
+    return ResponsiveScaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -123,7 +127,6 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
           ],
         ),
       ),
-      drawer: const HrDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -182,13 +185,15 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                         ? const Center(child: Text('No employees found.'))
                         : LayoutBuilder(
                             builder: (context, constraints) {
-                              int crossAxisCount = 2;
+                              int crossAxisCount = 1;
                               if (constraints.maxWidth > 1200) {
                                 crossAxisCount = 5;
                               } else if (constraints.maxWidth > 900) {
                                 crossAxisCount = 4;
                               } else if (constraints.maxWidth > 600) {
                                 crossAxisCount = 3;
+                              } else if (constraints.maxWidth > 400) {
+                                crossAxisCount = 2;
                               }
                               return GridView.builder(
                                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

@@ -21,6 +21,11 @@ class Employee {
   final String emergencyContactPhone;
   final int leaveBalance;
   final int attendanceRate;
+  final bool isAttendanceTracked;
+  final String departmentCategory;
+  final String? lateArrivalAllowedUntil;
+  final String? earlyOutAllowedAfter;
+  final String todayAttendanceStatus;
 
   Employee({
     required this.id,
@@ -45,6 +50,11 @@ class Employee {
     required this.emergencyContactPhone,
     this.leaveBalance = 14,
     this.attendanceRate = 96,
+    this.isAttendanceTracked = true,
+    this.departmentCategory = 'General',
+    this.lateArrivalAllowedUntil,
+    this.earlyOutAllowedAfter,
+    this.todayAttendanceStatus = 'ABSENT',
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
@@ -70,12 +80,26 @@ class Employee {
       joiningDate: json['joiningDate'] ?? '',
       employmentType: json['employmentType'] ?? 'FULL_TIME',
       address: json['address'] ?? '',
-      location: json['location'] ?? (json['address'].toString().isNotEmpty ? json['address'] : 'Headquarters'),
+      location: json['location'] ?? ((json['address'] != null && json['address'].toString().trim().isNotEmpty) ? json['address'].toString() : 'Headquarters'),
       emergencyContactName: json['emergencyContactName'] ?? '',
       emergencyContactPhone: json['emergencyContactPhone'] ?? '',
       leaveBalance: json['leaveBalance'] != null ? (json['leaveBalance'] as num).toInt() : 14,
       attendanceRate: json['attendanceRate'] != null ? (json['attendanceRate'] as num).toInt() : 96,
+      isAttendanceTracked: json['isAttendanceTracked'] ?? (json['role'] != 'MANAGER' && json['role'] != 'HR' && json['role'] != 'SUPER_ADMIN'),
+      departmentCategory: json['departmentCategory'] ?? json['department'] ?? 'General',
+      lateArrivalAllowedUntil: json['lateArrivalAllowedUntil']?.toString(),
+      earlyOutAllowedAfter: json['earlyOutAllowedAfter']?.toString(),
+      todayAttendanceStatus: json['todayAttendanceStatus'] ?? ((json['isAttendanceTracked'] == false) ? 'EXEMPT' : 'ABSENT'),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Employee && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }
 

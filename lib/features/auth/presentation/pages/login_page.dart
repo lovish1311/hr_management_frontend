@@ -12,7 +12,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: 'admin@company.com');
-  final _passwordController = TextEditingController(text: 'Password123!');
+  final _passwordController = TextEditingController(text: 'admin123');
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -218,19 +218,31 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => _fillDemoCredentials('admin@company.com', 'Password123!'),
+                              onPressed: () => _fillDemoCredentials('hr@company.com', 'hr123'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 side: BorderSide(color: const Color(0xFF0D9488).withValues(alpha: 0.5)),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              child: const Text('Admin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D9488))),
+                              child: const Text('HR Lead', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => _fillDemoCredentials('john.doe@company.com', 'Password123!'),
+                              onPressed: () => _fillDemoCredentials('admin@company.com', 'admin123'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: Text('Admin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _fillDemoCredentials('lovish@company.com', 'user123'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 side: BorderSide(color: Colors.grey.shade300),

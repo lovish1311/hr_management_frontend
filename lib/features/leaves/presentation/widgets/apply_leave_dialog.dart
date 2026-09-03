@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 
@@ -32,11 +33,19 @@ class LeaveTypeGridOption {
 
 class ApplyLeaveDialog extends StatefulWidget {
   final Map<String, dynamic>? initialBalance;
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
+  final Employee? targetEmployee;
+  final String? initialRequestCategory; // 'Leave', 'Short Break', 'Early Out'
   final Function(Map<String, dynamic> leaveData) onSubmit;
 
   const ApplyLeaveDialog({
     super.key,
     this.initialBalance,
+    this.initialStartDate,
+    this.initialEndDate,
+    this.targetEmployee,
+    this.initialRequestCategory,
     required this.onSubmit,
   });
 
@@ -45,17 +54,19 @@ class ApplyLeaveDialog extends StatefulWidget {
 }
 
 class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
-  int _currentStep = 0; // 0: Category, 1: Leave Type, 2: Form Details
+  int _currentStep = 0; // 0: Category, 1: Leave Type (if Leave), 2: Form Details
 
   String _selectedCategory = 'Leave';
   String _selectedLeaveType = 'Earned Leave';
   double _leaveBalanceDays = 12.0;
 
-  DateTime _fromDate = DateTime.now();
+  late DateTime _fromDate;
   String _fromSession = 'Session 1';
+  late TimeOfDay _fromTime;
 
-  DateTime _toDate = DateTime.now();
+  late DateTime _toDate;
   String _toSession = 'Session 2';
+  late TimeOfDay _toTime;
 
   final TextEditingController _reasonController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
@@ -64,10 +75,26 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   final List<Employee> _selectedCcEmployees = [];
   bool _isLoadingEmployees = true;
   String? _attachedFileName;
+  Employee? _selectedOnBehalfEmployee;
 
   @override
   void initState() {
     super.initState();
+    _fromDate = widget.initialStartDate ?? DateTime.now();
+    _toDate = widget.initialEndDate ?? widget.initialStartDate ?? DateTime.now();
+    _fromTime = const TimeOfDay(hour: 9, minute: 0);
+    _toTime = const TimeOfDay(hour: 11, minute: 0);
+    
+    if (widget.initialRequestCategory != null) {
+      _selectedCategory = widget.initialRequestCategory!;
+      if (_selectedCategory == 'Leave') {
+        _currentStep = 1; // Take to Leave Type
+      } else {
+        _currentStep = 2; // Short Break/Early Out go straight to Form
+      }
+    } else if (widget.initialStartDate != null) {
+      _currentStep = 1; // Take directly to Leave Type selection if date was pre-selected from calendar
+    }
     _loadEmployees();
   }
 
@@ -83,6 +110,17 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       if (mounted) {
         setState(() {
           _allEmployees = nonAdmin.isNotEmpty ? nonAdmin : _getMockNonAdminEmployees();
+          if (widget.targetEmployee != null) {
+            final matchIndex = _allEmployees.indexWhere((e) => e.id == widget.targetEmployee!.id);
+            if (matchIndex != -1) {
+              _selectedOnBehalfEmployee = _allEmployees[matchIndex];
+            } else {
+              _allEmployees.insert(0, widget.targetEmployee!);
+              _selectedOnBehalfEmployee = widget.targetEmployee;
+            }
+          } else if (_allEmployees.isNotEmpty && AuthStorage.isHr) {
+            _selectedOnBehalfEmployee = _allEmployees.first;
+          }
           _isLoadingEmployees = false;
         });
       }
@@ -90,6 +128,17 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       if (mounted) {
         setState(() {
           _allEmployees = _getMockNonAdminEmployees();
+          if (widget.targetEmployee != null) {
+            final matchIndex = _allEmployees.indexWhere((e) => e.id == widget.targetEmployee!.id);
+            if (matchIndex != -1) {
+              _selectedOnBehalfEmployee = _allEmployees[matchIndex];
+            } else {
+              _allEmployees.insert(0, widget.targetEmployee!);
+              _selectedOnBehalfEmployee = widget.targetEmployee;
+            }
+          } else if (_allEmployees.isNotEmpty && AuthStorage.isHr) {
+            _selectedOnBehalfEmployee = _allEmployees.first;
+          }
           _isLoadingEmployees = false;
         });
       }
@@ -199,19 +248,29 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       color: Color(0xFF0284C7),
     ),
     LeaveCategoryItem(
+      title: 'Late Arrival',
+      icon: Icons.access_time_outlined,
+      color: Color(0xFFEF4444),
+    ),
+    LeaveCategoryItem(
+      title: 'Short Break',
+      icon: Icons.coffee_outlined,
+      color: Color(0xFFF59E0B),
+    ),
+    LeaveCategoryItem(
+      title: 'Early Out',
+      icon: Icons.directions_run_outlined,
+      color: Color(0xFF8B5CF6),
+    ),
+    LeaveCategoryItem(
       title: 'Restricted Holiday',
       icon: Icons.edit_calendar_outlined,
-      color: Color(0xFF8B5CF6),
+      color: Color(0xFF10B981),
     ),
     LeaveCategoryItem(
       title: 'Comp Off Grant',
       icon: Icons.card_giftcard_outlined,
-      color: Color(0xFF10B981),
-    ),
-    LeaveCategoryItem(
-      title: 'Leave Cancel',
-      icon: Icons.event_busy_outlined,
-      color: Color(0xFFEF4444),
+      color: Color(0xFF059669),
     ),
   ];
 
@@ -287,7 +346,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   void _selectCategory(String cat) {
     setState(() {
       _selectedCategory = cat;
-      _currentStep = 1;
+      if (cat == 'Short Break' || cat == 'Early Out') {
+        _currentStep = 2; // Skip Leave Type for Short Break/Early Out
+      } else {
+        _currentStep = 1;
+      }
     });
   }
 
@@ -338,7 +401,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                           ? 'Apply Category'
                           : _currentStep == 1
                               ? 'Leave Type'
-                              : _selectedLeaveType,
+                              : (_selectedCategory == 'Leave' ? _selectedLeaveType : _selectedCategory),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -548,36 +611,68 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Leave Balance Top Card
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          if (AuthStorage.isHr) ...[
+            Text('Apply On Behalf Of Employee*', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<Employee>(
+                  isExpanded: true,
+                  value: _selectedOnBehalfEmployee,
+                  hint: const Text('Select Employee'),
+                  dropdownColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  items: _allEmployees.map((emp) {
+                    return DropdownMenuItem<Employee>(
+                      value: emp,
+                      child: Text(emp.name, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
+                    );
+                  }).toList(),
+                  onChanged: widget.targetEmployee != null ? null : (emp) {
+                    setState(() {
+                      _selectedOnBehalfEmployee = emp;
+                    });
+                  },
+                ),
+              ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+          ] else ...[
+            // Leave Balance Top Card
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.umbrella_rounded, color: Color(0xFF10B981), size: 20),
                   ),
-                  child: const Icon(Icons.umbrella_rounded, color: Color(0xFF10B981), size: 20),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Leave Balance', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Text('$_leaveBalanceDays days', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                  ],
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Leave Balance', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text('$_leaveBalanceDays days', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 20),
 
           // FROM Section Card
@@ -585,6 +680,8 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
             title: 'From',
             selectedDate: _fromDate,
             selectedSession: _fromSession,
+            selectedTime: _fromTime,
+            isTimeMode: _selectedCategory == 'Short Break' || _selectedCategory == 'Early Out' || _selectedCategory == 'Late Arrival',
             isDark: isDark,
             onDateTap: () async {
               final picked = await showDatePicker(
@@ -596,14 +693,23 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
               if (picked != null) setState(() => _fromDate = picked);
             },
             onSessionChanged: (val) => setState(() => _fromSession = val!),
+            onTimeTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: _fromTime,
+              );
+              if (picked != null) setState(() => _fromTime = picked);
+            },
           ),
           const SizedBox(height: 16),
 
-          // TO Section Card
+          // TO Section Card (Only show if it's 'Leave', Short Break/Early Out only need one date/time usually, but let's allow end time)
           _buildDateSessionCard(
             title: 'To',
             selectedDate: _toDate,
             selectedSession: _toSession,
+            selectedTime: _toTime,
+            isTimeMode: _selectedCategory == 'Short Break' || _selectedCategory == 'Early Out' || _selectedCategory == 'Late Arrival',
             isDark: isDark,
             onDateTap: () async {
               final picked = await showDatePicker(
@@ -615,6 +721,13 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
               if (picked != null) setState(() => _toDate = picked);
             },
             onSessionChanged: (val) => setState(() => _toSession = val!),
+            onTimeTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: _toTime,
+              );
+              if (picked != null) setState(() => _toTime = picked);
+            },
           ),
           const SizedBox(height: 20),
 
@@ -834,8 +947,12 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     required bool isDark,
     required VoidCallback onDateTap,
     required ValueChanged<String?> onSessionChanged,
+    TimeOfDay? selectedTime,
+    bool isTimeMode = false,
+    VoidCallback? onTimeTap,
   }) {
     final dateStr = '${selectedDate.day} ${_getMonthName(selectedDate.month)} ${selectedDate.year}';
+    final timeStr = selectedTime != null ? selectedTime.format(context) : '';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -869,49 +986,64 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 10),
-          Text('Select $title Session', style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => onSessionChanged('Session 1'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          selectedSession == 'Session 1' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: selectedSession == 'Session 1' ? const Color(0xFF3B82F6) : Colors.grey,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Session 1', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+          if (isTimeMode) ...[
+            Text('Select $title Time', style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: onTimeTap,
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time_rounded, size: 18, color: Color(0xFF3B82F6)),
+                  const SizedBox(width: 10),
+                  Text(timeStr, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                ],
+              ),
+            ),
+          ] else ...[
+            Text('Select $title Session', style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => onSessionChanged('Session 1'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedSession == 'Session 1' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                            color: selectedSession == 'Session 1' ? const Color(0xFF3B82F6) : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Session 1', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: () => onSessionChanged('Session 2'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          selectedSession == 'Session 2' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: selectedSession == 'Session 2' ? const Color(0xFF3B82F6) : Colors.grey,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Session 2', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                Expanded(
+                  child: InkWell(
+                    onTap: () => onSessionChanged('Session 2'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedSession == 'Session 2' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                            color: selectedSession == 'Session 2' ? const Color(0xFF3B82F6) : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Session 2', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -939,7 +1071,8 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                   else if (_allEmployees.isEmpty)
                     const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No employees available.')))
                   else
-                    Expanded(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 300),
                       child: ListView.builder(
                         itemCount: _allEmployees.length,
                         itemBuilder: (context, index) {
@@ -999,15 +1132,19 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   void _submitForm() {
     final leaveData = {
       'category': _selectedCategory,
-      'leaveType': _selectedLeaveType,
+      'leaveType': _selectedCategory == 'Leave' ? _selectedLeaveType : _selectedCategory,
       'fromDate': _fromDate.toIso8601String().split('T')[0],
       'fromSession': _fromSession,
-      'toDate': _toDate.toIso8601String().split('T')[0],
+      'toDate': _selectedCategory == 'Leave' ? _toDate.toIso8601String().split('T')[0] : _fromDate.toIso8601String().split('T')[0],
       'toSession': _toSession,
+      'startTime': _selectedCategory != 'Leave' ? '${_fromTime.hour.toString().padLeft(2, '0')}:${_fromTime.minute.toString().padLeft(2, '0')}' : null,
+      'endTime': _selectedCategory != 'Leave' ? '${_toTime.hour.toString().padLeft(2, '0')}:${_toTime.minute.toString().padLeft(2, '0')}' : null,
       'reason': _reasonController.text,
       'contactDetails': _contactController.text,
       'ccEmployees': _selectedCcEmployees.map((e) => e.name).toList(),
       'attachment': _attachedFileName,
+      if (AuthStorage.isHr && _selectedOnBehalfEmployee != null)
+        'onBehalfEmployeeId': _selectedOnBehalfEmployee!.id,
     };
 
     widget.onSubmit(leaveData);
