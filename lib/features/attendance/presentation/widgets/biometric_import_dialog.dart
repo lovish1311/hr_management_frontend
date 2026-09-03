@@ -269,6 +269,23 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
                           _buildSummaryBadge('Absent', '${_importSummary!['absentCount']}', const Color(0xFFEF4444)),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      if (_importSummary!['rows'] != null) ...[
+                        _buildDetailedList(
+                          (_importSummary!['rows'] as List).cast<Map<String, dynamic>>(),
+                          'LATE',
+                          'Late Arrivals',
+                          const Color(0xFFF59E0B),
+                          isDark,
+                        ),
+                        _buildDetailedList(
+                          (_importSummary!['rows'] as List).cast<Map<String, dynamic>>(),
+                          'ABSENT',
+                          'Absent Employees',
+                          const Color(0xFFEF4444),
+                          isDark,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -326,6 +343,58 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
         Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
+    );
+  }
+
+  Widget _buildDetailedList(List<Map<String, dynamic>> rows, String status, String title, Color color, bool isDark) {
+    final filtered = rows.where((r) => r['status'] == status).toList();
+    if (filtered.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(status == 'LATE' ? Icons.access_time_rounded : Icons.person_off_rounded, color: color, size: 16),
+              const SizedBox(width: 6),
+              Text('$title (${filtered.length})', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => Divider(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              itemBuilder: (context, index) {
+                final row = filtered[index];
+                final name = row['employeeName'] ?? 'Unknown Employee';
+                final time = status == 'LATE' ? (row['checkInTime'] ?? 'No punch') : 'No punch';
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(name, style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
+                      if (status == 'LATE')
+                        Text(time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

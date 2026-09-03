@@ -690,7 +690,15 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 firstDate: DateTime.now().subtract(const Duration(days: 30)),
                 lastDate: DateTime.now().add(const Duration(days: 365)),
               );
-              if (picked != null) setState(() => _fromDate = picked);
+              if (picked != null) {
+                setState(() {
+                  _fromDate = picked;
+                  // Logically ensure To Date is never before From Date
+                  if (_toDate.isBefore(_fromDate)) {
+                    _toDate = _fromDate;
+                  }
+                });
+              }
             },
             onSessionChanged: (val) => setState(() => _fromSession = val!),
             onTimeTap: () async {

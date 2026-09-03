@@ -36,10 +36,10 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       }
     } catch (e) {
       debugPrint('Failed to fetch attendance calendar summary from backend: $e');
+      throw Exception('Failed to load attendance data: $e');
     }
 
-    // Dynamic realistic fallback dataset for robust offline testing
-    return _generateFallbackCalendar(year, month);
+    return [];
   }
 
   @override
@@ -74,62 +74,5 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     return null;
   }
 
-  List<AttendanceCalendarDay> _generateFallbackCalendar(int year, int month) {
-    final daysInMonth = DateTime(year, month + 1, 0).day;
-    final now = DateTime.now();
-    final List<AttendanceCalendarDay> list = [];
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(year, month, day);
-      final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
-
-      String status;
-      String statusLabel;
-      String? leaveType;
-      String? checkIn;
-      String? checkOut;
-
-      if (isWeekend) {
-        status = 'WEEKEND';
-        statusLabel = 'Weekend';
-      } else if (day == 15) {
-        status = 'HOLIDAY';
-        statusLabel = 'Independence Day';
-      } else if (day == 12 || day == 13) {
-        status = 'PAID_LEAVE';
-        statusLabel = 'Approved Casual Leave';
-        leaveType = 'CASUAL';
-      } else if (day == 21) {
-        status = 'LOP_LEAVE';
-        statusLabel = 'Loss of Pay (Unpaid)';
-        leaveType = 'UNPAID';
-      } else if (date.isAfter(now)) {
-        status = 'UPCOMING';
-        statusLabel = 'Upcoming Working Day';
-      } else if (day == 5) {
-        status = 'LATE';
-        statusLabel = 'Late Check-In (09:42 AM)';
-        checkIn = '09:42 AM';
-        checkOut = '06:15 PM';
-      } else {
-        status = 'PRESENT';
-        statusLabel = 'Present';
-        checkIn = '09:00 AM';
-        checkOut = '06:00 PM';
-      }
-
-      list.add(AttendanceCalendarDay(
-        date: date,
-        status: status,
-        statusLabel: statusLabel,
-        leaveType: leaveType,
-        checkInTime: checkIn,
-        checkOutTime: checkOut,
-        isWeekend: isWeekend,
-        isHoliday: day == 15,
-      ));
-    }
-
-    return list;
-  }
 }

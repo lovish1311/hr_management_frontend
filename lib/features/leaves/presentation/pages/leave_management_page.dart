@@ -126,13 +126,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     final empId = AuthStorage.employeeId ?? 1;
 
     try {
-      // 1. Fetch employee leave balances from DB
-      final balanceRes = await http.get(Uri.parse('$_baseUrl/balance/$empId'), headers: headers);
+      // 1. Fetch employee leave balances from DB (fresh, un-cached)
+      final t = DateTime.now().millisecondsSinceEpoch;
+      final balanceRes = await http.get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
       if (balanceRes.statusCode == 200) {
         final Map<String, dynamic> b = json.decode(balanceRes.body);
-        _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 11.0;
-        _balances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 8.0;
-        _balances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 12.0;
+        _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 12.0;
+        _balances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 10.0;
+        _balances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 15.0;
         _balances['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
 
         _quotaLimits['Casual Leave'] = (b['casualLeaveQuota'] as num?)?.toDouble() ?? 12.0;
@@ -187,7 +188,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         }
       }
     } catch (e) {
-      debugPrint('Backend leave fetch fallback: $e');
+      // Log the real error so it's visible in the console — do NOT silently swallow
+      debugPrint('[LEAVE FETCH ERROR] Failed to load leave data: $e');
+      // Only seed mock data for the request history list — never overwrite real balance from API
       _seedMockLeaves();
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -359,24 +362,43 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     }
   }
 
-  void _withdrawLeave(dynamic leave) {
-    final type = leave['leaveType'] as String;
-    final days = (leave['totalDays'] as num).toDouble();
-
-    setState(() {
-      _myLeaves.removeWhere((l) => l['id'] == leave['id']);
-      if (_balances.containsKey(type)) {
-        final limit = _quotaLimits[type] ?? 12.0;
-        _balances[type] = (_balances[type]! + days).clamp(0.0, limit);
+  Future<void> _withdrawLeave(dynamic leave) async {
+    final leaveId = leave['id'];
+    try {
+      // Call backend to withdraw approved leave — this triggers LeaveWithdrawnEvent & balance refund
+      final res = await http.put(
+        Uri.parse('$_baseUrl/$leaveId/withdraw'),
+        headers: AuthStorage.authHeaders,
+        body: json.encode({'actorId': (AuthStorage.employeeId ?? 1).toString()}),
+      );
+      if (res.statusCode == 200) {
+        // Refetch FRESH balance and leave history from backend — never trust local state
+        await _fetchLeaveData();
+        if (!mounted) return;
+        final type = leave['leaveType'] as String;
+        final days = (leave['totalDays'] as num).toDouble();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Withdrew $type request. $days day(s) restored to balance.'),
+            backgroundColor: const Color(0xFF3B82F6),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Withdraw failed: ${res.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Withdrew $type request. Restored $days day(s) to balance.'),
-        backgroundColor: const Color(0xFF3B82F6),
-      ),
-    );
+    } catch (e) {
+      debugPrint('[WITHDRAW ERROR] $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Future<void> _updateLeaveStatus(int leaveId, String status, {String? rejectionReason}) async {
