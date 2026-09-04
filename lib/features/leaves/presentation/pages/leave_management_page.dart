@@ -31,30 +31,33 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   bool _isLoading = true;
   String _selectedStatusFilter = 'All';
 
-  // Live employee leave balances (Default initial HR quota for all employees)
+  bool _hasError = false;
+  String? _errorMessage;
+
+  // Live employee leave balances
   final Map<String, double> _balances = {
-    'Earned Leave': 12.0,
-    'Casual Leave': 12.0,
-    'Sick Leave': 10.0,
-    'Work From Home': 15.0,
-    'Comp - Off': 2.0,
-    'Birthday Leave': 1.0,
-    'Bereavement Leave': 5.0,
-    'Paternity Leave': 5.0,
+    'Earned Leave': 0.0,
+    'Casual Leave': 0.0,
+    'Sick Leave': 0.0,
+    'Work From Home': 0.0,
+    'Comp - Off': 0.0,
+    'Birthday Leave': 0.0,
+    'Bereavement Leave': 0.0,
+    'Paternity Leave': 0.0,
     'Loss Of Pay': 0.0,
   };
 
   // Initial total quota limits for progress calculation
   final Map<String, double> _quotaLimits = {
-    'Earned Leave': 12.0,
-    'Casual Leave': 12.0,
-    'Sick Leave': 10.0,
-    'Work From Home': 15.0,
-    'Comp - Off': 2.0,
-    'Birthday Leave': 1.0,
-    'Bereavement Leave': 5.0,
-    'Paternity Leave': 5.0,
-    'Loss Of Pay': 10.0,
+    'Earned Leave': 0.0,
+    'Casual Leave': 0.0,
+    'Sick Leave': 0.0,
+    'Work From Home': 0.0,
+    'Comp - Off': 0.0,
+    'Birthday Leave': 0.0,
+    'Bereavement Leave': 0.0,
+    'Paternity Leave': 0.0,
+    'Loss Of Pay': 0.0,
   };
 
   List<dynamic> _myLeaves = [];
@@ -121,7 +124,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   Future<void> _fetchLeaveData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
     final headers = AuthStorage.authHeaders;
     final empId = AuthStorage.employeeId ?? 1;
 
@@ -131,15 +138,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       final balanceRes = await http.get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
       if (balanceRes.statusCode == 200) {
         final Map<String, dynamic> b = json.decode(balanceRes.body);
-        _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 12.0;
-        _balances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 10.0;
-        _balances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 15.0;
+        _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
         _balances['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
 
-        _quotaLimits['Casual Leave'] = (b['casualLeaveQuota'] as num?)?.toDouble() ?? 12.0;
-        _quotaLimits['Sick Leave'] = (b['sickLeaveQuota'] as num?)?.toDouble() ?? 10.0;
-        _quotaLimits['Earned Leave'] = (b['earnedLeaveQuota'] as num?)?.toDouble() ?? 15.0;
+        _quotaLimits['Casual Leave'] = (b['casualLeaveQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Sick Leave'] = (b['sickLeaveQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Earned Leave'] = (b['earnedLeaveQuota'] as num?)?.toDouble() ?? 0.0;
         _quotaLimits['Work From Home'] = (b['workFromHomeQuota'] as num?)?.toDouble() ?? 0.0;
+      } else {
+        _hasError = true;
+        _errorMessage = 'Failed to fetch leave balances from server (Status: ${balanceRes.statusCode}).';
       }
 
       // 2. Fetch employee leave history from DB
@@ -170,8 +180,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             'status': item['status'] ?? 'PENDING',
           };
         }).toList();
-      } else {
-        _myLeaves = [];
+      } else if (!_hasError) {
+        _hasError = true;
+        _errorMessage = 'Failed to fetch leave requests from server (Status: ${myLeavesRes.statusCode}).';
       }
 
       // 3. Fetch pending approval requests for Manager / HR
@@ -180,11 +191,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       if (pendingRes.statusCode == 200) {
         final List<dynamic> pendingList = json.decode(pendingRes.body);
         _pendingApprovals = pendingList;
-      } else {
-        _pendingApprovals = [];
+      } else if (!_hasError) {
+        _hasError = true;
+        _errorMessage = 'Failed to fetch pending approval requests from server.';
       }
     } catch (e) {
       debugPrint('[LEAVE FETCH ERROR] Failed to load leave data: $e');
+      _hasError = true;
+      _errorMessage = 'Unable to connect to server. Please check your connection and backend API.';
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -467,16 +481,73 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
-            : (AuthStorage.isHr
-                // Admin: directly shows the approvals view — no personal My Leaves tab
-                ? _buildPendingApprovalsView(isDark)
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildMyLeavesDashboard(isDark),
-                      _buildPendingApprovalsView(isDark),
-                    ],
-                  )),
+            : (_hasError
+                ? _buildErrorView(isDark)
+                : (AuthStorage.isHr
+                    // Admin: directly shows the approvals view — no personal My Leaves tab
+                    ? _buildPendingApprovalsView(isDark)
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildMyLeavesDashboard(isDark),
+                          _buildPendingApprovalsView(isDark),
+                        ],
+                      ))),
+      ),
+    );
+  }
+
+  Widget _buildErrorView(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 64,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Can't load page",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? "Unable to connect to server. Please check your network connection or server status.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _fetchLeaveData,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

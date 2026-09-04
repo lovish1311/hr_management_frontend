@@ -60,7 +60,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
 
   String _selectedCategory = 'Leave';
   String _selectedLeaveType = 'Earned Leave';
-  double _leaveBalanceDays = 12.0;
+  double _leaveBalanceDays = 0.0;
 
   late DateTime _fromDate;
   String _fromSession = 'Session 1';
@@ -99,9 +99,9 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
         final Map<String, dynamic> b = json.decode(res.body);
         if (mounted) {
           setState(() {
-            _liveBalances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 12.0;
-            _liveBalances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 10.0;
-            _liveBalances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 15.0;
+            _liveBalances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+            _liveBalances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+            _liveBalances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
             _liveBalances['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
           });
         }
@@ -312,56 +312,56 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     return [
       LeaveTypeGridOption(
         type: 'Earned Leave',
-        balance: (b['Earned Leave'] as num?)?.toDouble() ?? 12.0,
+        balance: (b['Earned Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFECFDF5),
         icon: Icons.umbrella_rounded,
         iconColor: const Color(0xFF10B981),
       ),
       LeaveTypeGridOption(
         type: 'Casual Leave',
-        balance: (b['Casual Leave'] as num?)?.toDouble() ?? 12.0,
+        balance: (b['Casual Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFFEF3C7),
         icon: Icons.work_history_outlined,
         iconColor: const Color(0xFFD97706),
       ),
       LeaveTypeGridOption(
         type: 'Sick Leave',
-        balance: (b['Sick Leave'] as num?)?.toDouble() ?? 10.0,
+        balance: (b['Sick Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFE0F2FE),
         icon: Icons.health_and_safety_outlined,
         iconColor: const Color(0xFF0284C7),
       ),
       LeaveTypeGridOption(
         type: 'Work From Home',
-        balance: (b['Work From Home'] as num?)?.toDouble() ?? 15.0,
+        balance: (b['Work From Home'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFF1F5F9),
         icon: Icons.home_work_outlined,
         iconColor: const Color(0xFF475569),
       ),
       LeaveTypeGridOption(
         type: 'Comp - Off',
-        balance: (b['Comp - Off'] as num?)?.toDouble() ?? 2.0,
+        balance: (b['Comp - Off'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFECFDF5),
         icon: Icons.card_membership_outlined,
         iconColor: const Color(0xFF059669),
       ),
       LeaveTypeGridOption(
         type: 'Birthday Leave',
-        balance: (b['Birthday Leave'] as num?)?.toDouble() ?? 1.0,
+        balance: (b['Birthday Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFFFF1F2),
         icon: Icons.cake_outlined,
         iconColor: const Color(0xFFF43F5E),
       ),
       LeaveTypeGridOption(
         type: 'Bereavement Leave',
-        balance: (b['Bereavement Leave'] as num?)?.toDouble() ?? 5.0,
+        balance: (b['Bereavement Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFF5F3FF),
         icon: Icons.people_outline_rounded,
         iconColor: const Color(0xFF8B5CF6),
       ),
       LeaveTypeGridOption(
         type: 'Paternity Leave',
-        balance: (b['Paternity Leave'] as num?)?.toDouble() ?? 5.0,
+        balance: (b['Paternity Leave'] as num?)?.toDouble() ?? 0.0,
         color: const Color(0xFFF5F3FF),
         icon: Icons.child_care_outlined,
         iconColor: const Color(0xFF7C3AED),

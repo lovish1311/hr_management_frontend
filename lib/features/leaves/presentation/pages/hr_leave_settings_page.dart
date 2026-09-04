@@ -62,6 +62,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   // Staged pending adjustments: tracks leaveType -> delta (+2.0, -1.0)
   final Map<String, double> _pendingQuotaDeltas = {};
 
+  // Section 3: Time-Off Permission Policy Rules state
+  String _timeOffPolicyMode = 'UNITWISE';
+  String _timeOffCycle = 'Monthly';
+  int _shortBreakUnitLimit = 2;
+  int _earlyOutUnitLimit = 2;
+  int _lateArrivalUnitLimit = 2;
+  int _hourlyLimit = 4;
+  bool _isLoadingTimeOffSettings = false;
+
   String get _baseUrl {
     if (kIsWeb) return 'http://localhost:8080';
     try {
@@ -73,8 +82,83 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadEmployees();
+    _loadTimeOffSettings();
+  }
+
+  Future<void> _loadTimeOffSettings() async {
+    setState(() => _isLoadingTimeOffSettings = true);
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/api/settings'),
+        headers: AuthStorage.authHeaders,
+      );
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(res.body);
+        setState(() {
+          if (data['time_off_policy_mode'] != null && data['time_off_policy_mode'].toString().isNotEmpty) {
+            _timeOffPolicyMode = data['time_off_policy_mode'];
+          }
+          if (data['time_off_cycle'] != null && data['time_off_cycle'].toString().isNotEmpty) {
+            _timeOffCycle = data['time_off_cycle'];
+          }
+          _shortBreakUnitLimit = int.tryParse(data['time_off_short_break_unit_limit']?.toString() ?? '2') ?? 2;
+          _earlyOutUnitLimit = int.tryParse(data['time_off_early_out_unit_limit']?.toString() ?? '2') ?? 2;
+          _lateArrivalUnitLimit = int.tryParse(data['time_off_late_arrival_unit_limit']?.toString() ?? '2') ?? 2;
+          _hourlyLimit = int.tryParse(data['time_off_hourly_limit']?.toString() ?? '4') ?? 4;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load time off settings: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingTimeOffSettings = false);
+    }
+  }
+
+  Future<void> _saveTimeOffSettings() async {
+    final payload = {
+      'time_off_policy_mode': _timeOffPolicyMode,
+      'time_off_cycle': _timeOffCycle,
+      'time_off_short_break_unit_limit': _shortBreakUnitLimit.toString(),
+      'time_off_early_out_unit_limit': _earlyOutUnitLimit.toString(),
+      'time_off_late_arrival_unit_limit': _lateArrivalUnitLimit.toString(),
+      'time_off_hourly_limit': _hourlyLimit.toString(),
+    };
+
+    try {
+      final res = await http.put(
+        Uri.parse('$_baseUrl/api/settings/batch'),
+        headers: AuthStorage.authHeaders,
+        body: json.encode(payload),
+      );
+
+      if (res.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Time-off permission rules & limits updated successfully!'),
+            backgroundColor: context.appTheme.success,
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save settings: ${res.body}'),
+            backgroundColor: context.appTheme.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving settings: $e'),
+          backgroundColor: context.appTheme.danger,
+        ),
+      );
+    }
   }
 
   Future<void> _loadEmployees() async {
@@ -381,8 +465,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(icon: Icon(Icons.tune_rounded), text: '1. Company-Wide Leave Allocation'),
-            Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Individual Employee Leave Management'),
+            Tab(icon: Icon(Icons.tune_rounded), text: '1. Leave Allocation'),
+            Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Employee Quotas'),
+            Tab(icon: Icon(Icons.timer_rounded), text: '3. Short Break & Permission Rules'),
           ],
         ),
       ),
@@ -393,6 +478,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           children: [
             _buildSection1BulkGrants(),
             _buildSection2EmployeeOverrides(),
+            _buildSection3TimeOffPolicyRules(),
           ],
         ),
       ),
@@ -1008,6 +1094,361 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  // ---------------------------------------------------------------------------
+  // SECTION 3: Short Break, Early Out & Late Arrival Permission Policy Rules
+  // ---------------------------------------------------------------------------
+  Widget _buildSection3TimeOffPolicyRules() {
+    final t = context.appTheme;
+
+    if (_isLoadingTimeOffSettings) {
+      return Center(child: CircularProgressIndicator(color: t.primary));
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [t.primaryDark, const Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.timer_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text(
+                            'Time-Off Permission Policy & Limit Rules',
+                            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Configure how Short Break, Early Out, and Late Arrival permissions are enforced across your organization. Select evaluation modes, policy cycles, and unit or hourly quotas.',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Policy Evaluation Mode Card
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: t.card,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: t.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('1. Policy Evaluation Mode', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.text)),
+                    const SizedBox(height: 4),
+                    Text('Select how permission requests are restricted.', style: TextStyle(fontSize: 12, color: t.textSecondary)),
+                    const SizedBox(height: 16),
+
+                    _buildPolicyModeOption(
+                      mode: 'FLEXIBLE',
+                      title: 'Flexible Mode (Unlimited / Manual Approval)',
+                      description: 'No automated limit checks. Approvers review and approve requests on a case-by-case basis.',
+                      icon: Icons.splitscreen_rounded,
+                      t: t,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildPolicyModeOption(
+                      mode: 'UNITWISE',
+                      title: 'Unit-Based Quotas (Per-Count Limit)',
+                      description: 'Restricts the number of permission instances (e.g. max 2 Short Breaks, 2 Early Outs, 2 Late Arrivals per cycle).',
+                      icon: Icons.filter_1_rounded,
+                      t: t,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildPolicyModeOption(
+                      mode: 'HOURLY_SEPARATE',
+                      title: 'Hourly Quotas (Individual Hours Limit)',
+                      description: 'Applies an independent max hour limit for Short Breaks, Early Outs, and Late Arrivals separately.',
+                      icon: Icons.access_time_filled_rounded,
+                      t: t,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildPolicyModeOption(
+                      mode: 'HOURLY_COMBINED',
+                      title: 'Hourly Quotas (Combined Hours Pool)',
+                      description: 'Shares a single total pool of hours (e.g., 4 hours total) across Short Breaks, Early Outs, and Late Arrivals.',
+                      icon: Icons.pie_chart_outline_rounded,
+                      t: t,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Policy Cycle & Quota Limits Card
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: t.card,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: t.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('2. Policy Cycle & Quota Limits', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.text)),
+                    const SizedBox(height: 4),
+                    Text('Specify the resetting frequency and individual limits for time-based exemptions.', style: TextStyle(fontSize: 12, color: t.textSecondary)),
+                    const SizedBox(height: 20),
+
+                    // Cycle Selector
+                    Row(
+                      children: [
+                        Text('Policy Cycle Frequency:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
+                        const SizedBox(width: 16),
+                        Wrap(
+                          spacing: 8,
+                          children: ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'].map((cycle) {
+                            final isSel = _timeOffCycle == cycle;
+                            return ChoiceChip(
+                              label: Text(cycle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isSel ? Colors.white : t.text)),
+                              selected: isSel,
+                              selectedColor: t.primary,
+                              onSelected: (val) {
+                                if (val) setState(() => _timeOffCycle = cycle);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Divider(height: 1, color: t.border),
+                    const SizedBox(height: 20),
+
+                    // Unit Limits Editor (Short Break, Early Out, Late Arrival)
+                    Text('Permission Unit Limits (Per $_timeOffCycle Cycle):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: t.text)),
+                    const SizedBox(height: 14),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildLimitCounter(
+                            title: 'Short Break Limit',
+                            subtitle: 'Max short breaks allowed per cycle',
+                            value: _shortBreakUnitLimit,
+                            icon: Icons.coffee_outlined,
+                            color: const Color(0xFFF59E0B),
+                            t: t,
+                            onChanged: (val) => setState(() => _shortBreakUnitLimit = val),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildLimitCounter(
+                            title: 'Early Out Limit',
+                            subtitle: 'Max early outs allowed per cycle',
+                            value: _earlyOutUnitLimit,
+                            icon: Icons.directions_run_outlined,
+                            color: const Color(0xFF8B5CF6),
+                            t: t,
+                            onChanged: (val) => setState(() => _earlyOutUnitLimit = val),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildLimitCounter(
+                            title: 'Late Arrival Limit',
+                            subtitle: 'Max late arrival permissions per cycle',
+                            value: _lateArrivalUnitLimit,
+                            icon: Icons.watch_later_outlined,
+                            color: const Color(0xFFEF4444),
+                            t: t,
+                            onChanged: (val) => setState(() => _lateArrivalUnitLimit = val),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildLimitCounter(
+                            title: 'Combined Hourly Limit',
+                            subtitle: 'Max total hours (for Hourly Mode)',
+                            value: _hourlyLimit,
+                            icon: Icons.timer_outlined,
+                            color: const Color(0xFF0284C7),
+                            t: t,
+                            onChanged: (val) => setState(() => _hourlyLimit = val),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Save Rules Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _saveTimeOffSettings,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8B5CF6),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 2,
+                        ),
+                        icon: const Icon(Icons.save_rounded, size: 20),
+                        label: const Text(
+                          'Save Time-Off Permission Policy Rules & Limits',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolicyModeOption({required String mode, required String title, required String description, required IconData icon, required AppThemeConfig t}) {
+    final isSelected = _timeOffPolicyMode == mode;
+    return InkWell(
+      onTap: () => setState(() => _timeOffPolicyMode = mode),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? t.primary.withValues(alpha: 0.1) : t.cardSoft,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? t.primary : t.border,
+            width: isSelected ? 2.0 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Radio<String>(
+              value: mode,
+              groupValue: _timeOffPolicyMode,
+              onChanged: (val) {
+                if (val != null) setState(() => _timeOffPolicyMode = val);
+              },
+              activeColor: t.primary,
+            ),
+            Icon(icon, color: isSelected ? t.primary : t.textSecondary, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? t.primary : t.text)),
+                  const SizedBox(height: 2),
+                  Text(description, style: TextStyle(fontSize: 12, color: t.textSecondary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLimitCounter({required String title, required String subtitle, required int value, required IconData icon, required Color color, required AppThemeConfig t, required Function(int) onChanged}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: t.cardSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: t.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
+                    Text(subtitle, style: TextStyle(fontSize: 10, color: t.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: Icon(Icons.remove_circle_outline_rounded, color: color),
+                onPressed: () {
+                  if (value > 0) onChanged(value - 1);
+                },
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$value',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.add_circle_outline_rounded, color: color),
+                onPressed: () => onChanged(value + 1),
+              ),
+            ],
           ),
         ],
       ),
