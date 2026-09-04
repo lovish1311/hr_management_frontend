@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
-import 'package:hr_management/core/widgets/hr_drawer.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
@@ -275,10 +274,11 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
             constraints: const BoxConstraints(maxWidth: 540),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Row(
                     children: [
                       Container(
@@ -400,6 +400,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                   ),
                 ],
               ),
+             ),
             ),
           ),
         );
@@ -452,18 +453,18 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   @override
   Widget build(BuildContext context) {
     final t = context.appTheme;
-
     return ResponsiveScaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Company Leave Policy & Quotas', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('Company Leave Policy & Quotas', style: TextStyle(fontWeight: FontWeight.bold, color: t.onBackgroundText)),
         elevation: 0,
         backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: t.onBackgroundText),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorColor: t.primary,
+          labelColor: t.onBackgroundText,
+          unselectedLabelColor: t.onBackgroundTextSecondary,
           tabs: const [
             Tab(icon: Icon(Icons.tune_rounded), text: '1. Leave Allocation'),
             Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Employee Quotas'),
@@ -471,6 +472,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           ],
         ),
       ),
+
 
       body: SafeArea(
         child: TabBarView(
@@ -1098,6 +1100,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
         ],
       ),
     );
+  }
+
   // ---------------------------------------------------------------------------
   // SECTION 3: Short Break, Early Out & Late Arrival Permission Policy Rules
   // ---------------------------------------------------------------------------

@@ -500,60 +500,75 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   void _showApplyRequestOptionsForDate(AttendanceCalendarDay day) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        
         final t = context.appTheme;
+        final maxHeight = MediaQuery.of(context).size.height * 0.85;
         return SafeArea(
           child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: t.card,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Apply Request for ${_formatDate(day.date)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              _buildApplyOptionTile(
-                icon: Icons.luggage_outlined,
-                color: t.primary,
-                title: 'Apply Leave',
-                subtitle: 'Full day or half day leave',
-                onTap: () {
-                  Navigator.pop(context);
-                  _openApplyDialog(day.date, 'Leave');
-                },
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Apply Request for ${_formatDate(day.date)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  _buildApplyOptionTile(
+                    icon: Icons.luggage_outlined,
+                    color: t.primary,
+                    title: 'Apply Leave',
+                    subtitle: 'Full day or half day leave',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog(day.date, 'Leave');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.coffee_outlined,
+                    color: t.warning,
+                    title: 'Apply Short Break',
+                    subtitle: 'Partial time off during shift',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog(day.date, 'Short Break');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.directions_run_outlined,
+                    color: t.secondary,
+                    title: 'Apply Early Out',
+                    subtitle: 'Leave work earlier than schedule',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog(day.date, 'Early Out');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildApplyOptionTile(
+                    icon: Icons.watch_later_outlined,
+                    color: const Color(0xFFEF4444),
+                    title: 'Apply Late Arrival',
+                    subtitle: 'Permission for arriving after shift start',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openApplyDialog(day.date, 'Late Arrival');
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildApplyOptionTile(
-                icon: Icons.coffee_outlined,
-                color: t.warning,
-                title: 'Apply Short Break',
-                subtitle: 'Partial time off during shift',
-                onTap: () {
-                  Navigator.pop(context);
-                  _openApplyDialog(day.date, 'Short Break');
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildApplyOptionTile(
-                icon: Icons.directions_run_outlined,
-                color: t.secondary,
-                title: 'Apply Early Out',
-                subtitle: 'Leave work earlier than schedule',
-                onTap: () {
-                  Navigator.pop(context);
-                  _openApplyDialog(day.date, 'Early Out');
-                },
-              ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }
@@ -667,7 +682,6 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   Widget _buildDetailRow(String label, String value, AppThemeConfig t) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -721,16 +735,22 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     final String weeklyHoursStr = '${weeklyWorkingMinutes ~/ 60}h ${weeklyWorkingMinutes % 60}m';
 
     return ResponsiveScaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text(isAdmin ? 'Attendance Management' : 'Attendance Calendar'),
+        title: Text(
+          isAdmin ? 'Attendance Management' : 'Attendance Calendar',
+          style: TextStyle(fontWeight: FontWeight.bold, color: t.onBackgroundText),
+        ),
+        iconTheme: IconThemeData(color: t.onBackgroundText),
         actions: [
           if (!isAdmin)
             IconButton(
-              icon: const Icon(Icons.refresh_rounded),
+              icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
               onPressed: _fetchCalendarData,
             ),
         ],
       ),
+
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
@@ -1311,7 +1331,6 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   Widget _buildLegendItem(String label, Color color, AppThemeConfig t) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

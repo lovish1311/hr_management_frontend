@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+
 import '../../../../core/services/auth_storage.dart';
 import '../widgets/apply_leave_dialog.dart';
 
@@ -204,93 +208,6 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     }
   }
 
-  void _seedMockLeaves() {
-    if (_myLeaves.isEmpty) {
-      _myLeaves = [
-        {
-          'id': 101,
-          'leaveType': 'Birthday Leave',
-          'category': 'Leave',
-          'totalDays': 0.5,
-          'appliedOn': '19 Mar 2026',
-          'startDate': '19 Mar 2026',
-          'startSession': 'Session 2',
-          'endDate': '19 Mar 2026',
-          'endSession': 'Session 2',
-          'reason': 'Birthday half-day off',
-          'status': 'PENDING',
-        },
-        {
-          'id': 102,
-          'leaveType': 'Casual Leave',
-          'category': 'Leave',
-          'totalDays': 1.0,
-          'appliedOn': '10 Feb 2026',
-          'startDate': '14 Feb 2026',
-          'startSession': 'Session 1',
-          'endDate': '14 Feb 2026',
-          'endSession': 'Session 2',
-          'reason': 'Personal errands',
-          'status': 'APPROVED',
-        },
-        {
-          'id': 103,
-          'leaveType': 'Earned Leave',
-          'category': 'Leave',
-          'totalDays': 2.0,
-          'appliedOn': '05 Jan 2026',
-          'startDate': '10 Jan 2026',
-          'startSession': 'Session 1',
-          'endDate': '11 Jan 2026',
-          'endSession': 'Session 2',
-          'reason': 'Family trip',
-          'status': 'APPROVED',
-        },
-      ];
-    }
-
-    if (_pendingApprovals.isEmpty) {
-      _pendingApprovals = [
-        {
-          'id': 301,
-          'employeeId': 3,
-          'employeeName': 'Priya Patel',
-          'employeeEmail': 'priya.patel@company.com',
-          'leaveType': 'Sick Leave',
-          'totalDays': 2.0,
-          'startDate': '2026-08-05',
-          'endDate': '2026-08-06',
-          'reason': 'Personal Medical Leave',
-          'status': 'PENDING',
-        },
-        {
-          'id': 302,
-          'employeeId': 15,
-          'employeeName': 'Neha Verma',
-          'employeeEmail': 'neha.verma@company.com',
-          'leaveType': 'Sick Leave',
-          'totalDays': 2.0,
-          'startDate': '2026-08-30',
-          'endDate': '2026-08-31',
-          'reason': 'Dental procedure',
-          'status': 'PENDING',
-        },
-        {
-          'id': 303,
-          'employeeId': 14,
-          'employeeName': 'Rohan Gupta',
-          'employeeEmail': 'rohan.gupta@company.com',
-          'leaveType': 'Casual Leave',
-          'totalDays': 3.0,
-          'startDate': '2026-08-27',
-          'endDate': '2026-08-29',
-          'reason': 'Personal work & family commitment',
-          'status': 'PENDING',
-        },
-      ];
-    }
-  }
-
   Future<void> _applyForLeaveFromMap(Map<String, dynamic> data) async {
     final type = data['leaveType'] as String;
     final fromDateStr = data['fromDate'] as String;
@@ -437,19 +354,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final t = context.appTheme;
 
     return ResponsiveScaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Leave Management', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Leave Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: t.onBackgroundText)),
         elevation: 0,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        iconTheme: IconThemeData(color: t.onBackgroundText),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
             tooltip: 'Refresh Quotas',
             onPressed: _fetchLeaveData,
           ),
@@ -457,47 +373,89 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         ],
         bottom: AuthStorage.isHr
             ? null
-            : TabBar(
-                controller: _tabController,
-                indicatorColor: const Color(0xFF0D9488),
-                labelColor: const Color(0xFF0D9488),
-                unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
-                tabs: const [
-                  Tab(icon: Icon(Icons.person_outline), text: 'My Leaves & Quotas'),
-                  Tab(icon: Icon(Icons.approval_outlined), text: 'Team Approvals'),
-                ],
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(48),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: t.card.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: t.border.withValues(alpha: 0.3)),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      color: t.primary,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: t.primary.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: t.onBackgroundTextSecondary,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    tabs: const [
+                      Tab(icon: Icon(Icons.person_outline_rounded, size: 18), text: 'My Leaves & Quotas'),
+                      Tab(icon: Icon(Icons.approval_rounded, size: 18), text: 'Team Approvals'),
+                    ],
+                  ),
+                ),
               ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showApplyRequestOptions,
-        backgroundColor: const Color(0xFF0D9488),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          // Admin always applies on behalf of an employee, not for themselves
-          AuthStorage.isHr ? 'Apply On Behalf of Employee' : 'Apply Request',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [t.primary, t.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: t.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          elevation: 0,
+          highlightElevation: 0,
+          backgroundColor: Colors.transparent,
+          onPressed: _showApplyRequestOptions,
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: Text(
+            AuthStorage.isHr ? 'Apply On Behalf of Employee' : 'Apply Request',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          ),
         ),
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
+            ? Center(child: CircularProgressIndicator(color: t.primary))
             : (_hasError
-                ? _buildErrorView(isDark)
+                ? _buildErrorView(t)
                 : (AuthStorage.isHr
-                    // Admin: directly shows the approvals view — no personal My Leaves tab
-                    ? _buildPendingApprovalsView(isDark)
+                    ? _buildPendingApprovalsView(t)
                     : TabBarView(
                         controller: _tabController,
                         children: [
-                          _buildMyLeavesDashboard(isDark),
-                          _buildPendingApprovalsView(isDark),
+                          _buildMyLeavesDashboard(t),
+                          _buildPendingApprovalsView(t),
                         ],
                       ))),
       ),
     );
   }
 
-  Widget _buildErrorView(bool isDark) {
+  Widget _buildErrorView(AppThemeConfig t) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -522,7 +480,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                color: t.onBackgroundText,
               ),
             ),
             const SizedBox(height: 8),
@@ -531,7 +489,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                color: t.onBackgroundTextSecondary,
               ),
             ),
             const SizedBox(height: 24),
@@ -540,7 +498,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Try Again'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D9488),
+                backgroundColor: t.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -552,14 +510,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildMyLeavesDashboard(bool isDark) {
+  Widget _buildMyLeavesDashboard(AppThemeConfig t) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Dashboard Welcome Hero Banner
-          _buildHeroBanner(isDark),
+          _buildHeroBanner(t),
           const SizedBox(height: 28),
 
           // 2. Leave Quotas Grid (Desktop 4-col / Mobile 2-col)
@@ -571,20 +529,20 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  color: t.onBackgroundText,
                 ),
               ),
               Text(
                 'Allocated by HR Admin',
-                style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+                style: TextStyle(fontSize: 12, color: t.onBackgroundTextSecondary),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          _buildQuotaGrid(isDark),
+          _buildQuotaGrid(t),
           const SizedBox(height: 32),
 
-          // 3. Responsive Main Grid (Left: Request History, Right: Company Holidays & Guidelines)
+          // 3. Responsive Main Grid
           LayoutBuilder(
             builder: (context, constraints) {
               final isDesktop = constraints.maxWidth > 850;
@@ -594,21 +552,21 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   children: [
                     Expanded(
                       flex: 5,
-                      child: _buildHistorySection(isDark),
+                      child: _buildHistorySection(t),
                     ),
                     const SizedBox(width: 24),
                     Expanded(
                       flex: 3,
-                      child: _buildSidebarSection(isDark),
+                      child: _buildSidebarSection(t),
                     ),
                   ],
                 );
               } else {
                 return Column(
                   children: [
-                    _buildHistorySection(isDark),
+                    _buildHistorySection(t),
                     const SizedBox(height: 24),
-                    _buildSidebarSection(isDark),
+                    _buildSidebarSection(t),
                   ],
                 );
               }
@@ -620,20 +578,17 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   // Gradient Welcome Hero Banner matching Dashboard
-  Widget _buildHeroBanner(bool isDark) {
+  Widget _buildHeroBanner(AppThemeConfig t) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: t.card,
         borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(color: t.border, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+            color: t.glow,
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -646,30 +601,31 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: t.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: t.primary.withValues(alpha: 0.25)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.beach_access_rounded, color: Color(0xFFFACC15), size: 14),
-                      SizedBox(width: 6),
+                      const Icon(Icons.beach_access_rounded, color: Color(0xFFF59E0B), size: 14),
+                      const SizedBox(width: 6),
                       Text(
                         'LIVE LEAVE PORTAL',
-                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                        style: TextStyle(color: t.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Account for your absence by managing leaves 👋',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: t.text,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -678,23 +634,39 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   'Apply for time off, monitor remaining quotas, and track request approvals in real-time.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: t.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: _showApplyRequestOptions,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 4,
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [t.primary, t.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: t.primary.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: _showApplyRequestOptions,
+              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+              label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
             ),
           ),
         ],
@@ -703,7 +675,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   // Quota Grid Cards
-  Widget _buildQuotaGrid(bool isDark) {
+  Widget _buildQuotaGrid(AppThemeConfig t) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 550 ? 3 : 2);
@@ -721,73 +693,12 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             final item = _quotaGridItems[index];
             final rem = _balances[item.key] ?? 0.0;
             final limit = _quotaLimits[item.key] ?? 12.0;
-            final color = item.color;
 
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: color.withValues(alpha: 0.25), width: 1.2),
-                boxShadow: [
-                  BoxShadow(color: color.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(item.icon, color: color, size: 16),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$rem',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Out of ${limit.toInt()} Allocated Days',
-                        style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : const Color(0xFF94A3B8)),
-                      ),
-                    ],
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0,
-                      backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                      minHeight: 4,
-                    ),
-                  ),
-                ],
-              ),
+            return _QuotaCardTile(
+              item: item,
+              remaining: rem,
+              limit: limit,
+              t: t,
             );
           },
         );
@@ -796,7 +707,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   // Filterable Request History Section
-  Widget _buildHistorySection(bool isDark) {
+  Widget _buildHistorySection(AppThemeConfig t) {
     final filtered = _myLeaves.where((leave) {
       if (_selectedStatusFilter == 'All') return true;
       return (leave['status'] as String).toLowerCase() == _selectedStatusFilter.toLowerCase();
@@ -805,11 +716,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0), width: 1.2),
+        color: t.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: t.border, width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 14, offset: const Offset(0, 6)),
+          BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
         ],
       ),
       child: Column(
@@ -823,18 +734,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  color: t.text,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                  color: t.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${filtered.length} Requests',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.primary),
                 ),
               ),
             ],
@@ -852,9 +763,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   child: ChoiceChip(
                     label: Text(status),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF0D9488),
+                    selectedColor: t.primary,
+                    backgroundColor: t.cardSoft,
+                    side: BorderSide(color: isSelected ? t.primary : t.border),
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                      color: isSelected ? Colors.white : t.textSecondary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       fontSize: 12,
                     ),
@@ -871,14 +784,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           if (filtered.isEmpty)
             _buildEmptyState('No leave requests found for status "$_selectedStatusFilter"')
           else
-            ...filtered.map((leave) => _buildInspirationLeaveCard(leave, isDark)),
+            ...filtered.map((leave) => _buildInspirationLeaveCard(leave, t)),
         ],
       ),
     );
   }
 
-  // Card matching screenshot 6 & 7 exactly
-  Widget _buildInspirationLeaveCard(dynamic leave, bool isDark) {
+  // Individual Request Card
+  Widget _buildInspirationLeaveCard(dynamic leave, AppThemeConfig t) {
     final leaveType = leave['leaveType'] ?? 'Leave';
     final totalDays = leave['totalDays'] ?? 1.0;
     final category = leave['category'] ?? 'Leave';
@@ -894,11 +807,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        color: t.cardSoft,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        border: Border.all(color: t.border),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: t.glow.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -908,21 +821,21 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
+              color: t.primary.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              border: Border(bottom: BorderSide(color: const Color(0xFFA7F3D0).withValues(alpha: 0.5))),
+              border: Border(bottom: BorderSide(color: t.border.withValues(alpha: 0.5))),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '$leaveType - $totalDays day(s)',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text),
                 ),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: status == 'APPROVED'
                             ? const Color(0xFF10B981).withValues(alpha: 0.15)
@@ -934,7 +847,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       child: Text(
                         status,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: status == 'APPROVED'
                               ? const Color(0xFF10B981)
@@ -945,7 +858,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.north_east_rounded, size: 16, color: Color(0xFF0D9488)),
+                    Icon(Icons.north_east_rounded, size: 16, color: t.primary),
                   ],
                 ),
               ],
@@ -958,25 +871,25 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.folder_open_rounded, size: 16, color: Colors.grey),
+                    Icon(Icons.folder_open_rounded, size: 16, color: t.textSecondary),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Category', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        Text('Category', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),
-                        Text(category, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                        Text(category, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
                       ],
                     ),
                     const SizedBox(width: 32),
-                    const Icon(Icons.check_box_outlined, size: 16, color: Colors.grey),
+                    Icon(Icons.check_box_outlined, size: 16, color: t.textSecondary),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Applied on', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        Text('Applied on', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),
-                        Text(appliedOn, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                        Text(appliedOn, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
                       ],
                     ),
                   ],
@@ -984,7 +897,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
+                    Icon(Icons.calendar_today_outlined, size: 16, color: t.textSecondary),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Row(
@@ -992,23 +905,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('From', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                              Text('From', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
-                              Text(startDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                              Text(startSession, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              Text(startDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
+                              Text(startSession, style: TextStyle(fontSize: 10, color: t.textSecondary)),
                             ],
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text('—', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text('—', style: TextStyle(color: t.textSecondary, fontWeight: FontWeight.bold)),
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('To', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                              Text('To', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
-                              Text(endDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                              Text(endSession, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              Text(endDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
+                              Text(endSession, style: TextStyle(fontSize: 10, color: t.textSecondary)),
                             ],
                           ),
                         ],
@@ -1023,7 +936,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     child: ElevatedButton(
                       onPressed: () => _withdrawLeave(leave),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: t.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1041,18 +954,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   // Right Sidebar Component (Holidays & Company Guidelines)
-  Widget _buildSidebarSection(bool isDark) {
+  Widget _buildSidebarSection(AppThemeConfig t) {
     return Column(
       children: [
         // Upcoming Holidays Card
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0), width: 1.2),
+            color: t.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: t.border, width: 1.2),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 14, offset: const Offset(0, 6)),
+              BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -1066,18 +979,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: t.text,
                     ),
                   ),
-                  const Icon(Icons.event_available_rounded, size: 20, color: Color(0xFF0D9488)),
+                  Icon(Icons.event_available_rounded, size: 20, color: t.primary),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildHolidayItem('Diwali Festival', 'Oct 31, 2026', 'Mandatory', isDark),
+              _buildHolidayItem('Diwali Festival', 'Oct 31, 2026', 'Mandatory', t),
               const SizedBox(height: 10),
-              _buildHolidayItem('Christmas Day', 'Dec 25, 2026', 'Mandatory', isDark),
+              _buildHolidayItem('Christmas Day', 'Dec 25, 2026', 'Mandatory', t),
               const SizedBox(height: 10),
-              _buildHolidayItem("New Year's Eve", 'Dec 31, 2026', 'Restricted', isDark),
+              _buildHolidayItem("New Year's Eve", 'Dec 31, 2026', 'Restricted', t),
             ],
           ),
         ),
@@ -1087,11 +1000,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0), width: 1.2),
+            color: t.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: t.border, width: 1.2),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 14, offset: const Offset(0, 6)),
+              BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -1099,14 +1012,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             children: [
               Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 20, color: Color(0xFF3B82F6)),
+                  Icon(Icons.info_outline_rounded, size: 20, color: t.primary),
                   const SizedBox(width: 8),
                   Text(
                     'Leave Policy Highlights',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      color: t.text,
                     ),
                   ),
                 ],
@@ -1116,7 +1029,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 '• Leave requests exceeding 3 consecutive days require manager approval at least 48 hours prior.\n'
                 '• Unused Sick Leave and Casual Leave auto-reset at fiscal year-end.\n'
                 '• Session 1 represents morning hours (09:00 AM - 01:30 PM), Session 2 represents afternoon hours (01:30 PM - 06:00 PM).',
-                style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : const Color(0xFF64748B), height: 1.5),
+                style: TextStyle(fontSize: 12, color: t.textSecondary, height: 1.5),
               ),
             ],
           ),
@@ -1125,13 +1038,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildHolidayItem(String name, String date, String tag, bool isDark) {
+  Widget _buildHolidayItem(String name, String date, String tag, AppThemeConfig t) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        color: t.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: t.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1139,13 +1052,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+              Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
               const SizedBox(height: 2),
-              Text(date, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(date, style: TextStyle(fontSize: 11, color: t.textSecondary)),
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: tag == 'Mandatory' ? const Color(0xFF10B981).withValues(alpha: 0.15) : const Color(0xFF8B5CF6).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
@@ -1164,7 +1077,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildPendingApprovalsView(bool isDark) {
+  Widget _buildPendingApprovalsView(AppThemeConfig t) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -1173,10 +1086,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Pending Team Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Chip(
-                label: Text('${_pendingApprovals.length} Pending', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                backgroundColor: const Color(0xFFF59E0B),
+              Text('Pending Team Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.onBackgroundText)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('${_pendingApprovals.length} Pending', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -1188,7 +1105,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     itemCount: _pendingApprovals.length,
                     itemBuilder: (context, index) {
                       final leave = _pendingApprovals[index];
-                      return _buildApprovalCard(leave, isDark);
+                      return _buildApprovalCard(leave, t);
                     },
                   ),
           ),
@@ -1197,46 +1114,25 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  String _getMockEmployeeName(dynamic empId) {
-    final Map<dynamic, String> names = {
-      1: 'Harsh Kaushal',
-      2: 'Aarav Sharma',
-      3: 'Priya Patel',
-      14: 'Rohan Gupta',
-      15: 'Neha Verma',
-    };
-    return names[empId] ?? 'Team Member #${empId ?? 1}';
-  }
-
-  String _getMockEmployeeEmail(dynamic empId) {
-    final Map<dynamic, String> emails = {
-      1: 'harsh.k@company.com',
-      2: 'aarav.s@company.com',
-      3: 'priya.p@company.com',
-      14: 'rohan.g@company.com',
-      15: 'neha.v@company.com',
-    };
-    return emails[empId] ?? 'employee${empId ?? 1}@company.com';
-  }
-
-  Widget _buildApprovalCard(dynamic leave, bool isDark) {
+  Widget _buildApprovalCard(dynamic leave, AppThemeConfig t) {
     final empId = leave['employeeId'];
-    final empName = leave['employeeName'] ?? leave['employee']?['name'] ?? _getMockEmployeeName(empId);
-    final empEmail = leave['employeeEmail'] ?? leave['employee']?['email'] ?? _getMockEmployeeEmail(empId);
-    final leaveType = leave['leaveType'] ?? leave['type'] ?? 'Casual Leave';
+    final empName = leave['employeeName'] ?? leave['employee']?['name'] ?? 'Employee #$empId';
+    final empEmail = leave['employeeEmail'] ?? leave['employee']?['email'] ?? '';
+    final dept = leave['employeeDepartment'] ?? 'General';
+    final leaveType = (leave['leaveType'] ?? leave['type'] ?? 'Casual Leave').toString().replaceAll('_', ' ');
     final totalDays = leave['totalDays'] ?? leave['days'] ?? 1.0;
-    final startDate = leave['startDate'] ?? '2026-08-25';
-    final endDate = leave['endDate'] ?? '2026-08-26';
+    final startDate = leave['startDate'] ?? 'Today';
+    final endDate = leave['endDate'] ?? 'Today';
     final reason = leave['reason'] ?? 'None provided';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        color: t.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: t.border),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Padding(
@@ -1248,10 +1144,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                  backgroundColor: t.primary.withValues(alpha: 0.15),
                   child: Text(
                     empName.isNotEmpty ? empName[0] : 'E',
-                    style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -1264,13 +1160,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          color: t.text,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        empEmail,
-                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+                        empEmail.isNotEmpty ? '$empEmail • $dept' : dept,
+                        style: TextStyle(fontSize: 12, color: t.textSecondary),
                       ),
                     ],
                   ),
@@ -1278,13 +1174,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                    color: t.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '$leaveType ($totalDays Days)',
-                    style: const TextStyle(
-                      color: Color(0xFF0D9488),
+                    style: TextStyle(
+                      color: t.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -1293,23 +1189,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(height: 1),
+            Divider(height: 1, color: t.border),
             const SizedBox(height: 14),
             Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
+                Icon(Icons.calendar_today_outlined, size: 16, color: t.textSecondary),
                 const SizedBox(width: 8),
-                Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : const Color(0xFF334155))),
+                Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.notes_rounded, size: 16, color: Colors.grey),
+                Icon(Icons.notes_rounded, size: 16, color: t.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Reason: $reason', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF475569))),
+                  child: Text('Reason: $reason', style: TextStyle(fontSize: 13, color: t.textSecondary)),
                 ),
               ],
             ),
@@ -1364,76 +1260,83 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   void _showApplyRequestOptions() {
+    final t = context.appTheme;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final maxHeight = MediaQuery.of(context).size.height * 0.85;
         return SafeArea(
           child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              color: t.card,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AuthStorage.isHr ? 'Apply Request on Behalf of Employee' : 'Apply Request',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                _buildApplyOptionTile(
-                  icon: Icons.luggage_outlined,
-                  color: const Color(0xFF0284C7),
-                  title: 'Apply Leave',
-                  subtitle: AuthStorage.isHr ? 'Full/half-day leave on behalf of employee' : 'Full day or half day leave',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openApplyDialog('Leave');
-                  },
-                ),
-                // Time-based exemptions are personal (employee applies for themselves)
-                // Admin does NOT see these — they don't personally clock in/out
-                if (!AuthStorage.isHr) ...[
-                  const SizedBox(height: 12),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AuthStorage.isHr ? 'Apply Request on Behalf of Employee' : 'Apply Request',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text),
+                  ),
+                  const SizedBox(height: 16),
                   _buildApplyOptionTile(
-                    icon: Icons.coffee_outlined,
-                    color: const Color(0xFFF59E0B),
-                    title: 'Apply Short Break',
-                    subtitle: 'Partial time off during shift',
+                    t: t,
+                    icon: Icons.luggage_outlined,
+                    color: const Color(0xFF0284C7),
+                    title: 'Apply Leave',
+                    subtitle: AuthStorage.isHr ? 'Full/half-day leave on behalf of employee' : 'Full day or half day leave',
                     onTap: () {
                       Navigator.pop(context);
-                      _openApplyDialog('Short Break');
+                      _openApplyDialog('Leave');
                     },
                   ),
-                  const SizedBox(height: 12),
-                  _buildApplyOptionTile(
-                    icon: Icons.directions_run_outlined,
-                    color: const Color(0xFF8B5CF6),
-                    title: 'Apply Early Out',
-                    subtitle: 'Leave work earlier than schedule',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openApplyDialog('Early Out');
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildApplyOptionTile(
-                    icon: Icons.watch_later_outlined,
-                    color: const Color(0xFFEF4444),
-                    title: 'Apply Late Arrival',
-                    subtitle: 'Permission for arriving after shift start',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openApplyDialog('Late Arrival');
-                    },
-                  ),
+                  if (!AuthStorage.isHr) ...[
+                    const SizedBox(height: 12),
+                    _buildApplyOptionTile(
+                      t: t,
+                      icon: Icons.coffee_outlined,
+                      color: const Color(0xFFF59E0B),
+                      title: 'Apply Short Break',
+                      subtitle: 'Partial time off during shift',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openApplyDialog('Short Break');
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildApplyOptionTile(
+                      t: t,
+                      icon: Icons.directions_run_outlined,
+                      color: const Color(0xFF8B5CF6),
+                      title: 'Apply Early Out',
+                      subtitle: 'Leave work earlier than schedule',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openApplyDialog('Early Out');
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildApplyOptionTile(
+                      t: t,
+                      icon: Icons.watch_later_outlined,
+                      color: const Color(0xFFEF4444),
+                      title: 'Apply Late Arrival',
+                      subtitle: 'Permission for arriving after shift start',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openApplyDialog('Late Arrival');
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 24),
                 ],
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
           ),
         );
@@ -1441,14 +1344,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildApplyOptionTile({required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _buildApplyOptionTile({required AppThemeConfig t, required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
@@ -1466,7 +1369,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 children: [
                   Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: t.textSecondary)),
                 ],
               ),
             ),
@@ -1483,10 +1386,121 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       builder: (context) => ApplyLeaveDialog(
         initialBalance: _balances,
         initialRequestCategory: category,
-        // Admin always applies on behalf of an employee — no self-service apply
-        // Employee applies for themselves (targetEmployee is null)
         targetEmployee: null,
         onSubmit: (data) => _applyForLeaveFromMap(data),
+      ),
+    );
+  }
+}
+
+class _QuotaCardTile extends StatefulWidget {
+  final QuotaGridCardItem item;
+  final double remaining;
+  final double limit;
+  final AppThemeConfig t;
+
+  const _QuotaCardTile({
+    super.key,
+    required this.item,
+    required this.remaining,
+    required this.limit,
+    required this.t,
+  });
+
+  @override
+  State<_QuotaCardTile> createState() => _QuotaCardTileState();
+}
+
+class _QuotaCardTileState extends State<_QuotaCardTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    final item = widget.item;
+    final rem = widget.remaining;
+    final limit = widget.limit;
+    final color = item.color;
+    final isDesktop = kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: t.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _isHovered ? color : color.withValues(alpha: 0.3),
+            width: _isHovered ? 1.8 : 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isHovered ? color.withValues(alpha: 0.2) : t.glow,
+              blurRadius: _isHovered ? 16 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(item.icon, color: color, size: 18),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${rem % 1 == 0 ? rem.toInt() : rem}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: t.text,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Out of ${limit.toInt()} Allocated Days',
+                  style: TextStyle(fontSize: 11, color: t.textSecondary),
+                ),
+              ],
+            ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0,
+                backgroundColor: t.border,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

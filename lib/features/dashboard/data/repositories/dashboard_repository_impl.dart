@@ -35,48 +35,40 @@ class DashboardRepositoryImpl implements DashboardRepository {
       debugPrint('Failed to connect to backend dashboard endpoint: $e');
     }
 
-    // Graceful fallback data when backend API is offline or returns error
+    // Return 0 / empty list if offline or error occurs
     return DashboardStats(
-      totalEmployees: 142,
-      presentToday: 128,
-      onLeaveToday: 14,
-      pendingLeaves: [
-        LeaveRequest(
-          id: 101,
-          employeeName: 'Sarah Jenkins',
-          startDate: '2026-08-26',
-          endDate: '2026-08-28',
-          reason: 'Annual Leave / Vacation',
-        ),
-        LeaveRequest(
-          id: 102,
-          employeeName: 'Alex Smith',
-          startDate: '2026-08-27',
-          endDate: '2026-08-27',
-          reason: 'Medical Appointment',
-        ),
-        LeaveRequest(
-          id: 103,
-          employeeName: 'Alisha Sharma',
-          startDate: '2026-08-30',
-          endDate: '2026-09-02',
-          reason: 'Family Emergency',
-        ),
-      ],
+      totalEmployees: 0,
+      presentToday: 0,
+      onLeaveToday: 0,
+      pendingLeaves: [],
     );
   }
 
   @override
   Future<void> updateLeaveStatus(int id, String status) async {
-    final url = Uri.parse('$_baseUrl/api/v1/leaves/$id/status?status=$status');
+    final url = Uri.parse('$_baseUrl/api/v1/leaves/$id/status');
+    final approverId = AuthStorage.employeeId ?? 1;
+    final body = json.encode({
+      'status': status,
+      'rejectionReason': status == 'REJECTED' ? 'Rejected by Admin' : '',
+      'approverId': approverId.toString(),
+    });
     try {
       final response = await http.put(
         url,
         headers: AuthStorage.authHeaders,
+        body: body,
       );
-      if (response.statusCode == 200) return;
+      if (response.statusCode == 200) {
+        debugPrint('Successfully updated leave ID $id status to $status');
+        return;
+      } else {
+        debugPrint('Failed to update leave status. Server returned ${response.statusCode}: ${response.body}');
+        throw Exception('Server error ${response.statusCode}: ${response.body}');
+      }
     } catch (e) {
       debugPrint('Error updating leave status via backend API: $e');
+      rethrow;
     }
   }
 }

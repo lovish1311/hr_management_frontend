@@ -121,127 +121,132 @@ class AttendanceCalendarGrid extends StatelessWidget {
     // For Mobile Long-Press Bottom Sheet
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.85;
         return SafeArea(
-          child: Padding(
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(4),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Actions for ${_formatDate(day.date)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Actions for ${_formatDate(day.date)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Status: ${day.statusLabel}',
-                  style: TextStyle(fontSize: 12, color: _getStatusColor(day.status, isDark)),
-                ),
-                const SizedBox(height: 16),
-                if (isAdmin && isPendingLeave)
+                  const SizedBox(height: 4),
+                  Text(
+                    'Status: ${day.statusLabel}',
+                    style: TextStyle(fontSize: 12, color: _getStatusColor(day.status, isDark)),
+                  ),
+                  const SizedBox(height: 16),
+                  if (isAdmin && isPendingLeave)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.rate_review_rounded, color: Color(0xFFFF9800), size: 20),
+                      ),
+                      title: const Text('Review Leave Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFFF9800))),
+                      subtitle: const Text('Approve or reject this pending leave', style: TextStyle(fontSize: 11)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onDayTap(day);
+                      },
+                    ),
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF9800).withValues(alpha: 0.12),
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.rate_review_rounded, color: Color(0xFFFF9800), size: 20),
+                      child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1), size: 20),
                     ),
-                    title: const Text('Review Leave Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFFF9800))),
-                    subtitle: const Text('Approve or reject this pending leave', style: TextStyle(fontSize: 11)),
+                    title: const Text('Request Permission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF6366F1))),
+                    subtitle: const Text('Apply leave, short break, early out, or late arrival', style: TextStyle(fontSize: 11)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onApplyLeaveForDate(day);
+                    },
+                  ),
+                  if (!isAdmin && isPendingLeave)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.visibility_rounded, color: Color(0xFFF59E0B), size: 20),
+                      ),
+                      title: const Text('Review / Withdraw Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFF59E0B))),
+                      subtitle: const Text('View pending request details or withdraw', style: TextStyle(fontSize: 11)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onDayTap(day);
+                      },
+                    ),
+                  if (showReminderOption)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.alarm_add_rounded, color: Color(0xFFF59E0B), size: 20),
+                      ),
+                      title: const Text('Set Attendance Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text('Get notified before check-in cutoff', style: TextStyle(fontSize: 11)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        onSetReminderForDate(day);
+                      },
+                    ),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.info_outline_rounded, color: Color(0xFF06B6D4), size: 20),
+                    ),
+                    title: const Text('View Day Log & Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF06B6D4))),
+                    subtitle: const Text('Check check-in/out timestamps and notes', style: TextStyle(fontSize: 11)),
                     onTap: () {
                       Navigator.pop(context);
                       onDayTap(day);
                     },
                   ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1), size: 20),
-                  ),
-                  title: const Text('Request Permission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF6366F1))),
-                  subtitle: const Text('Apply leave, short break, or early out', style: TextStyle(fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onApplyLeaveForDate(day);
-                  },
-                ),
-                if (!isAdmin && isPendingLeave)
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.visibility_rounded, color: Color(0xFFF59E0B), size: 20),
-                    ),
-                    title: const Text('Review / Withdraw Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFF59E0B))),
-                    subtitle: const Text('View pending request details or withdraw', style: TextStyle(fontSize: 11)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onDayTap(day);
-                    },
-                  ),
-                if (showReminderOption)
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.alarm_add_rounded, color: Color(0xFFF59E0B), size: 20),
-                    ),
-                    title: const Text('Set Attendance Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('Get notified before check-in cutoff', style: TextStyle(fontSize: 11)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSetReminderForDate(day);
-                    },
-                  ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.info_outline_rounded, color: Color(0xFF06B6D4), size: 20),
-                  ),
-                  title: const Text('View Day Log Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Check-in and check-out timestamps', style: TextStyle(fontSize: 11)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    onDayTap(day);
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

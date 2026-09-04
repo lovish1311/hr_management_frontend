@@ -362,8 +362,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             // Quick Actions
                             Text(
                               'Quick Actions',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text),
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.onBackgroundText),
                             ),
+
                             const SizedBox(height: 16),
                             LayoutBuilder(
                               builder: (context, constraints) {

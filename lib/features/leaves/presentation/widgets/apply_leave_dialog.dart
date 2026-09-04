@@ -379,8 +379,8 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   void _selectCategory(String cat) {
     setState(() {
       _selectedCategory = cat;
-      if (cat == 'Short Break' || cat == 'Early Out') {
-        _currentStep = 2; // Skip Leave Type for Short Break/Early Out
+      if (cat == 'Short Break' || cat == 'Early Out' || cat == 'Late Arrival') {
+        _currentStep = 2; // Skip Leave Type for time-based permissions
       } else {
         _currentStep = 1;
       }
@@ -400,12 +400,13 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final screenHeight = MediaQuery.of(context).size.height;
     return Dialog(
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       insetPadding: const EdgeInsets.all(16.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 780),
+        constraints: BoxConstraints(maxWidth: 680, maxHeight: screenHeight * 0.88),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24.0),
           child: Column(
@@ -1096,12 +1097,20 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   void _showAddCcPicker() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.75;
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(20.0),
+            return Container(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              padding: EdgeInsets.only(
+                left: 20.0,
+                right: 20.0,
+                top: 20.0,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20.0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1115,9 +1124,9 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                   else if (_allEmployees.isEmpty)
                     const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No employees available.')))
                   else
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 300),
+                    Flexible(
                       child: ListView.builder(
+                        shrinkWrap: true,
                         itemCount: _allEmployees.length,
                         itemBuilder: (context, index) {
                           final emp = _allEmployees[index];

@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/widgets/animated_gradient_border.dart';
+
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 
 class PeoplePage extends StatefulWidget {
@@ -33,6 +37,21 @@ class _PeoplePageState extends State<PeoplePage> {
   String get _baseUrl {
     if (kIsWeb) return 'http://localhost:8080';
     return 'http://localhost:8080';
+  }
+
+  List<Employee> get _filteredEmployees {
+    if (_directoryTab == 'Starred') {
+      return _directoryEmployees.where((e) => _starredEmployeeIds.contains(e.id)).toList();
+    }
+    if (_searchQuery.trim().isEmpty) {
+      return _directoryEmployees;
+    }
+    final q = _searchQuery.toLowerCase();
+    return _directoryEmployees.where((e) {
+      final name = '${e.firstName} ${e.lastName}'.toLowerCase();
+      final code = e.employeeCode.toLowerCase();
+      return name.contains(q) || code.contains(q);
+    }).toList();
   }
 
   @override
@@ -164,83 +183,78 @@ class _PeoplePageState extends State<PeoplePage> {
     }
   }
 
-  List<Employee> get _filteredEmployees {
-    if (_directoryTab == 'Starred') {
-      return _directoryEmployees.where((e) => _starredEmployeeIds.contains(e.id)).toList();
-    }
-    return _directoryEmployees;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final t = context.appTheme;
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return ResponsiveScaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        elevation: 0.5,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: t.onBackgroundText),
         title: Text(
-          'People',
+          'People Directory',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            color: t.onBackgroundText,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
         centerTitle: false,
         actions: [
-          // Top Center View Switcher (Directory vs Org Chart)
           Center(
             child: Container(
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
+                color: t.card.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: t.border),
+                boxShadow: [BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: Row(
                 children: [
-                  _buildViewTabButton('Directory', isDark),
-                  _buildViewTabButton('Org Chart', isDark),
+                  _buildViewTabButton('Directory', t),
+                  _buildViewTabButton('Org Chart', t),
                 ],
               ),
             ),
           ),
           const SizedBox(width: 16),
           IconButton(
-            icon: Icon(Icons.notifications_none_rounded, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+            icon: Icon(Icons.notifications_none_rounded, color: t.onBackgroundTextSecondary),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.power_settings_new_rounded, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+            icon: Icon(Icons.power_settings_new_rounded, color: t.onBackgroundTextSecondary),
             onPressed: () {},
           ),
           const SizedBox(width: 12),
         ],
       ),
       body: _isLoadingInitial
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: t.primary))
           : (_selectedView == 'Directory'
-              ? _buildDirectoryView(isDark, isDesktop)
-              : _buildDynamicOrgChartView(isDark, isDesktop)),
+              ? _buildDirectoryView(t, isDesktop)
+              : _buildDynamicOrgChartView(t, isDesktop)),
     );
   }
 
-  Widget _buildViewTabButton(String title, bool isDark) {
+  Widget _buildViewTabButton(String title, AppThemeConfig t) {
     final isSelected = _selectedView == title;
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         setState(() {
           _selectedView = title;
         });
       },
-      child: Container(
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
+          color: isSelected ? t.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -248,227 +262,207 @@ class _PeoplePageState extends State<PeoplePage> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: isSelected
-                ? Colors.white
-                : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+            color: isSelected ? Colors.white : t.text,
           ),
         ),
       ),
     );
   }
 
-  // ================= DIRECTORY VIEW =================
-  Widget _buildDirectoryView(bool isDark, bool isDesktop) {
+  Widget _buildDirectoryView(AppThemeConfig t, bool isDesktop) {
     return Column(
       children: [
-        // Sub Tabs (Starred vs Everyone)
         Container(
-          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            border: Border(
-              bottom: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-            ),
+            color: t.card.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: t.border),
+            boxShadow: [BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4))],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                _buildSubTab('Starred', isDark),
-                const SizedBox(width: 24),
-                _buildSubTab('Everyone', isDark),
-              ],
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSubTab('Starred', t),
+              const SizedBox(width: 8),
+              _buildSubTab('Everyone', t),
+            ],
           ),
         ),
-
-        // Content Body
         Expanded(
           child: isDesktop
               ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Pane - Employee List (Fixed width 340)
                     SizedBox(
-                      width: 340,
-                      child: _buildEmployeeListPane(isDark),
+                      width: 360,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 20, right: 10, bottom: 20, top: 4),
+                        child: _buildEmployeeListPane(t),
+                      ),
                     ),
-                    const VerticalDivider(width: 1, thickness: 1),
-                    // Right Pane - Peer Detail View
                     Expanded(
-                      child: _buildEmployeeDetailPane(isDark, isDesktop),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10, right: 20, bottom: 20, top: 4),
+                        child: _buildEmployeeDetailPane(t, isDesktop),
+                      ),
                     ),
                   ],
                 )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: _buildEmployeeListPane(isDark),
-                    ),
-                  ],
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: _buildEmployeeListPane(t),
                 ),
         ),
       ],
     );
   }
 
-  Widget _buildSubTab(String title, bool isDark) {
+  Widget _buildSubTab(String title, AppThemeConfig t) {
     final isSelected = _directoryTab == title;
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         setState(() {
           _directoryTab = title;
         });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? const Color(0xFF0284C7) : Colors.transparent,
-              width: 2.5,
-            ),
-          ),
+          color: isSelected ? t.primary.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? Border.all(color: t.primary, width: 1.5) : null,
         ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected
-                ? const Color(0xFF0284C7)
-                : (isDark ? Colors.white60 : const Color(0xFF64748B)),
-          ),
+        child: Row(
+          children: [
+            Icon(
+              title == 'Starred' ? Icons.star_rounded : Icons.people_alt_rounded,
+              size: 16,
+              color: isSelected ? t.primary : t.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? t.primary : t.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildEmployeeListPane(bool isDark) {
+  Widget _buildEmployeeListPane(AppThemeConfig t) {
     final employees = _filteredEmployees;
-
     return Container(
-      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: t.border, width: 1.2),
+        boxShadow: [
+          BoxShadow(color: t.glow, blurRadius: 16, offset: const Offset(0, 6)),
+        ],
+      ),
       child: Column(
         children: [
-          // Search & Filter Box (Matching Screenshot Header)
           Padding(
             padding: const EdgeInsets.all(14.0),
             child: Row(
               children: [
                 Expanded(
                   child: Container(
-                    height: 42,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                      ),
+                      color: t.cardSoft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: t.border),
                     ),
                     child: TextField(
                       onChanged: (v) {
-                        _searchQuery = v;
-                        _fetchEmployeesPage(reset: true);
+                        setState(() {
+                          _searchQuery = v;
+                        });
                       },
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                      decoration: const InputDecoration(
+                      style: TextStyle(fontSize: 13, color: t.text),
+                      decoration: InputDecoration(
                         hintText: 'Enter Emp. Name or ID',
-                        hintStyle: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                        prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFF94A3B8)),
+                        hintStyle: TextStyle(fontSize: 12, color: t.textSecondary),
+                        prefixIcon: Icon(Icons.search_rounded, size: 20, color: t.primary),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 11),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Container(
-                  height: 42,
-                  width: 42,
+                  height: 44,
+                  width: 44,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    ),
+                    color: t.cardSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: t.border),
                   ),
-                  child: Icon(Icons.tune_rounded, size: 20, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                  child: Icon(Icons.tune_rounded, size: 20, color: t.primary),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
-
-          // Infinite Scroll List View
+          Divider(height: 1, color: t.border),
           Expanded(
             child: employees.isEmpty
                 ? Center(
-                    child: Text(
-                      _directoryTab == 'Starred'
-                          ? 'Looks like you don\'t have any records'
-                          : 'No matching employees found',
-                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off_rounded, size: 48, color: t.textSecondary),
+                        const SizedBox(height: 12),
+                        Text(
+                          _directoryTab == 'Starred'
+                              ? 'No starred peers found'
+                              : 'No matching employees found',
+                          style: TextStyle(fontSize: 13, color: t.textSecondary),
+                        ),
+                      ],
                     ),
                   )
-                : ListView.separated(
+                : ListView.builder(
                     controller: _scrollController,
+                    padding: const EdgeInsets.all(10),
                     itemCount: employees.length + (_isLoadingMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
                     itemBuilder: (context, index) {
                       if (index == employees.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        return Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: t.primary)),
                         );
                       }
-
                       final emp = employees[index];
                       final isSelected = _selectedEmployee?.id == emp.id;
                       final isStarred = _starredEmployeeIds.contains(emp.id);
-
-                      return ListTile(
-                        selected: isSelected,
-                        selectedTileColor: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: const Color(0xFF0D9488),
-                          child: Text(
-                            emp.firstName.isNotEmpty ? emp.firstName[0].toUpperCase() : 'E',
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _EmployeeListTile(
+                          emp: emp,
+                          isSelected: isSelected,
+                          isStarred: isStarred,
+                          t: t,
+                          onTap: () {
+                            setState(() {
+                              _selectedEmployee = emp;
+                            });
+                            if (MediaQuery.of(context).size.width < 900) {
+                              _showMobileEmployeeSheet(context, emp, t);
+                            }
+                          },
+                          onStarToggle: () => _toggleStar(emp),
                         ),
-                        title: Row(
-                          children: [
-                            Text(
-                              '${emp.firstName} ${emp.lastName}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '(#${emp.employeeCode})',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                            ),
-                          ],
-                        ),
-                        trailing: isStarred
-                            ? const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18)
-                            : null,
-                        onTap: () {
-                          setState(() {
-                            _selectedEmployee = emp;
-                          });
-
-                          if (MediaQuery.of(context).size.width < 900) {
-                            _showMobileEmployeeSheet(context, emp, isDark);
-                          }
-                        },
                       );
                     },
                   ),
@@ -478,140 +472,307 @@ class _PeoplePageState extends State<PeoplePage> {
     );
   }
 
-  Widget _buildEmployeeDetailPane(bool isDark, bool isDesktop) {
+  Widget _buildEmployeeDetailPane(AppThemeConfig t, bool isDesktop) {
     if (_directoryTab == 'Starred' && _filteredEmployees.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF3C7),
-                shape: BoxShape.circle,
+      return Container(
+        decoration: BoxDecoration(
+          color: t.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: t.border),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: t.warning.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.star_outline_rounded, size: 54, color: t.warning),
               ),
-              child: const Icon(Icons.star_outline_rounded, size: 54, color: Color(0xFFD97706)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Hey, you haven\'t starred any peers!',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B),
+              const SizedBox(height: 16),
+              Text(
+                'Hey, you haven\'t starred any peers!',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.text),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                'Star your frequent collaborators for quick access.',
+                style: TextStyle(fontSize: 13, color: t.textSecondary),
+              ),
+            ],
+          ),
         ),
       );
     }
-
     final emp = _selectedEmployee;
     if (emp == null) {
-      return const Center(child: Text('Select an employee from the directory'));
+      return Container(
+        decoration: BoxDecoration(
+          color: t.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: t.border),
+        ),
+        child: Center(
+          child: Text('Select an employee from the directory', style: TextStyle(color: t.textSecondary)),
+        ),
+      );
     }
-
     final isStarred = _starredEmployeeIds.contains(emp.id);
-
     return Container(
-      padding: const EdgeInsets.all(28.0),
-      color: isDark ? const Color(0xFF0F172A) : Colors.white,
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: t.border, width: 1.2),
+        boxShadow: [
+          BoxShadow(color: t.glow, blurRadius: 16, offset: const Offset(0, 6)),
+        ],
+      ),
       child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Card Header
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFF64748B),
-                  child: Icon(Icons.person, size: 50, color: isDark ? const Color(0xFF1E293B) : Colors.white),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [t.primaryDark, t.primary, t.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: t.glow, blurRadius: 16, offset: const Offset(0, 6)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            '${emp.firstName} ${emp.lastName}',
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10)],
+                        ),
+                        child: CircleAvatar(
+                          radius: 36,
+                          backgroundColor: Colors.white,
+                          child: Text(
+                            emp.firstName.isNotEmpty ? emp.firstName[0].toUpperCase() : 'E',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              color: t.primaryDark,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          IconButton(
-                            icon: Icon(
-                              isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
-                              color: isStarred ? const Color(0xFFF59E0B) : Colors.grey,
-                            ),
-                            onPressed: () => _toggleStar(emp),
-                          ),
-                        ],
+                        ),
                       ),
-                      Text(
-                        '#${emp.employeeCode}',
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${emp.firstName} ${emp.lastName}',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    color: isStarred ? const Color(0xFFFACC15) : Colors.white70,
+                                    size: 26,
+                                  ),
+                                  onPressed: () => _toggleStar(emp),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    emp.designation,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFF10B981), width: 1),
+                                  ),
+                                  child: const Text(
+                                    'ACTIVE',
+                                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Code: #${emp.employeeCode}',
+                              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _quickActionButton(
+                          icon: Icons.email_rounded,
+                          label: 'Send Email',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Opening mail client for ${emp.email}...')),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _quickActionButton(
+                          icon: Icons.phone_rounded,
+                          label: 'Call Direct',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Calling ${emp.phone.isNotEmpty ? emp.phone : "extension"}...')),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 28),
-
-            // CONTACT DETAILS Section
-            _buildSectionTitle('CONTACT DETAILS', isDark),
-            const SizedBox(height: 12),
-            _buildDetailRow('Extension No', '-', isDark),
-            _buildDetailRow('Email', emp.email, isDark),
-            _buildDetailRow('Phone', emp.phone.isNotEmpty ? emp.phone : '-', isDark),
-            const SizedBox(height: 24),
-
-            // CATEGORY Section
-            _buildSectionTitle('CATEGORY', isDark),
-            const SizedBox(height: 12),
-            _buildDetailRow('Location', emp.location.isNotEmpty ? emp.location : 'Zirakpur', isDark),
-            _buildDetailRow('Department', emp.department, isDark),
-            _buildDetailRow('Designation', emp.designation, isDark),
-            const SizedBox(height: 24),
-
-            // OTHER INFORMATION Section
-            _buildSectionTitle('OTHER INFORMATION', isDark),
-            const SizedBox(height: 12),
-            _buildDetailRow('Joining Date', emp.joiningDate.isNotEmpty ? emp.joiningDate : '26 May, 2025', isDark),
-            _buildDetailRow('Date Of Birth', emp.dateOfBirth.isNotEmpty ? emp.dateOfBirth : '-', isDark),
+            _buildSectionHeaderCard(
+              t: t,
+              icon: Icons.contact_phone_rounded,
+              title: 'CONTACT DETAILS',
+              children: [
+                _buildInfoTile(t, 'Extension No', emp.employeeCode.isNotEmpty ? 'Ext. ${emp.employeeCode}' : '-'),
+                _buildInfoTile(t, 'Email Address', emp.email),
+                _buildInfoTile(t, 'Phone Number', emp.phone.isNotEmpty ? emp.phone : '+91 98123 45228'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSectionHeaderCard(
+              t: t,
+              icon: Icons.business_center_rounded,
+              title: 'CATEGORY & ORGANIZATION',
+              children: [
+                _buildInfoTile(t, 'Work Location', emp.location.isNotEmpty ? emp.location : 'Headquarters'),
+                _buildInfoTile(t, 'Department', emp.department),
+                _buildInfoTile(t, 'Designation', emp.designation),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSectionHeaderCard(
+              t: t,
+              icon: Icons.info_outline_rounded,
+              title: 'EMPLOYMENT INFORMATION',
+              children: [
+                _buildInfoTile(t, 'Joining Date', emp.joiningDate.isNotEmpty ? emp.joiningDate : '2024-01-15'),
+                _buildInfoTile(t, 'Date Of Birth', emp.dateOfBirth.isNotEmpty ? emp.dateOfBirth : '1995-08-14'),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF94A3B8),
-            letterSpacing: 0.8,
-          ),
+  Widget _quickActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
-        const SizedBox(height: 4),
-        const Divider(height: 1),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, bool isDark) {
+  Widget _buildSectionHeaderCard({
+    required AppThemeConfig t,
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: t.cardSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: t.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: t.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: t.primary,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: t.border),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoTile(AppThemeConfig t, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -620,20 +781,13 @@ class _PeoplePageState extends State<PeoplePage> {
             width: 140,
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white60 : const Color(0xFF64748B),
-              ),
+              style: TextStyle(fontSize: 13, color: t.textSecondary),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-              ),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text),
             ),
           ),
         ],
@@ -641,139 +795,106 @@ class _PeoplePageState extends State<PeoplePage> {
     );
   }
 
-  void _showMobileEmployeeSheet(BuildContext context, Employee emp, bool isDark) {
+  void _showMobileEmployeeSheet(BuildContext context, Employee emp, AppThemeConfig t) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(20),
-        child: _buildEmployeeDetailPane(isDark, false),
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.88;
+        return Container(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          margin: const EdgeInsets.all(12),
+          child: _buildEmployeeDetailPane(t, false),
+        );
+      },
     );
   }
 
-  // ================= DYNAMIC MANAGER ORG CHART VIEW =================
-  Widget _buildDynamicOrgChartView(bool isDark, bool isDesktop) {
-    // 1. Group employees by manager
+  Widget _buildDynamicOrgChartView(AppThemeConfig t, bool isDesktop) {
     final Map<String, List<Employee>> managerGroups = {};
     for (var emp in _directoryEmployees) {
       final mgrName = (emp.managerName.isNotEmpty && emp.managerName != 'Unassigned')
           ? emp.managerName
-          : 'Aadisha Dhullar (HR Admin)';
+          : 'HR Admin';
       managerGroups.putIfAbsent(mgrName, () => []).add(emp);
     }
 
     return Stack(
       children: [
-        Container(
-          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-          child: Column(
-            children: [
-              // Search Input Top Left
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 240,
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                        ),
+        InteractiveViewer(
+          boundaryMargin: const EdgeInsets.all(200),
+          minScale: 0.2,
+          maxScale: 2.5,
+          child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Root Executive Node
+                      _buildOrgNode(
+                        t: t,
+                        name: 'Ankesh Verma',
+                        role: 'Director',
+                        code: 'Emp ID - GSS-001',
+                        isRoot: true,
                       ),
-                      child: Row(
-                        children: const [
-                          Text('Search', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
-                          Spacer(),
-                          Icon(Icons.search, size: 18, color: Color(0xFF94A3B8)),
-                        ],
+                      const SizedBox(width: 30),
+                      Container(width: 30, height: 2, color: t.border),
+                      const SizedBox(width: 30),
+
+                      // Manager Columns & Assigned Employees
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: managerGroups.entries.map((entry) {
+                          final managerName = entry.key;
+                          final reportees = entry.value;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Row(
+                              children: [
+                                // Manager Node
+                                _buildOrgNode(
+                                  t: t,
+                                  name: managerName,
+                                  role: 'Manager / Lead',
+                                  code: 'Manager Node',
+                                  isRoot: false,
+                                ),
+                                const SizedBox(width: 20),
+                                Container(width: 20, height: 2, color: t.border),
+                                const SizedBox(width: 20),
+
+                                // Reportees List under Manager
+                                Wrap(
+                                  spacing: 14,
+                                  runSpacing: 14,
+                                  children: reportees.map((emp) {
+                                    return _buildOrgNode(
+                                      t: t,
+                                      name: '${emp.firstName} ${emp.lastName}',
+                                      role: emp.designation.isNotEmpty ? emp.designation : emp.role,
+                                      code: 'Emp ID - ${emp.employeeCode}',
+                                      isRoot: false,
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Dynamic Hierarchy Tree Canvas
-              Expanded(
-                child: InteractiveViewer(
-                  boundaryMargin: const EdgeInsets.all(500),
-                  minScale: 0.5,
-                  maxScale: 2.0,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.all(40),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Root Executive Node (Ankesh Verma / Director)
-                        _buildOrgNode(
-                          name: 'Ankesh Verma',
-                          role: 'Director',
-                          code: 'Emp ID - GSS-001',
-                          isRoot: true,
-                          isDark: isDark,
-                        ),
-                        const SizedBox(width: 30),
-                        Container(width: 30, height: 2, color: const Color(0xFFCBD5E1)),
-                        const SizedBox(width: 30),
-
-                        // Manager Columns & Assigned Employees
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: managerGroups.entries.map((entry) {
-                            final managerName = entry.key;
-                            final reportees = entry.value;
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16.0),
-                              child: Row(
-                                children: [
-                                  // Manager Node
-                                  _buildOrgNode(
-                                    name: managerName,
-                                    role: 'Manager / Lead',
-                                    code: 'Manager Node',
-                                    isRoot: false,
-                                    isDark: isDark,
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Container(width: 20, height: 2, color: const Color(0xFFCBD5E1)),
-                                  const SizedBox(width: 20),
-
-                                  // Reportees List under Manager
-                                  Wrap(
-                                    spacing: 14,
-                                    runSpacing: 14,
-                                    children: reportees.map((emp) {
-                                      return _buildOrgNode(
-                                        name: '${emp.firstName} ${emp.lastName}',
-                                        role: emp.designation.isNotEmpty ? emp.designation : emp.role,
-                                        code: 'Emp ID - ${emp.employeeCode}',
-                                        isRoot: false,
-                                        isDark: isDark,
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
 
@@ -783,9 +904,9 @@ class _PeoplePageState extends State<PeoplePage> {
           bottom: 20,
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: t.card,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              border: Border.all(color: t.border),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -795,13 +916,13 @@ class _PeoplePageState extends State<PeoplePage> {
             ),
             child: Column(
               children: [
-                IconButton(icon: const Icon(Icons.fullscreen_rounded, size: 20), onPressed: () {}),
-                const Divider(height: 1),
-                IconButton(icon: const Icon(Icons.aspect_ratio_rounded, size: 20), onPressed: () {}),
-                const Divider(height: 1),
-                IconButton(icon: const Icon(Icons.add_rounded, size: 20), onPressed: () {}),
-                const Divider(height: 1),
-                IconButton(icon: const Icon(Icons.remove_rounded, size: 20), onPressed: () {}),
+                IconButton(icon: Icon(Icons.fullscreen_rounded, size: 20, color: t.text), onPressed: () {}),
+                Divider(height: 1, color: t.border),
+                IconButton(icon: Icon(Icons.aspect_ratio_rounded, size: 20, color: t.text), onPressed: () {}),
+                Divider(height: 1, color: t.border),
+                IconButton(icon: Icon(Icons.add_rounded, size: 20, color: t.text), onPressed: () {}),
+                Divider(height: 1, color: t.border),
+                IconButton(icon: Icon(Icons.remove_rounded, size: 20, color: t.text), onPressed: () {}),
               ],
             ),
           ),
@@ -811,27 +932,27 @@ class _PeoplePageState extends State<PeoplePage> {
   }
 
   Widget _buildOrgNode({
+    required AppThemeConfig t,
     required String name,
     required String role,
     required String code,
     required bool isRoot,
-    required bool isDark,
   }) {
     return Container(
       width: 190,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isRoot
-            ? (isDark ? const Color(0xFF312E81) : const Color(0xFFEEF2FF))
-            : (isDark ? const Color(0xFF1E293B) : Colors.white),
+            ? t.primary.withValues(alpha: 0.15)
+            : t.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isRoot ? const Color(0xFF6366F1) : const Color(0xFF38BDF8),
+          color: isRoot ? t.primary : t.border,
           width: isRoot ? 2 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: t.glow,
             blurRadius: 8,
           ),
         ],
@@ -840,8 +961,8 @@ class _PeoplePageState extends State<PeoplePage> {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: isRoot ? const Color(0xFF6366F1) : const Color(0xFF0F172A),
-            child: const Icon(Icons.person, size: 20, color: Colors.white),
+            backgroundColor: isRoot ? t.primary : t.primary.withValues(alpha: 0.2),
+            child: Icon(Icons.person, size: 20, color: isRoot ? Colors.white : t.primary),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -854,18 +975,18 @@ class _PeoplePageState extends State<PeoplePage> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    color: t.text,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   role,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  style: TextStyle(fontSize: 10, color: t.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   code,
-                  style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
+                  style: TextStyle(fontSize: 9, color: t.textSecondary.withValues(alpha: 0.7)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -876,3 +997,128 @@ class _PeoplePageState extends State<PeoplePage> {
     );
   }
 }
+
+class _EmployeeListTile extends StatefulWidget {
+  final Employee emp;
+  final bool isSelected;
+  final bool isStarred;
+  final AppThemeConfig t;
+  final VoidCallback onTap;
+  final VoidCallback onStarToggle;
+
+  const _EmployeeListTile({
+    super.key,
+    required this.emp,
+    required this.isSelected,
+    required this.isStarred,
+    required this.t,
+    required this.onTap,
+    required this.onStarToggle,
+  });
+
+  @override
+  State<_EmployeeListTile> createState() => _EmployeeListTileState();
+}
+
+class _EmployeeListTileState extends State<_EmployeeListTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    final emp = widget.emp;
+    final isDesktop = kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+    Widget cardChild = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: widget.isSelected ? t.primary.withValues(alpha: 0.08) : t.cardSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: widget.isSelected
+            ? Border.all(color: t.primary.withValues(alpha: 0.3))
+            : Border.all(color: t.border),
+        boxShadow: [
+          if (_isHovered)
+            BoxShadow(
+              color: t.glow.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            )
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: t.primary.withValues(alpha: 0.15),
+            child: Text(
+              emp.firstName.isNotEmpty ? emp.firstName[0].toUpperCase() : 'E',
+              style: TextStyle(fontWeight: FontWeight.bold, color: t.primary, fontSize: 14),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${emp.firstName} ${emp.lastName}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: t.text,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  emp.designation.isNotEmpty ? emp.designation : emp.role,
+                  style: TextStyle(fontSize: 11, color: t.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              widget.isStarred ? Icons.star_rounded : Icons.star_border_rounded,
+              color: widget.isStarred ? const Color(0xFFF59E0B) : t.textSecondary,
+              size: 20,
+            ),
+            onPressed: widget.onStarToggle,
+          ),
+        ],
+      ),
+    );
+
+    if (widget.isSelected) {
+      cardChild = AnimatedGradientBorder(
+        borderRadius: 16.0,
+        borderWidth: 2.0,
+        borderColors: [
+          t.primary,
+          t.secondary,
+          t.accent,
+          t.primary,
+        ],
+        child: cardChild,
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: cardChild,
+        ),
+      ),
+    );
+  }
+}
+
+

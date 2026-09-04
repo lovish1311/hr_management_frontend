@@ -72,7 +72,24 @@ class AppThemeConfig {
     required this.glow,
     this.themeMode = ThemeMode.dark,
   });
+
+  /// True if the top/primary color of the background gradient is dark
+  bool get isBackgroundDark => backgroundGradient.first.computeLuminance() < 0.45;
+
+  /// True if the card surface color is dark
+  bool get isCardDark => card.computeLuminance() < 0.45;
+
+  /// Color for text sitting directly over the page background gradient (e.g. headers, section titles)
+  Color get onBackgroundText => isBackgroundDark ? Colors.white : const Color(0xFF0F172A);
+
+  /// Color for secondary text sitting directly over the page background gradient
+  Color get onBackgroundTextSecondary => isBackgroundDark ? Colors.white.withValues(alpha: 0.75) : const Color(0xFF64748B);
+
+  /// Convenient aliases for section headers on background
+  Color get headerText => onBackgroundText;
+  Color get headerTextSecondary => onBackgroundTextSecondary;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SINGLETON MANAGER
@@ -399,12 +416,35 @@ class ThemeManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> applySettingsBatch({
+    required AppThemeType theme,
+    required double fontSizeMultiplier,
+    required String fontFamily,
+    required String densityMode,
+    required bool use24HourTime,
+  }) async {
+    _currentTheme = theme;
+    _fontSizeMultiplier = fontSizeMultiplier;
+    _fontFamily = fontFamily;
+    _densityMode = densityMode;
+    _use24HourTime = use24HourTime;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_theme', theme.toString().split('.').last);
+    await prefs.setDouble('font_size', fontSizeMultiplier);
+    await prefs.setString('font_family', fontFamily);
+    await prefs.setString('density_mode', densityMode);
+    await prefs.setBool('use_24h_time', use24HourTime);
+  }
+
   Future<void> setTheme(AppThemeType type) async {
     _currentTheme = type;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('selected_theme', type.toString().split('.').last);
   }
+
 
   Future<void> setFontSize(double size) async {
     _fontSizeMultiplier = size;

@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 
 class PayslipPage extends StatefulWidget {
@@ -13,7 +14,7 @@ class _PayslipPageState extends State<PayslipPage> {
   bool _isEarningsExpanded = true;
   bool _isDeductionsExpanded = false;
 
-  final List<String> _months = const [
+  final List<String> _months = [
     'Jun 2026',
     'May 2026',
     'Apr 2026',
@@ -24,29 +25,30 @@ class _PayslipPageState extends State<PayslipPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final t = context.appTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ResponsiveScaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back, color: t.onBackgroundText),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Payslip',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            color: t.onBackgroundText,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.home_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+            icon: Icon(Icons.home_outlined, color: t.onBackgroundText),
             onPressed: () => Navigator.pushReplacementNamed(context, '/'),
           ),
           const SizedBox(width: 8),
@@ -434,35 +436,42 @@ class _PayslipPageState extends State<PayslipPage> {
   void _showMonthPicker() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select Payroll Month',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      builder: (context) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.85;
+        return Container(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Payroll Month',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ..._months.map(
+                  (m) => ListTile(
+                    title: Text(m, style: TextStyle(fontWeight: m == _selectedMonth ? FontWeight.bold : FontWeight.normal)),
+                    trailing: m == _selectedMonth ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)) : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedMonth = m;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            ..._months.map(
-              (m) => ListTile(
-                title: Text(m, style: TextStyle(fontWeight: m == _selectedMonth ? FontWeight.bold : FontWeight.normal)),
-                trailing: m == _selectedMonth ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)) : null,
-                onTap: () {
-                  setState(() {
-                    _selectedMonth = m;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
