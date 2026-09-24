@@ -28,21 +28,39 @@ class ResponsiveScaffold extends StatelessWidget {
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 800;
 
-            return Scaffold(
-              backgroundColor: Colors.transparent,
-              extendBodyBehindAppBar: true,
-              appBar: isDesktop ? null : appBar,
-              drawer: isDesktop ? null : const HrDrawer(),
-              floatingActionButton: floatingActionButton,
-              body: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: t.backgroundGradient,
-                  ),
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: t.backgroundGradient,
                 ),
-                child: Row(
+              ),
+              child: Scaffold(
+                backgroundColor: Colors.transparent,
+                extendBodyBehindAppBar: false,
+                appBar: isDesktop
+                    ? null
+                    : (appBar != null
+                        ? PreferredSize(
+                            preferredSize: appBar!.preferredSize,
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                iconTheme: const IconThemeData(color: Colors.white),
+                                appBarTheme: const AppBarTheme(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  iconTheme: IconThemeData(color: Colors.white),
+                                  actionsIconTheme: IconThemeData(color: Colors.white),
+                                ),
+                              ),
+                              child: appBar!,
+                            ),
+                          )
+                        : null),
+                drawer: isDesktop ? null : const HrDrawer(),
+                floatingActionButton: floatingActionButton,
+                body: Row(
                   children: [
                     if (isDesktop)
                       const SizedBox(
@@ -57,14 +75,25 @@ class ResponsiveScaffold extends StatelessWidget {
                               bottom: false,
                               child: SizedBox(
                                 height: appBar!.preferredSize.height,
-                                child: appBar!,
+                                child: Theme(
+                                  data: Theme.of(context).copyWith(
+                                    iconTheme: const IconThemeData(color: Colors.white),
+                                    appBarTheme: const AppBarTheme(
+                                      backgroundColor: Colors.transparent,
+                                      elevation: 0,
+                                      iconTheme: IconThemeData(color: Colors.white),
+                                      actionsIconTheme: IconThemeData(color: Colors.white),
+                                    ),
+                                  ),
+                                  child: appBar!,
+                                ),
                               ),
                             ),
                           Expanded(
                             child: SafeArea(
-                              bottom: false,
+                              bottom: true,
                               right: false,
-                              top: !isDesktop && appBar == null,
+                              top: isDesktop || appBar == null,
                               child: body,
                             ),
                           ),
@@ -73,8 +102,8 @@ class ResponsiveScaffold extends StatelessWidget {
                     ),
                   ],
                 ),
+                bottomNavigationBar: isDesktop ? null : _buildBottomNav(context, t),
               ),
-              bottomNavigationBar: isDesktop ? null : _buildBottomNav(context, t),
             );
           },
         );
@@ -104,25 +133,39 @@ class ResponsiveScaffold extends StatelessWidget {
     int currentIndex = items.indexWhere((item) => item.route == currentRoute);
     if (currentIndex == -1) currentIndex = 0;
 
-    return BottomNavigationBar(
-      currentIndex: currentIndex >= 0 && currentIndex < 4 ? currentIndex : 0,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: t.card,
-      selectedItemColor: t.primary,
-      unselectedItemColor: t.textSecondary,
-      selectedFontSize: 12,
-      unselectedFontSize: 12,
-      onTap: (index) {
-        final item = items[index];
-        if (item.route != null && item.route != currentRoute) {
-          Navigator.pushReplacementNamed(context, item.route!);
-        } else if (item.route == null) {
-          Scaffold.of(context).openDrawer();
-        }
-      },
-      items: items.map((item) {
-        return BottomNavigationBarItem(icon: Icon(item.icon), label: item.title);
-      }).toList(),
+    return Container(
+      decoration: BoxDecoration(
+        color: t.card,
+        border: Border(top: BorderSide(color: t.border.withValues(alpha: 0.5), width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 56,
+          child: BottomNavigationBar(
+            currentIndex: currentIndex >= 0 && currentIndex < items.length ? currentIndex : 0,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: t.primary,
+            unselectedItemColor: t.textSecondary.withValues(alpha: 0.8),
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            onTap: (index) {
+              final item = items[index];
+              if (item.route != null && item.route != currentRoute) {
+                Navigator.pushReplacementNamed(context, item.route!);
+              } else if (item.route == null) {
+                Scaffold.of(context).openDrawer();
+              }
+            },
+            items: items.map((item) {
+              return BottomNavigationBarItem(icon: Icon(item.icon, size: 20), label: item.title);
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 }

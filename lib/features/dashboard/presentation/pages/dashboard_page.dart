@@ -126,7 +126,7 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: t.text),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Row(
           children: [
             Container(
@@ -154,7 +154,7 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(Icons.notifications_outlined, color: t.text),
+                const Icon(Icons.notifications_outlined, color: Colors.white),
                 Positioned(
                   right: -2,
                   top: -2,
@@ -169,7 +169,7 @@ class _DashboardPageState extends State<DashboardPage> {
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.refresh_rounded, color: t.text),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Refresh Dashboard',
             onPressed: () {
               setState(() { _isLoading = true; });
@@ -368,10 +368,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             const SizedBox(height: 16),
                             LayoutBuilder(
                               builder: (context, constraints) {
-                                final isMobile = constraints.maxWidth < 600;
-                                final isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 900;
-                                
-                                final crossAxisCount = isMobile ? 2 : (isTablet ? 2 : 4);
+                                final crossAxisCount = constraints.maxWidth < 450 ? 1 : 3;
                                 const spacing = 12.0;
                                 final cardWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
 
@@ -382,7 +379,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                     SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.person_add_alt_1_rounded, title: 'Add Employee', subtitle: 'Onboard new hire', onTap: () => Navigator.pushNamed(context, '/employees'))),
                                     SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.rule_rounded, title: 'Attendance', subtitle: 'Mark log today', onTap: () => Navigator.pushNamed(context, '/attendance'))),
                                     SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.beach_access_rounded, title: 'Apply Leave', subtitle: 'Time off request', onTap: () => Navigator.pushNamed(context, '/leaves'))),
-                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.post_add_rounded, title: 'Create Job', subtitle: 'Post new opening', onTap: () => Navigator.pushNamed(context, '/recruitment'))),
                                   ],
                                 );
                               },

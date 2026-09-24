@@ -1,3 +1,4 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -67,7 +68,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   List<dynamic> _myLeaves = [];
   List<dynamic> _pendingApprovals = [];
 
-  final String _baseUrl = 'http://localhost:8080/api/v1/leaves';
+  String get _baseUrl => "${ApiConfig.baseUrl}/api/v1/leaves";
 
   static const List<QuotaGridCardItem> _quotaGridItems = [
     QuotaGridCardItem(
@@ -1400,7 +1401,6 @@ class _QuotaCardTile extends StatefulWidget {
   final AppThemeConfig t;
 
   const _QuotaCardTile({
-    super.key,
     required this.item,
     required this.remaining,
     required this.limit,

@@ -1,3 +1,4 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -26,12 +27,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   List<dynamic> _teamPendingApprovals = [];
   bool _isLoadingTeamApprovals = true;
 
-  String get _baseUrl {
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8080';
-    }
-    return 'http://localhost:8080';
-  }
+  String get _baseUrl => ApiConfig.baseUrl;
 
   static const List<String> _days = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -220,8 +216,8 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 color: const Color(0xFF0D9488).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.spa_rounded, color: Color(0xFF0D9488), size: 16),
                   SizedBox(width: 6),
                   Text(
@@ -953,7 +949,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline_rounded, color: const Color(0xFF10B981), size: 22),
+                  const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981), size: 22),
                   const SizedBox(width: 10),
                   Text(
                     'All caught up! No pending team requests.',
@@ -1226,6 +1222,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() => controller.dispose());
   }
 }

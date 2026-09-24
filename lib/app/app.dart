@@ -18,7 +18,7 @@ class HRManagementApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: manager.activeThemeConfig.themeMode,
-          initialRoute: '/login',
+          initialRoute: '/splash',
           routes: AppRouter.routes,
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);

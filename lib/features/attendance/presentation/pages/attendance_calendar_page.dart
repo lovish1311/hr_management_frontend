@@ -1,7 +1,6 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
@@ -34,13 +33,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
   final AttendanceRepository _repository = AttendanceRepositoryImpl();
 
-  String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
-    } catch (_) {}
-    return 'http://localhost:8080';
-  }
+  String get _baseUrl => ApiConfig.baseUrl;
 
   DateTime _activeMonth = DateTime.now();
   List<AttendanceCalendarDay> _days = [];
@@ -66,7 +59,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   @override
   void initState() {
     super.initState();
-    if (AuthStorage.isHr) {
+    if (AuthStorage.isSuperAdmin) {
       _isLoading = false;
       _dropdownScrollController.addListener(() {
         if (_dropdownScrollController.position.pixels >=
@@ -89,10 +82,17 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _dropdownScrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchCalendarData() async {
-    final empId = AuthStorage.isHr
+    final empId = AuthStorage.isSuperAdmin
         ? (_selectedEmployee?.id ?? '')
-        : widget.currentEmployeeId;
+        : (AuthStorage.employeeId != null ? AuthStorage.employeeId.toString() : widget.currentEmployeeId);
 
     if (empId.isEmpty) {
       setState(() => _isLoading = false);
@@ -252,7 +252,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     });
 
     try {
-      final isAdminApply = AuthStorage.isHr && data['onBehalfEmployeeId'] != null;
+      final isAdminApply = AuthStorage.isSuperAdmin && data['onBehalfEmployeeId'] != null;
       final urlStr = isAdminApply
           ? '$_baseUrl/api/v1/leaves/admin/apply-on-behalf'
           : '$_baseUrl/api/v1/leaves/apply';
@@ -330,7 +330,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update leave request status.'),
+            content: const Text('Failed to update leave request status.'),
             backgroundColor: t.danger,
           ),
         );
@@ -406,7 +406,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() => reasonController.dispose());
   }
 
   void _changeMonth(int delta) {
@@ -618,7 +618,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
         initialEndDate: date,
         initialRequestCategory: category,
         // Admin applies on behalf of selected employee; Employee applies for themselves (null)
-        targetEmployee: AuthStorage.isHr ? _selectedEmployee : null,
+        targetEmployee: AuthStorage.isSuperAdmin ? _selectedEmployee : null,
         onSubmit: (data) {
           _submitLeaveRequest(data);
         },
@@ -637,7 +637,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
   void _showDayDetailsDialog(AttendanceCalendarDay day) {
     // Admin reviewing an employee's calendar can approve/reject pending leaves
-    if (AuthStorage.isHr && day.status == 'PENDING_LEAVE' && day.leaveRequestId != null) {
+    if (AuthStorage.isSuperAdmin && day.status == 'PENDING_LEAVE' && day.leaveRequestId != null) {
       _showReviewLeaveDialog(day);
       return;
     }
@@ -726,7 +726,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   Widget build(BuildContext context) {
     
     final t = context.appTheme;
-    final isAdmin = AuthStorage.isHr;
+    final isAdmin = AuthStorage.isSuperAdmin;
 
     // KPI Metrics calculation
     final paidLeaveCount = _days.where((d) => d.status == 'PAID_LEAVE').length;
@@ -739,13 +739,15 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       appBar: AppBar(
         title: Text(
           isAdmin ? 'Attendance Management' : 'Attendance Calendar',
-          style: TextStyle(fontWeight: FontWeight.bold, color: t.onBackgroundText),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        iconTheme: IconThemeData(color: t.onBackgroundText),
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           if (!isAdmin)
             IconButton(
-              icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               onPressed: _fetchCalendarData,
             ),
         ],
@@ -754,11 +756,17 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12.0 : 24.0,
+                  vertical: isMobile ? 10.0 : 20.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // HR Biometric Sheet Upload Header Card (Visible ONLY for Super Admin)
                 if (isAdmin) ...[
                   Container(
@@ -774,50 +782,10 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: t.border),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: t.primary.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.upload_file_rounded, color: Color(0xFF6366F1), size: 28),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Biometric Attendance Management',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: t.text,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Upload punch machine Excel (.xlsx) to process and sync daily attendance',
-                                style: TextStyle(fontSize: 12, color: t.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _openBiometricImportDialog,
-                          icon: const Icon(Icons.note_add_rounded, size: 18),
-                          label: const Text('Import Punch Excel'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: t.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        PopupMenuButton<String>(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isCompact = constraints.maxWidth < 720;
+                        final clearDataBtn = PopupMenuButton<String>(
                           tooltip: 'Clear Leave Data Options',
                           onSelected: (val) {
                             if (val == 'selected') {
@@ -836,7 +804,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                                   const SizedBox(width: 8),
                                   Text(
                                     _selectedEmployee != null
-                                        ? 'Clear ${_selectedEmployee!.name}\'s Leave Data'
+                                        ? 'Clear \'s Leave Data'
                                         : 'Select an employee to clear',
                                     style: const TextStyle(fontSize: 13, color: Colors.red),
                                   ),
@@ -855,13 +823,14 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                             ),
                           ],
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
                               color: Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                             ),
                             child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.cleaning_services_rounded, color: Colors.red, size: 18),
                                 SizedBox(width: 6),
@@ -870,8 +839,116 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                               ],
                             ),
                           ),
-                        ),
-                      ],
+                        );
+
+                        if (isCompact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: t.primary.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.upload_file_rounded, color: Color(0xFF6366F1), size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Biometric Attendance Management',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: t.text,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Upload punch machine Excel (.xlsx) to sync daily attendance',
+                                          style: TextStyle(fontSize: 12, color: t.textSecondary),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: _openBiometricImportDialog,
+                                      icon: const Icon(Icons.note_add_rounded, size: 18),
+                                      label: const Text('Import Punch Excel'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: t.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  clearDataBtn,
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: t.primary.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.upload_file_rounded, color: Color(0xFF6366F1), size: 28),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Biometric Attendance Management',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: t.text,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Upload punch machine Excel (.xlsx) to process and sync daily attendance',
+                                    style: TextStyle(fontSize: 12, color: t.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _openBiometricImportDialog,
+                              icon: const Icon(Icons.note_add_rounded, size: 18),
+                              label: const Text('Import Punch Excel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: t.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            clearDataBtn,
+                          ],
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -1023,11 +1100,13 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                 ],
               ],
             ),
-          ),
-        ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildKpiCard(String label, String value, Color color, IconData icon, AppThemeConfig t) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

@@ -16,114 +16,107 @@ class EmployeeCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(20.0),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 180;
+        final avatarRadius = isCompact ? 26.0 : 32.0;
+
+        return InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16.0),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 8.0 : 12.0,
+              vertical: isCompact ? 10.0 : 14.0,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Top Action Menu
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                  size: 20,
-                ),
-                onPressed: () {},
-                padding: const EdgeInsets.only(top: 8.0, right: 8.0),
-                constraints: const BoxConstraints(),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16.0),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                width: 1.0,
               ),
-            ),
-            const SizedBox(height: 2),
-            // Avatar with Status Badge
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 38,
-                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                  backgroundImage: NetworkImage(
-                    'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name)}',
-                  ),
-                ),
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    width: 13,
-                    height: 13,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: isDark ? const Color(0xFF1E293B) : Colors.white, width: 2),
-                    ),
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Name
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Text(
-                employee.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Avatar with Status Indicator Dot
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: avatarRadius,
+                      backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                      backgroundImage: NetworkImage(
+                        'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name)}',
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? const Color(0xFF1E293B) : Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 3),
-            // Role
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Text(
-                '${employee.role} • ${employee.department}',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                const SizedBox(height: 8),
+
+                // Name
+                Text(
+                  employee.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: isCompact ? 13 : 14,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 2),
+
+                // Role & Department
+                Text(
+                  '${employee.role} • ${employee.department}',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isCompact ? 10 : 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Live Today Attendance Status Badge
+                _buildTodayStatusBadge(
+                  employee.isAttendanceTracked ? employee.todayAttendanceStatus : 'EXEMPT',
+                  isCompact,
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            const SizedBox(height: 10),
-            // Live Today Attendance Status Badge
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14.0),
-              child: _buildTodayStatusBadge(employee.isAttendanceTracked ? employee.todayAttendanceStatus : 'EXEMPT'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildTodayStatusBadge(String status) {
+  Widget _buildTodayStatusBadge(String status, bool isCompact) {
     Color bg;
     Color text;
     String label;
@@ -133,52 +126,55 @@ class EmployeeCard extends StatelessWidget {
       case 'PRESENT':
         bg = const Color(0xFF10B981).withValues(alpha: 0.15);
         text = const Color(0xFF10B981);
-        label = 'PRESENT TODAY';
+        label = 'PRESENT';
         break;
       case 'LATE':
         bg = const Color(0xFFF59E0B).withValues(alpha: 0.15);
         text = const Color(0xFFD97706);
-        label = 'LATE TODAY';
+        label = 'LATE';
         break;
       case 'ON_LEAVE':
       case 'PAID_LEAVE':
         bg = const Color(0xFF6366F1).withValues(alpha: 0.15);
         text = const Color(0xFF6366F1);
-        label = 'ON LEAVE TODAY';
+        label = 'ON LEAVE';
         break;
       case 'EXEMPT':
       case 'UNTRACKED':
         bg = Colors.amber.withValues(alpha: 0.15);
         text = const Color(0xFFD97706);
-        label = 'UNTRACKED / EXEMPT';
+        label = 'EXEMPT';
         icon = Icons.do_not_disturb_on_rounded;
         break;
       case 'ABSENT':
       default:
         bg = const Color(0xFFEF4444).withValues(alpha: 0.15);
         text = const Color(0xFFEF4444);
-        label = 'ABSENT TODAY';
+        label = 'ABSENT';
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 6.0 : 8.0,
+        vertical: 3.0,
+      ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20.0),
+        borderRadius: BorderRadius.circular(12.0),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 8, color: text),
-          const SizedBox(width: 5),
+          Icon(icon, size: isCompact ? 6 : 7, color: text),
+          const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               color: text,
               fontWeight: FontWeight.bold,
-              fontSize: 10,
-              letterSpacing: 0.5,
+              fontSize: isCompact ? 8.5 : 9.5,
+              letterSpacing: 0.3,
             ),
           ),
         ],

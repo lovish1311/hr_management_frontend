@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+﻿import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthStorage {
   static String? _token;
@@ -65,6 +65,9 @@ class AuthStorage {
     if (_token != null && _token!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $_token';
     }
+    if (_employeeId != null) {
+      headers['X-Employee-Id'] = _employeeId.toString();
+    }
     return headers;
   }
 
@@ -81,3 +84,4 @@ class AuthStorage {
     await prefs.remove(_kEmpId);
   }
 }
+

@@ -1,8 +1,11 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+
+
 class AuthApiService {
-  static const String baseUrl = 'http://localhost:8080/api';
+  static String get baseUrl => "${ApiConfig.baseUrl}/api";
 
   static Future<Map<String, dynamic>> login({
     required String email,

@@ -1,7 +1,6 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
@@ -70,13 +69,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   int _hourlyLimit = 4;
   bool _isLoadingTimeOffSettings = false;
 
-  String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
-    } catch (_) {}
-    return 'http://localhost:8080';
-  }
+  String get _baseUrl => ApiConfig.baseUrl;
 
   @override
   void initState() {
@@ -405,7 +398,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           ),
         );
       },
-    );
+    ).whenComplete(() => noteController.dispose());
   }
 
   // Commits staged changes to backend database
@@ -465,6 +458,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           indicatorColor: t.primary,
           labelColor: t.onBackgroundText,
           unselectedLabelColor: t.onBackgroundTextSecondary,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(icon: Icon(Icons.tune_rounded), text: '1. Leave Allocation'),
             Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Employee Quotas'),
@@ -533,9 +528,11 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                           child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
                         ),
                         const SizedBox(width: 14),
-                        const Text(
-                          'Company-Wide Annual & Quarterly Leave Distribution',
-                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                        const Expanded(
+                          child: Text(
+                            'Company-Wide Annual & Quarterly Leave Distribution',
+                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                          ),
                         ),
                       ],
                     ),
@@ -598,32 +595,39 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       }).toList(),
                     ),
                     const SizedBox(height: 16),
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 10,
                       children: [
                         Text('Allocation Days to Grant:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: t.text)),
-                        const SizedBox(width: 16),
-                        IconButton(
-                          icon: Icon(Icons.remove_circle_outline_rounded, color: t.primary),
-                          onPressed: () {
-                            if (_grantDays > 0.5) setState(() => _grantDays -= 0.5);
-                          },
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: t.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$_grantDays Days',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.primary),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.add_circle_outline_rounded, color: t.primary),
-                          onPressed: () {
-                            setState(() => _grantDays += 0.5);
-                          },
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.remove_circle_outline_rounded, color: t.primary),
+                              onPressed: () {
+                                if (_grantDays > 0.5) setState(() => _grantDays -= 0.5);
+                              },
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: t.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$_grantDays Days',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.primary),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.add_circle_outline_rounded, color: t.primary),
+                              onPressed: () {
+                                setState(() => _grantDays += 0.5);
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -633,7 +637,10 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Step 3: Employee Exclusions (Probation / Notice Period)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
+                        Expanded(
+                          child: Text('Step 3: Employee Exclusions (Probation / Notice Period)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text)),
+                        ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -1239,13 +1246,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     Text('Specify the resetting frequency and individual limits for time-based exemptions.', style: TextStyle(fontSize: 12, color: t.textSecondary)),
                     const SizedBox(height: 20),
 
-                    // Cycle Selector
-                    Row(
+                    // Cycle Selector (Fixed 108px overflow using Column + Wrap)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Policy Cycle Frequency:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
-                        const SizedBox(width: 16),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
+                          runSpacing: 8,
                           children: ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'].map((cycle) {
                             final isSel = _timeOffCycle == cycle;
                             return ChoiceChip(
@@ -1268,60 +1277,114 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     Text('Permission Unit Limits (Per $_timeOffCycle Cycle):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: t.text)),
                     const SizedBox(height: 14),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildLimitCounter(
-                            title: 'Short Break Limit',
-                            subtitle: 'Max short breaks allowed per cycle',
-                            value: _shortBreakUnitLimit,
-                            icon: Icons.coffee_outlined,
-                            color: const Color(0xFFF59E0B),
-                            t: t,
-                            onChanged: (val) => setState(() => _shortBreakUnitLimit = val),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildLimitCounter(
-                            title: 'Early Out Limit',
-                            subtitle: 'Max early outs allowed per cycle',
-                            value: _earlyOutUnitLimit,
-                            icon: Icons.directions_run_outlined,
-                            color: const Color(0xFF8B5CF6),
-                            t: t,
-                            onChanged: (val) => setState(() => _earlyOutUnitLimit = val),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildLimitCounter(
-                            title: 'Late Arrival Limit',
-                            subtitle: 'Max late arrival permissions per cycle',
-                            value: _lateArrivalUnitLimit,
-                            icon: Icons.watch_later_outlined,
-                            color: const Color(0xFFEF4444),
-                            t: t,
-                            onChanged: (val) => setState(() => _lateArrivalUnitLimit = val),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildLimitCounter(
-                            title: 'Combined Hourly Limit',
-                            subtitle: 'Max total hours (for Hourly Mode)',
-                            value: _hourlyLimit,
-                            icon: Icons.timer_outlined,
-                            color: const Color(0xFF0284C7),
-                            t: t,
-                            onChanged: (val) => setState(() => _hourlyLimit = val),
-                          ),
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 520;
+                        if (isNarrow) {
+                          return Column(
+                            children: [
+                              _buildLimitCounter(
+                                title: 'Short Break Limit',
+                                subtitle: 'Max short breaks allowed per cycle',
+                                value: _shortBreakUnitLimit,
+                                icon: Icons.coffee_outlined,
+                                color: const Color(0xFFF59E0B),
+                                t: t,
+                                onChanged: (val) => setState(() => _shortBreakUnitLimit = val),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLimitCounter(
+                                title: 'Early Out Limit',
+                                subtitle: 'Max early outs allowed per cycle',
+                                value: _earlyOutUnitLimit,
+                                icon: Icons.directions_run_outlined,
+                                color: const Color(0xFF8B5CF6),
+                                t: t,
+                                onChanged: (val) => setState(() => _earlyOutUnitLimit = val),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLimitCounter(
+                                title: 'Late Arrival Limit',
+                                subtitle: 'Max late arrival permissions per cycle',
+                                value: _lateArrivalUnitLimit,
+                                icon: Icons.watch_later_outlined,
+                                color: const Color(0xFFEF4444),
+                                t: t,
+                                onChanged: (val) => setState(() => _lateArrivalUnitLimit = val),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLimitCounter(
+                                title: 'Combined Hourly Limit',
+                                subtitle: 'Max total hours (for Hourly Mode)',
+                                value: _hourlyLimit,
+                                icon: Icons.timer_outlined,
+                                color: const Color(0xFF0284C7),
+                                t: t,
+                                onChanged: (val) => setState(() => _hourlyLimit = val),
+                              ),
+                            ],
+                          );
+                        }
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildLimitCounter(
+                                    title: 'Short Break Limit',
+                                    subtitle: 'Max short breaks allowed per cycle',
+                                    value: _shortBreakUnitLimit,
+                                    icon: Icons.coffee_outlined,
+                                    color: const Color(0xFFF59E0B),
+                                    t: t,
+                                    onChanged: (val) => setState(() => _shortBreakUnitLimit = val),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildLimitCounter(
+                                    title: 'Early Out Limit',
+                                    subtitle: 'Max early outs allowed per cycle',
+                                    value: _earlyOutUnitLimit,
+                                    icon: Icons.directions_run_outlined,
+                                    color: const Color(0xFF8B5CF6),
+                                    t: t,
+                                    onChanged: (val) => setState(() => _earlyOutUnitLimit = val),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildLimitCounter(
+                                    title: 'Late Arrival Limit',
+                                    subtitle: 'Max late arrival permissions per cycle',
+                                    value: _lateArrivalUnitLimit,
+                                    icon: Icons.watch_later_outlined,
+                                    color: const Color(0xFFEF4444),
+                                    t: t,
+                                    onChanged: (val) => setState(() => _lateArrivalUnitLimit = val),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildLimitCounter(
+                                    title: 'Combined Hourly Limit',
+                                    subtitle: 'Max total hours (for Hourly Mode)',
+                                    value: _hourlyLimit,
+                                    icon: Icons.timer_outlined,
+                                    color: const Color(0xFF0284C7),
+                                    t: t,
+                                    onChanged: (val) => setState(() => _hourlyLimit = val),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 32),
 
@@ -1373,7 +1436,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           children: [
             Radio<String>(
               value: mode,
+              // ignore: deprecated_member_use
               groupValue: _timeOffPolicyMode,
+              // ignore: deprecated_member_use
               onChanged: (val) {
                 if (val != null) setState(() => _timeOffPolicyMode = val);
               },

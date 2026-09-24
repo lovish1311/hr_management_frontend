@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/network/api_config.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
@@ -34,10 +35,7 @@ class _PeoplePageState extends State<PeoplePage> {
   bool _isLoadingMore = false;
   bool _hasMorePages = true;
 
-  String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    return 'http://localhost:8080';
-  }
+  String get _baseUrl => ApiConfig.baseUrl;
 
   List<Employee> get _filteredEmployees {
     if (_directoryTab == 'Starred') {
@@ -1007,7 +1005,6 @@ class _EmployeeListTile extends StatefulWidget {
   final VoidCallback onStarToggle;
 
   const _EmployeeListTile({
-    super.key,
     required this.emp,
     required this.isSelected,
     required this.isStarred,

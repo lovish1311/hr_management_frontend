@@ -1,3 +1,4 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -79,7 +80,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   String? _attachedFileName;
   Employee? _selectedOnBehalfEmployee;
 
-  Map<String, double> _liveBalances = {};
+  final Map<String, double> _liveBalances = {};
 
   Future<void> _fetchLiveBalance([int? targetEmpId]) async {
     final empId = targetEmpId ??
@@ -91,8 +92,9 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
 
     try {
       final t = DateTime.now().millisecondsSinceEpoch;
+      final String baseUrl = ApiConfig.baseUrl;
       final res = await http.get(
-        Uri.parse('http://localhost:8080/api/v1/leaves/balance/$empId?t=$t'),
+        Uri.parse('$baseUrl/api/v1/leaves/balance/$empId?t=$t'),
         headers: AuthStorage.authHeaders,
       );
       if (res.statusCode == 200) {
@@ -129,6 +131,13 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     }
     _loadEmployees();
     _fetchLiveBalance();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _contactController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadEmployees() async {

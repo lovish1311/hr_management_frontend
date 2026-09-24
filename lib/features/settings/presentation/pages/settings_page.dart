@@ -381,11 +381,13 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           initialValue: value,
+          isExpanded: true,
           dropdownColor: t.card,
-          style: TextStyle(color: t.text),
+          style: TextStyle(color: t.text, fontSize: 13),
           decoration: InputDecoration(
             filled: true,
             fillColor: t.cardSoft,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: t.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: t.border)),
           ),

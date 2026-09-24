@@ -72,15 +72,15 @@ class AttendanceCalendarGrid extends StatelessWidget {
               ),
             ),
           PopupMenuItem(
-              onTap: () => Future.microtask(() => onApplyLeaveForDate(day)),
-              child: const Row(
-                children: [
-                  Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1), size: 18),
-                  SizedBox(width: 10),
-                  Text('Request Permission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF6366F1))),
-                ],
-              ),
+            onTap: () => Future.microtask(() => onApplyLeaveForDate(day)),
+            child: const Row(
+              children: [
+                Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1), size: 18),
+                SizedBox(width: 10),
+                Text('Request Permission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF6366F1))),
+              ],
             ),
+          ),
           if (!isAdmin && isPendingLeave)
             PopupMenuItem(
               onTap: () => Future.microtask(() => onDayTap(day)),
@@ -148,20 +148,8 @@ class AttendanceCalendarGrid extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Actions for ${_formatDate(day.date)}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Status: ${day.statusLabel}',
-                    style: TextStyle(fontSize: 12, color: _getStatusColor(day.status, isDark)),
-                  ),
-                  const SizedBox(height: 16),
+                  Text('Quick Actions for ${_formatDate(day.date)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
                   if (isAdmin && isPendingLeave)
                     ListTile(
                       leading: Container(
@@ -173,7 +161,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
                         child: const Icon(Icons.rate_review_rounded, color: Color(0xFFFF9800), size: 20),
                       ),
                       title: const Text('Review Leave Request', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFFF9800))),
-                      subtitle: const Text('Approve or reject this pending leave', style: TextStyle(fontSize: 11)),
+                      subtitle: const Text('Approve or decline pending request', style: TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         onDayTap(day);
@@ -188,8 +176,8 @@ class AttendanceCalendarGrid extends StatelessWidget {
                       ),
                       child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF6366F1), size: 20),
                     ),
-                    title: const Text('Request Permission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF6366F1))),
-                    subtitle: const Text('Apply leave, short break, early out, or late arrival', style: TextStyle(fontSize: 11)),
+                    title: const Text('Request Permission / Apply Leave', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('Submit leave, break, or punch correction', style: TextStyle(fontSize: 11)),
                     onTap: () {
                       Navigator.pop(context);
                       onApplyLeaveForDate(day);
@@ -262,6 +250,9 @@ class AttendanceCalendarGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 500;
+
     final firstDayOfMonth = DateTime(activeMonth.year, activeMonth.month, 1);
     final daysInMonth = DateTime(activeMonth.year, activeMonth.month + 1, 0).day;
     final leadingPaddingDays = firstDayOfMonth.weekday % 7; // Sunday = 0, Monday = 1 ...
@@ -272,10 +263,10 @@ class AttendanceCalendarGrid extends StatelessWidget {
       children: [
         // Weekday Headers
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: isNarrow ? 6 : 10),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -286,7 +277,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
                   day,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: isNarrow ? 11 : 12,
                     fontWeight: FontWeight.w700,
                     color: isWeekendHeader
                         ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
@@ -297,17 +288,17 @@ class AttendanceCalendarGrid extends StatelessWidget {
             }).toList(),
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: isNarrow ? 6 : 10),
 
-        // Grid Cells with fixed mainAxisExtent for compact height across all screen sizes
+        // Grid Cells
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisExtent: MediaQuery.of(context).size.width < 450 ? 52 : 64,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+            mainAxisExtent: isNarrow ? 56 : 68,
+            crossAxisSpacing: isNarrow ? 4 : 8,
+            mainAxisSpacing: isNarrow ? 4 : 8,
           ),
           itemCount: leadingPaddingDays + daysInMonth,
           itemBuilder: (context, index) {
@@ -344,7 +335,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: EdgeInsets.all(isNarrow ? 4 : 6),
                 decoration: BoxDecoration(
                   gradient: dayData.status == 'UPCOMING'
                       ? LinearGradient(
@@ -359,8 +350,8 @@ class AttendanceCalendarGrid extends StatelessWidget {
                       ? null
                       : (dayData.status == 'WEEKEND'
                           ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.4) : const Color(0xFFF1F5F9))
-                          : statusColor.withValues(alpha: isDark ? 0.2 : 0.12)),
-                  borderRadius: BorderRadius.circular(10),
+                          : statusColor.withValues(alpha: isDark ? 0.22 : 0.14)),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isToday
                         ? const Color(0xFF3B82F6)
@@ -368,21 +359,22 @@ class AttendanceCalendarGrid extends StatelessWidget {
                             ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
                             : (dayData.status == 'WEEKEND'
                                 ? Colors.transparent
-                                : statusColor.withValues(alpha: 0.35))),
+                                : statusColor.withValues(alpha: 0.4))),
                     width: isToday ? 2.0 : 1.0,
                   ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Top Row: Day Number & Today Tag
+                    // Top Row: Day Number & Today indicator
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           '$dayNumber',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: isNarrow ? 12 : 14,
                             fontWeight: isToday || dayData.status != 'UPCOMING' ? FontWeight.w800 : FontWeight.w600,
                             color: dayData.status == 'WEEKEND'
                                 ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
@@ -391,41 +383,44 @@ class AttendanceCalendarGrid extends StatelessWidget {
                         ),
                         if (isToday)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6),
-                              borderRadius: BorderRadius.circular(4),
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF3B82F6),
+                              shape: BoxShape.circle,
                             ),
-                            child: const Text('TODAY', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                           ),
                       ],
                     ),
 
-                    // Bottom Row: Status Micro Pill / Dot
+                    // Bottom: Status Indicator
                     if (dayData.status != 'WEEKEND' && dayData.status != 'UPCOMING')
                       Align(
-                        alignment: Alignment.bottomLeft,
+                        alignment: Alignment.centerLeft,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isNarrow ? 3 : 5,
+                            vertical: 1.5,
+                          ),
                           decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.2),
+                            color: statusColor.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 5,
-                                height: 5,
+                                width: 4,
+                                height: 4,
                                 decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
-                                  _getMicroStatusLabel(dayData.status, dayData.leaveType),
+                                  _getMicroStatusLabel(dayData.status, dayData.leaveType, isNarrow),
                                   style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: isNarrow ? 8 : 9,
+                                    fontWeight: FontWeight.w800,
                                     color: statusColor,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -446,27 +441,27 @@ class AttendanceCalendarGrid extends StatelessWidget {
     );
   }
 
-  String _getMicroStatusLabel(String status, String? leaveType) {
+  String _getMicroStatusLabel(String status, String? leaveType, bool isNarrow) {
     final normType = leaveType != null ? leaveType.toUpperCase().replaceAll(RegExp(r'[ _-]'), '') : '';
     switch (status.toUpperCase()) {
       case 'PRESENT':
         if (normType.contains('SHORTBREAK') || normType.contains('SHORTLEAVE')) {
-          return 'Break (Present)';
+          return isNarrow ? 'Break' : 'Break (P)';
         } else if (normType.contains('EARLYOUT') || normType.contains('EARLYLEAVE')) {
-          return 'Early Out (Present)';
+          return isNarrow ? 'Early' : 'Early Out';
         }
-        return 'Present';
+        return isNarrow ? 'Pres' : 'Present';
       case 'LATE':
         return 'Late';
       case 'PAID_LEAVE':
-        return 'On Leave';
+        return isNarrow ? 'Leave' : 'On Leave';
       case 'PENDING_LEAVE':
-        return 'Pending';
+        return isNarrow ? 'Pend' : 'Pending';
       case 'LOP_LEAVE':
       case 'UNEXCUSED_ABSENT':
         return 'LOP';
       case 'HOLIDAY':
-        return 'Holiday';
+        return isNarrow ? 'Holi' : 'Holiday';
       default:
         return '';
     }

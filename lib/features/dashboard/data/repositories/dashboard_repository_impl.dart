@@ -1,6 +1,6 @@
+import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats.dart';
@@ -8,13 +8,7 @@ import 'package:hr_management/features/dashboard/domain/repositories/dashboard_r
 
 class DashboardRepositoryImpl implements DashboardRepository {
   
-  String get _baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
-    } catch (_) {}
-    return 'http://localhost:8080';
-  }
+  String get _baseUrl => ApiConfig.baseUrl;
 
   @override
   Future<DashboardStats> getDashboardStats() async {
