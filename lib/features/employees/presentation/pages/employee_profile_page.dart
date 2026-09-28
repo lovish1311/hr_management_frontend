@@ -1,3 +1,4 @@
+import 'package:hr_management/features/employees/presentation/pages/employee_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
@@ -307,6 +308,57 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   runSpacing: 6,
                   alignment: WrapAlignment.center,
                   children: [
+                    if (emp.status == 'PROBATION' || emp.isProbation)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.timer_outlined, size: 12, color: Color(0xFFD97706)),
+                            SizedBox(width: 4),
+                            Text('In Probation', style: TextStyle(color: Color(0xFFD97706), fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    if (emp.status == 'NOTICE_PERIOD' || emp.isNoticePeriod)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.exit_to_app_rounded, size: 12, color: Color(0xFF7C3AED)),
+                            SizedBox(width: 4),
+                            Text('On Notice', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    if (emp.status == 'INACTIVE')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.block_rounded, size: 12, color: Color(0xFFEF4444)),
+                            SizedBox(width: 4),
+                            Text('Inactive / Deactivated', style: TextStyle(color: Color(0xFFEF4444), fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                     if (!emp.isAttendanceTracked)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -451,6 +503,71 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                       ),
                       icon: const Icon(Icons.security_rounded, size: 16),
                       label: const Text('Elevate / Change Role', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final res = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => EmployeeFormPage(initialEmployee: emp, isModal: true),
+                        );
+                        if (res == true) {
+                          _fetchEmployee(emp.id);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.edit_note_rounded, size: 16),
+                      label: const Text('Edit Employee Profile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final isCurrentlyInactive = emp.status == 'INACTIVE';
+                        final newStatus = isCurrentlyInactive ? 'ACTIVE' : 'INACTIVE';
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(isCurrentlyInactive ? 'Reactivate Employee?' : 'Deactivate Employee?'),
+                            content: Text(isCurrentlyInactive
+                                ? 'Reactivate ${emp.name}? Their login credentials will be restored.'
+                                : 'Deactivate ${emp.name}? Soft deactivation blocks logins while strictly preserving all leave history, attendance, and approvals.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isCurrentlyInactive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                ),
+                                child: Text(isCurrentlyInactive ? 'Reactivate' : 'Deactivate', style: const TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          await _repository.toggleEmployeeStatus(emp.id, newStatus);
+                          _fetchEmployee(emp.id);
+                        }
+                      },
+                      icon: Icon(emp.status == 'INACTIVE' ? Icons.check_circle_outline : Icons.block_rounded, size: 16),
+                      label: Text(emp.status == 'INACTIVE' ? 'Reactivate Employee' : 'Deactivate Employee', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: emp.status == 'INACTIVE' ? const Color(0xFF10B981) : const Color(0xFFEF4444)),
+                        foregroundColor: emp.status == 'INACTIVE' ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      ),
                     ),
                   ),
                 ],
@@ -1127,6 +1244,18 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (emp.status == 'PROBATION' || emp.isProbation) ...[
+            _buildProbationAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
+            const SizedBox(height: 16),
+          ],
+          if (emp.status == 'NOTICE_PERIOD' || emp.isNoticePeriod) ...[
+            _buildNoticeAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
+            const SizedBox(height: 16),
+          ],
+          if (emp.status == 'INACTIVE') ...[
+            _buildInactiveAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
+            const SizedBox(height: 16),
+          ],
           TabBar(
             isScrollable: true,
             labelColor: theme.colorScheme.primary,
@@ -1678,9 +1807,13 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Reason', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      Text(r.reason, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(r.reason, textAlign: TextAlign.end, style: const TextStyle(fontSize: 13)),
+                      ),
                     ],
                   ),
                 ],
@@ -1753,6 +1886,148 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       ),
     );
   }
+
+  Widget _buildProbationAlertBanner(Employee emp, bool isDark) {
+    final endDateStr = emp.probationEndDate ?? 'Scheduled';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Probation Period Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFD97706))),
+                    Text('Start: ${emp.probationStartDate ?? emp.joiningDate} • Projected Completion: $endDateStr', style: const TextStyle(fontSize: 12, color: Color(0xFFB45309))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFD97706)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Earned Leave accrual = 0.0 during probation. 15th-day rule determines eligible proration upon completion.',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFB45309)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoticeAlertBanner(Employee emp, bool isDark) {
+    final lwd = emp.noticeEndDate ?? 'Scheduled';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF5F3FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.exit_to_app_rounded, color: Color(0xFF7C3AED), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Serving Notice Period', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF7C3AED))),
+                    Text('Start: ${emp.noticeStartDate ?? 'Active'} • Last Working Day: $lwd', style: const TextStyle(fontSize: 12, color: Color(0xFF6D28D9))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.shield_outlined, size: 14, color: Color(0xFF7C3AED)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Notice Restrictions: Casual/Sick/Earned leaves blocked • Loss of Pay (LOP) allowed • Balances visible.',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF6D28D9)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInactiveAlertBanner(Employee emp, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Employee is Deactivated (Soft Deactivation: Historical attendance, leaves, and approvals are preserved).',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }
 
 class StatusPill extends StatelessWidget {

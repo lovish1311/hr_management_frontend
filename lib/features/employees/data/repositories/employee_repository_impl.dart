@@ -10,6 +10,14 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
   String get _baseUrl => ApiConfig.baseUrl;
 
+  // In-memory cache for Phase 1 UI state & mock reactivity
+  static List<Employee>? _cachedEmployees;
+
+  List<Employee> _getEffectiveCache() {
+    _cachedEmployees ??= _getMockEmployeeList();
+    return _cachedEmployees!;
+  }
+
   @override
   Future<List<Employee>> getEmployees({String? departmentFilter}) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees');
@@ -24,16 +32,21 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded is List && decoded.isNotEmpty) {
-          list = decoded.map((jsonItem) => Employee.fromJson(jsonItem as Map<String, dynamic>)).toList();
+          final fromApi = decoded.map((jsonItem) => Employee.fromJson(jsonItem as Map<String, dynamic>)).toList();
+          // Merge with locally created/edited employees if any
+          final currentCache = _getEffectiveCache();
+          final localCreated = currentCache.where((cached) => !fromApi.any((api) => api.id == cached.id)).toList();
+          _cachedEmployees = [...localCreated, ...fromApi];
+          list = _cachedEmployees!;
         } else {
-          list = _getMockEmployeeList();
+          list = _getEffectiveCache();
         }
       } else {
-        list = _getMockEmployeeList();
+        list = _getEffectiveCache();
       }
     } catch (e) {
       debugPrint('Employees API connect error, using fallback: $e');
-      list = _getMockEmployeeList();
+      list = _getEffectiveCache();
     }
 
     if (departmentFilter == null || departmentFilter == 'All') {
@@ -44,6 +57,12 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
   @override
   Future<Employee?> getEmployeeById(String id) async {
+    final cache = _getEffectiveCache();
+    final matchInCache = cache.where((e) => e.id == id);
+    if (matchInCache.isNotEmpty) {
+      return matchInCache.first;
+    }
+
     final url = Uri.parse('$_baseUrl/api/v1/employees/$id');
     try {
       final response = await http.get(
@@ -59,9 +78,53 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       }
     } catch (_) {}
 
-    final all = _getMockEmployeeList();
-    final match = all.where((e) => e.id == id);
-    return match.isNotEmpty ? match.first : (all.isNotEmpty ? all.first : null);
+    return cache.isNotEmpty ? cache.first : null;
+  }
+
+  @override
+  Future<Employee> createEmployee(Employee employee) async {
+    final cache = _getEffectiveCache();
+    final newId = (DateTime.now().millisecondsSinceEpoch % 100000).toString();
+    final assignedCode = employee.employeeCode.isNotEmpty ? employee.employeeCode : 'EMP-$newId';
+    
+    final created = employee.copyWith(
+      id: employee.id.isNotEmpty ? employee.id : newId,
+      employeeCode: assignedCode,
+    );
+    
+    cache.insert(0, created);
+    return created;
+  }
+
+  @override
+  Future<Employee> updateEmployee(Employee employee) async {
+    final cache = _getEffectiveCache();
+    final index = cache.indexWhere((e) => e.id == employee.id);
+    if (index != -1) {
+      cache[index] = employee;
+      return employee;
+    } else {
+      cache.insert(0, employee);
+      return employee;
+    }
+  }
+
+  @override
+  Future<bool> toggleEmployeeStatus(String id, String newStatus) async {
+    final cache = _getEffectiveCache();
+    final index = cache.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      final emp = cache[index];
+      final isProbation = (newStatus.toUpperCase() == 'PROBATION');
+      final isNotice = (newStatus.toUpperCase() == 'NOTICE' || newStatus.toUpperCase() == 'NOTICE_PERIOD');
+      cache[index] = emp.copyWith(
+        status: newStatus.toUpperCase(),
+        isProbation: isProbation ? true : emp.isProbation,
+        isNoticePeriod: isNotice ? true : (newStatus.toUpperCase() == 'ACTIVE' ? false : emp.isNoticePeriod),
+      );
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -120,7 +183,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
     }
 
     // Local fallback/mock pagination
-    final mockList = _getMockEmployeeList();
+    final mockList = _getEffectiveCache();
     if (query != null && query.isNotEmpty) {
       final lower = query.toLowerCase();
       final filtered = mockList.where((e) =>
@@ -150,9 +213,69 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       Employee(id: '9', employeeCode: 'EMP-204', name: 'Abhinav Singh', role: 'EMPLOYEE', department: 'Engineering', designation: 'Backend Developer', status: 'ACTIVE', email: 'abhinav@company.com', phone: '+91 98123 45204', managerName: 'Harsh Kaushal', isAttendanceTracked: true, dateOfBirth: '1997-11-05', emergencyContactName: 'Singh Contact', emergencyContactPhone: '+91 98000 45204'),
       Employee(id: '10', employeeCode: 'EMP-205', name: 'Gurkirat Singh', role: 'EMPLOYEE', department: 'Engineering', designation: 'Tech Lead', status: 'ACTIVE', email: 'gurkirat@company.com', phone: '+91 98123 45205', managerName: 'Harsh Kaushal', isAttendanceTracked: true, dateOfBirth: '1995-09-30', emergencyContactName: 'Singh Contact', emergencyContactPhone: '+91 98000 45205'),
       Employee(id: '11', employeeCode: 'EMP-206', name: 'Ashish Chaudhari', role: 'EMPLOYEE', department: 'Engineering', designation: 'QA Engineer', status: 'ACTIVE', email: 'ashish@company.com', phone: '+91 98123 45206', managerName: 'Harsh Kaushal', isAttendanceTracked: true, dateOfBirth: '1999-01-22', emergencyContactName: 'Chaudhari Contact', emergencyContactPhone: '+91 98000 45206'),
-      Employee(id: '12', employeeCode: 'EMP-207', name: 'Aman Dhiman', role: 'EMPLOYEE', department: 'Engineering', designation: 'Junior Software Developer', status: 'ACTIVE', email: 'aman@company.com', phone: '+91 98123 45207', managerName: 'Harsh Kaushal', isAttendanceTracked: true, dateOfBirth: '2000-06-15', emergencyContactName: 'Dhiman Contact', emergencyContactPhone: '+91 98000 45207'),
-      Employee(id: '13', employeeCode: 'EMP-208', name: 'Aniket Sharma', role: 'EMPLOYEE', department: 'Engineering', designation: 'Software Engineer', status: 'ACTIVE', email: 'aniket@company.com', phone: '+91 98123 45208', managerName: 'Harsh Kaushal', isAttendanceTracked: true, dateOfBirth: '1998-10-18', emergencyContactName: 'Sharma Contact', emergencyContactPhone: '+91 98000 45208'),
-      Employee(id: '14', employeeCode: 'EMP-209', name: 'Abhishek Yadav', role: 'EMPLOYEE', department: 'Product', designation: 'Product Analyst', status: 'ACTIVE', email: 'abhishek.yadav@company.com', phone: '+91 98123 45209', managerName: 'Naveen Chandra Tiwari', isAttendanceTracked: true, dateOfBirth: '1996-03-29', emergencyContactName: 'Yadav Contact', emergencyContactPhone: '+91 98000 45209'),
+      // Example Employee in Probation
+      Employee(
+        id: '12', 
+        employeeCode: 'EMP-207', 
+        name: 'Aman Dhiman', 
+        role: 'EMPLOYEE', 
+        department: 'Engineering', 
+        designation: 'Junior Software Developer', 
+        status: 'PROBATION', 
+        email: 'aman@company.com', 
+        phone: '+91 98123 45207', 
+        managerName: 'Harsh Kaushal', 
+        isAttendanceTracked: true, 
+        dateOfBirth: '2000-06-15', 
+        emergencyContactName: 'Dhiman Contact', 
+        emergencyContactPhone: '+91 98000 45207',
+        isProbation: true,
+        probationStartDate: '2026-07-01',
+        probationDurationMonths: 3,
+        probationEndDate: '2026-10-01',
+      ),
+      // Another Employee in Probation (joined after 15th)
+      Employee(
+        id: '13', 
+        employeeCode: 'EMP-208', 
+        name: 'Aniket Sharma', 
+        role: 'EMPLOYEE', 
+        department: 'Engineering', 
+        designation: 'Software Engineer', 
+        status: 'PROBATION', 
+        email: 'aniket@company.com', 
+        phone: '+91 98123 45208', 
+        managerName: 'Harsh Kaushal', 
+        isAttendanceTracked: true, 
+        dateOfBirth: '1998-10-18', 
+        emergencyContactName: 'Sharma Contact', 
+        emergencyContactPhone: '+91 98000 45208',
+        isProbation: true,
+        probationStartDate: '2026-08-20',
+        probationDurationMonths: 2,
+        probationEndDate: '2026-10-20',
+      ),
+      // Example Employee serving Notice Period
+      Employee(
+        id: '14', 
+        employeeCode: 'EMP-209', 
+        name: 'Abhishek Yadav', 
+        role: 'EMPLOYEE', 
+        department: 'Product', 
+        designation: 'Product Analyst', 
+        status: 'NOTICE_PERIOD', 
+        email: 'abhishek.yadav@company.com', 
+        phone: '+91 98123 45209', 
+        managerName: 'Naveen Chandra Tiwari', 
+        isAttendanceTracked: true, 
+        dateOfBirth: '1996-03-29', 
+        emergencyContactName: 'Yadav Contact', 
+        emergencyContactPhone: '+91 98000 45209',
+        isNoticePeriod: true,
+        noticeStartDate: '2026-09-01',
+        noticeDurationDays: 60,
+        noticeEndDate: '2026-10-31',
+      ),
       Employee(id: '15', employeeCode: 'EMP-210', name: 'Nikhilesh Thakur', role: 'EMPLOYEE', department: 'Product', designation: 'Senior Product Analyst', status: 'ACTIVE', email: 'nikhilesh@company.com', phone: '+91 98123 45210', managerName: 'Naveen Chandra Tiwari', isAttendanceTracked: true, dateOfBirth: '1995-12-04', emergencyContactName: 'Thakur Contact', emergencyContactPhone: '+91 98000 45210'),
       Employee(id: '16', employeeCode: 'EMP-211', name: 'Kuldeep Singh', role: 'EMPLOYEE', department: 'Product', designation: 'Technical Writer', status: 'ACTIVE', email: 'kuldeep@company.com', phone: '+91 98123 45211', managerName: 'Naveen Chandra Tiwari', isAttendanceTracked: true, dateOfBirth: '1994-07-21', emergencyContactName: 'Singh Contact', emergencyContactPhone: '+91 98000 45211'),
       Employee(id: '17', employeeCode: 'EMP-212', name: 'Abhishek Thakur', role: 'EMPLOYEE', department: 'Product', designation: 'Business Analyst', status: 'ACTIVE', email: 'abhishek.thakur@company.com', phone: '+91 98123 45212', managerName: 'Naveen Chandra Tiwari', isAttendanceTracked: true, dateOfBirth: '1997-05-09', emergencyContactName: 'Thakur Contact', emergencyContactPhone: '+91 98000 45212'),
@@ -171,7 +294,23 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       Employee(id: '30', employeeCode: 'EMP-225', name: 'Mehak Dhillon', role: 'EMPLOYEE', department: 'Design', designation: 'Graphic Designer', status: 'ACTIVE', email: 'mehak.dhillon@company.com', phone: '+91 98123 45225', managerName: 'Ankesh Verma', isAttendanceTracked: true, dateOfBirth: '1997-09-08', emergencyContactName: 'Dhillon Contact', emergencyContactPhone: '+91 98000 45225'),
       Employee(id: '31', employeeCode: 'EMP-226', name: 'Pradeep Negi', role: 'EMPLOYEE', department: 'Sales', designation: 'Sales Executive', status: 'ACTIVE', email: 'pradeep@company.com', phone: '+91 98123 45226', managerName: 'Ankesh Verma', isAttendanceTracked: true, dateOfBirth: '1996-02-24', emergencyContactName: 'Negi Contact', emergencyContactPhone: '+91 98000 45226'),
       Employee(id: '32', employeeCode: 'EMP-227', name: 'Sakshi Sharma', role: 'EMPLOYEE', department: 'Marketing', designation: 'Content Writer', status: 'ACTIVE', email: 'sakshi@company.com', phone: '+91 98123 45227', managerName: 'Ankesh Verma', isAttendanceTracked: true, dateOfBirth: '1998-10-02', emergencyContactName: 'Sharma Contact', emergencyContactPhone: '+91 98000 45227'),
-      Employee(id: '33', employeeCode: 'EMP-228', name: 'Sahil Billowria', role: 'EMPLOYEE', department: 'Sales', designation: 'BDE', status: 'ACTIVE', email: 'sahil@company.com', phone: '+91 98123 45228', managerName: 'Ankesh Verma', isAttendanceTracked: true, dateOfBirth: '1997-07-13', emergencyContactName: 'Billowria Contact', emergencyContactPhone: '+91 98000 45228'),
+      // Example Deactivated / Inactive Employee
+      Employee(
+        id: '33', 
+        employeeCode: 'EMP-228', 
+        name: 'Sahil Billowria', 
+        role: 'EMPLOYEE', 
+        department: 'Sales', 
+        designation: 'BDE', 
+        status: 'INACTIVE', 
+        email: 'sahil@company.com', 
+        phone: '+91 98123 45228', 
+        managerName: 'Ankesh Verma', 
+        isAttendanceTracked: false, 
+        dateOfBirth: '1997-07-13', 
+        emergencyContactName: 'Billowria Contact', 
+        emergencyContactPhone: '+91 98000 45228',
+      ),
     ];
   }
 }

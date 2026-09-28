@@ -12,6 +12,10 @@ class ApiConfig {
     if (kIsWeb) {
       final origin = Uri.base.origin;
       if (origin.isNotEmpty && !origin.startsWith('file:') && origin != 'null') {
+        final host = Uri.base.host;
+        if (host == 'localhost' || host == '127.0.0.1') {
+          return 'http://localhost:8080';
+        }
         return origin;
       }
       return 'http://localhost:8080';

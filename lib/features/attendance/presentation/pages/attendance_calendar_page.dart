@@ -829,14 +829,17 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                             ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.cleaning_services_rounded, color: Colors.red, size: 18),
-                                SizedBox(width: 6),
-                                Text('Clear Data', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
-                                Icon(Icons.arrow_drop_down_rounded, color: Colors.red, size: 18),
-                              ],
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.cleaning_services_rounded, color: Colors.red, size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Clear Data', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Icon(Icons.arrow_drop_down_rounded, color: Colors.red, size: 18),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -879,24 +882,48 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                                 ],
                               ),
                               const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: _openBiometricImportDialog,
-                                      icon: const Icon(Icons.note_add_rounded, size: 18),
-                                      label: const Text('Import Punch Excel'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: t.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              LayoutBuilder(
+                                builder: (context, btnConstraints) {
+                                  if (btnConstraints.maxWidth < 450) {
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        ElevatedButton.icon(
+                                          onPressed: _openBiometricImportDialog,
+                                          icon: const Icon(Icons.note_add_rounded, size: 18),
+                                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Import Punch Excel')),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: t.primary,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        clearDataBtn,
+                                      ],
+                                    );
+                                  }
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: _openBiometricImportDialog,
+                                          icon: const Icon(Icons.note_add_rounded, size: 18),
+                                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Import Punch Excel')),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: t.primary,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  clearDataBtn,
-                                ],
+                                      const SizedBox(width: 10),
+                                      clearDataBtn,
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           );
@@ -1017,19 +1044,24 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                               icon: const Icon(Icons.chevron_left_rounded, size: 28),
                               onPressed: () => _changeMonth(-1),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
                                 '${_getMonthName(_activeMonth.month)} ${_activeMonth.year}',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: t.text,
                                 ),
+                              ),
+                            ),
                               ),
                             ),
                             IconButton(
@@ -1174,13 +1206,16 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Select Employee to View Attendance',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: t.text,
-                  letterSpacing: 0.3,
+              Expanded(
+                child: Text(
+                  'Select Employee to View Attendance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: t.text,
+                    letterSpacing: 0.3,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1252,20 +1287,25 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                       ),
                     ),
                     if (_selectedEmployee != null && !_isDropdownOpen) ...[
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
-                        },
-                        icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                        label: const Text('New Request', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: t.success,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
+                            },
+                            icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                            label: const Text('New Request', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: t.success,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                     ],
                     Icon(
                       _isDropdownOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
@@ -1410,20 +1450,23 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   Widget _buildLegendItem(String label, Color color, AppThemeConfig t) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.textSecondary),
-        ),
-      ],
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }

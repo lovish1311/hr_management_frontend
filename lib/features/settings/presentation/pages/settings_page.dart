@@ -66,6 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (!mounted) return;
+    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Settings applied successfully!'),
@@ -123,28 +124,35 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Select your preferred color gradient and accent color.',
                             ),
                             const SizedBox(height: 24),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 4,
-                                crossAxisSpacing: 14,
-                                mainAxisSpacing: 14,
-                                childAspectRatio: 1.15,
-                              ),
-                              itemCount: ThemeManager.themes.length,
-                              itemBuilder: (context, index) {
-                                final type = ThemeManager.themes.keys.elementAt(index);
-                                final cfg = ThemeManager.themes[type]!;
-                                final isDraftActive = _draftTheme == type;
-                                return _ThemeCard(
-                                  type: type,
-                                  config: cfg,
-                                  isActive: isDraftActive,
-                                  onSelect: () {
-                                    setState(() {
-                                      _draftTheme = type;
-                                    });
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final cols = constraints.maxWidth > 700 ? 4 : (constraints.maxWidth > 420 ? 3 : 2);
+                                final ratio = constraints.maxWidth > 700 ? 1.05 : 1.0;
+
+                                return GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: cols,
+                                    crossAxisSpacing: 14,
+                                    mainAxisSpacing: 14,
+                                    childAspectRatio: ratio,
+                                  ),
+                                  itemCount: ThemeManager.themes.length,
+                                  itemBuilder: (context, index) {
+                                    final type = ThemeManager.themes.keys.elementAt(index);
+                                    final cfg = ThemeManager.themes[type]!;
+                                    final isDraftActive = _draftTheme == type;
+                                    return _ThemeCard(
+                                      type: type,
+                                      config: cfg,
+                                      isActive: isDraftActive,
+                                      onSelect: () {
+                                        setState(() {
+                                          _draftTheme = type;
+                                        });
+                                      },
+                                    );
                                   },
                                 );
                               },
@@ -167,65 +175,137 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Customize font styles, font scaling, and layout density.',
                             ),
                             const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _dropdownField(
-                                    t,
-                                    'Font Family',
-                                    _draftFontFamily,
-                                    ['Default', 'Inter', 'Roboto', 'Outfit', 'Poppins', 'Lato', 'Chilanka (Chillar)']
-                                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                                        .toList(),
-                                    (v) {
-                                      if (v != null) {
-                                        setState(() {
-                                          _draftFontFamily = v;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _dropdownField<double>(
-                                    t,
-                                    'Font Size Scaling',
-                                    _draftFontSize,
-                                    const [
-                                      DropdownMenuItem(value: 0.8, child: Text('Small (80%)')),
-                                      DropdownMenuItem(value: 1.0, child: Text('Default (100%)')),
-                                      DropdownMenuItem(value: 1.2, child: Text('Large (120%)')),
-                                      DropdownMenuItem(value: 1.4, child: Text('Extra Large (140%)')),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isNarrow = constraints.maxWidth < 620;
+
+                                if (isNarrow) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _dropdownField(
+                                        t,
+                                        'Font Family',
+                                        _draftFontFamily,
+                                        ['Default', 'Inter', 'Roboto', 'Outfit', 'Poppins', 'Lato', 'Chilanka (Chillar)']
+                                            .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
+                                            .toList(),
+                                        (v) {
+                                          if (v != null) {
+                                            setState(() {
+                                              _draftFontFamily = v;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _dropdownField<double>(
+                                              t,
+                                              'Font Size Scaling',
+                                              _draftFontSize,
+                                              const [
+                                                DropdownMenuItem(value: 0.8, child: Text('80% (Small)', overflow: TextOverflow.ellipsis)),
+                                                DropdownMenuItem(value: 1.0, child: Text('100% (Default)', overflow: TextOverflow.ellipsis)),
+                                                DropdownMenuItem(value: 1.2, child: Text('120% (Large)', overflow: TextOverflow.ellipsis)),
+                                                DropdownMenuItem(value: 1.4, child: Text('140% (Extra Large)', overflow: TextOverflow.ellipsis)),
+                                              ],
+                                              (v) {
+                                                if (v != null) {
+                                                  setState(() {
+                                                    _draftFontSize = v;
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: _dropdownField(
+                                              t,
+                                              'Density Mode',
+                                              _draftDensityMode,
+                                              ['Comfortable', 'Compact']
+                                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
+                                                  .toList(),
+                                              (v) {
+                                                if (v != null) {
+                                                  setState(() {
+                                                    _draftDensityMode = v;
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
-                                    (v) {
-                                      if (v != null) {
-                                        setState(() {
-                                          _draftFontSize = v;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _dropdownField(
-                                    t,
-                                    'Density Mode',
-                                    _draftDensityMode,
-                                    ['Comfortable', 'Compact']
-                                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                                        .toList(),
-                                    (v) {
-                                      if (v != null) {
-                                        setState(() {
-                                          _draftDensityMode = v;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
+                                  );
+                                }
+
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: _dropdownField(
+                                        t,
+                                        'Font Family',
+                                        _draftFontFamily,
+                                        ['Default', 'Inter', 'Roboto', 'Outfit', 'Poppins', 'Lato', 'Chilanka (Chillar)']
+                                            .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
+                                            .toList(),
+                                        (v) {
+                                          if (v != null) {
+                                            setState(() {
+                                              _draftFontFamily = v;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _dropdownField<double>(
+                                        t,
+                                        'Font Size Scaling',
+                                        _draftFontSize,
+                                        const [
+                                          DropdownMenuItem(value: 0.8, child: Text('80% (Small)', overflow: TextOverflow.ellipsis)),
+                                          DropdownMenuItem(value: 1.0, child: Text('100% (Default)', overflow: TextOverflow.ellipsis)),
+                                          DropdownMenuItem(value: 1.2, child: Text('120% (Large)', overflow: TextOverflow.ellipsis)),
+                                          DropdownMenuItem(value: 1.4, child: Text('140% (Extra Large)', overflow: TextOverflow.ellipsis)),
+                                        ],
+                                        (v) {
+                                          if (v != null) {
+                                            setState(() {
+                                              _draftFontSize = v;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _dropdownField(
+                                        t,
+                                        'Density Mode',
+                                        _draftDensityMode,
+                                        ['Comfortable', 'Compact']
+                                            .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
+                                            .toList(),
+                                        (v) {
+                                          if (v != null) {
+                                            setState(() {
+                                              _draftDensityMode = v;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -245,18 +325,21 @@ class _SettingsPageState extends State<SettingsPage> {
                               'Additional user interface preferences.',
                             ),
                             const SizedBox(height: 16),
-                            SwitchListTile(
-                              title: Text('Use 24-Hour Time', style: TextStyle(fontWeight: FontWeight.bold, color: t.text)),
-                              subtitle: Text('Display times as 14:00 instead of 2:00 PM.', style: TextStyle(color: t.textSecondary)),
-                              activeThumbColor: t.primary,
-                              activeTrackColor: t.primary.withValues(alpha: 0.3),
-                              value: _draftUse24HourTime,
-                              onChanged: (v) {
-                                setState(() {
-                                  _draftUse24HourTime = v;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
+                            Material(
+                              color: Colors.transparent,
+                              child: SwitchListTile(
+                                title: Text('Use 24-Hour Time', style: TextStyle(fontWeight: FontWeight.bold, color: t.text)),
+                                subtitle: Text('Display times as 14:00 instead of 2:00 PM.', style: TextStyle(color: t.textSecondary)),
+                                activeThumbColor: t.primary,
+                                activeTrackColor: t.primary.withValues(alpha: 0.3),
+                                value: _draftUse24HourTime,
+                                onChanged: (v) {
+                                  setState(() {
+                                    _draftUse24HourTime = v;
+                                  });
+                                },
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
                           ],
                         ),
@@ -270,7 +353,7 @@ class _SettingsPageState extends State<SettingsPage> {
               // ── Floating Action Bar (Reset, Cancel, Apply Changes) ───────────
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
                   color: t.card,
                   border: Border(top: BorderSide(color: t.border, width: 1.2)),
@@ -278,53 +361,113 @@ class _SettingsPageState extends State<SettingsPage> {
                     BoxShadow(color: t.glow, blurRadius: 16, offset: const Offset(0, -4)),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    // Reset to Default Button
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: t.text,
-                        side: BorderSide(color: t.border),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: _resetToDefaults,
-                      icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                      label: const Text('Reset to Default', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    const Spacer(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                    final isCompact = constraints.maxWidth < (textScale > 1.2 ? 780 : 560);
 
-                    // Cancel / Revert Button
-                    if (_hasChanges) ...[
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: t.textSecondary,
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    if (isCompact) {
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: t.text,
+                              side: BorderSide(color: t.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _resetToDefaults,
+                            icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Reset', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (_hasChanges)
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: t.textSecondary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  ),
+                                  onPressed: _cancelDraft,
+                                  child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cancel', style: TextStyle(fontSize: 12))),
+                                ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: t.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  elevation: _hasChanges ? 4 : 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: _hasChanges ? _applyChanges : null,
+                                icon: const Icon(Icons.check_rounded, size: 16),
+                                label: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _hasChanges ? 'Apply' : 'Applied',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: t.text,
+                            side: BorderSide(color: t.border),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: _resetToDefaults,
+                          icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                          label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Reset to Default', style: TextStyle(fontWeight: FontWeight.bold))),
                         ),
-                        onPressed: _cancelDraft,
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        label: const Text('Cancel / Revert'),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
+                        const Spacer(),
 
-                    // Apply Changes Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: t.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        elevation: _hasChanges ? 4 : 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: _hasChanges ? _applyChanges : null,
-                      icon: const Icon(Icons.check_rounded, size: 18),
-                      label: Text(
-                        _hasChanges ? 'Apply Changes' : 'Applied',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+                        if (_hasChanges) ...[
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: t.textSecondary,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            ),
+                            onPressed: _cancelDraft,
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            label: const Text('Cancel / Revert'),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: t.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            elevation: _hasChanges ? 4 : 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: _hasChanges ? _applyChanges : null,
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: Text(
+                            _hasChanges ? 'Apply Changes' : 'Applied',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -358,7 +501,9 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Icon(icon, color: t.primary, size: 22),
             const SizedBox(width: 10),
-            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text)),
+            Expanded(
+              child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text)),
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -377,19 +522,22 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t.text)),
+        Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           initialValue: value,
           isExpanded: true,
+          isDense: true,
           dropdownColor: t.card,
-          style: TextStyle(color: t.text, fontSize: 13),
+          style: TextStyle(color: t.text, fontSize: 13, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled: true,
             fillColor: t.cardSoft,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: t.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: t.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: t.primary, width: 1.5)),
           ),
           items: items,
           onChanged: onChanged,
@@ -425,16 +573,24 @@ class _ThemeCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isActive ? config.primary : config.border.withValues(alpha: 0.5),
-            width: isActive ? 2.5 : 1,
+            color: isActive ? config.primary : config.border.withValues(alpha: 0.6),
+            width: isActive ? 2.5 : 1.2,
           ),
-          boxShadow: isActive ? [BoxShadow(color: config.glow, blurRadius: 12, spreadRadius: 2)] : [],
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: config.glow.withValues(alpha: 0.5),
+                    blurRadius: 14,
+                    spreadRadius: 1.5,
+                  ),
+                ]
+              : [],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: Column(
             children: [
-              // Gradient preview
+              // Gradient preview with centered emoji & top-right check badge
               Expanded(
                 child: Stack(
                   fit: StackFit.expand,
@@ -448,54 +604,65 @@ class _ThemeCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (isActive)
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.black38,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
-                        ),
+                    // Centered Theme Emoji
+                    Center(
+                      child: Text(
+                        config.emoji,
+                        style: const TextStyle(fontSize: 22),
                       ),
-                    // Accent dot indicator
+                    ),
+                    // Perfectly aligned selection checkbox / badge at top-right
                     Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        width: 10,
-                        height: 10,
+                      top: 7,
+                      right: 7,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 22,
+                        height: 22,
                         decoration: BoxDecoration(
-                          color: config.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
+                          color: isActive ? config.primary : Colors.black.withValues(alpha: 0.28),
+                          border: Border.all(
+                            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.65),
+                            width: 1.5,
+                          ),
+                          boxShadow: isActive
+                              ? [
+                                  BoxShadow(
+                                    color: config.primary.withValues(alpha: 0.5),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
+                        child: isActive
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Label
+              // Theme Name Footer with contrast-safe text
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                 color: config.card,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(config.emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(
-                      config.name,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                        color: isActive ? config.primary : config.text,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                child: Text(
+                  config.name,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive ? config.primary : config.surfaceText,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -505,4 +672,3 @@ class _ThemeCard extends StatelessWidget {
     );
   }
 }
-

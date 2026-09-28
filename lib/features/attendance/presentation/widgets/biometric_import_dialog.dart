@@ -102,11 +102,12 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       child: Container(
         width: 600,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(18),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -116,35 +117,41 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.upload_file_rounded, color: Color(0xFF6366F1), size: 24),
                         ),
-                        child: const Icon(Icons.upload_file_rounded, color: Color(0xFF6366F1), size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Import Biometric Punch Log',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Import Biometric Punch Log',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Parse punch machine Excel report & sync attendance',
+                                style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Parse punch machine Excel report & sync attendance',
-                            style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
@@ -173,10 +180,14 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${_selectedDate.day} ${_getMonthName(_selectedDate.month)} ${_selectedDate.year}',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                      Expanded(
+                        child: Text(
+                          '${_selectedDate.day} ${_getMonthName(_selectedDate.month)} ${_selectedDate.year}',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       const Icon(Icons.calendar_today_rounded, size: 18, color: Color(0xFF6366F1)),
                     ],
                   ),
@@ -293,14 +304,17 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
               ],
 
               // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (_importSummary != null) ...[
                     ElevatedButton.icon(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: const Text('OK'),
+                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('OK')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
                         foregroundColor: Colors.white,
@@ -311,15 +325,17 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
                   ] else ...[
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cancel')),
                     ),
-                    const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: _isUploading || _selectedFile == null ? null : _uploadAndProcess,
                       icon: _isUploading
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.flash_on_rounded, size: 18),
-                      label: Text(_isUploading ? 'Processing...' : 'Process & Sync Batch'),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(_isUploading ? 'Processing...' : 'Process & Sync Batch'),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6366F1),
                         foregroundColor: Colors.white,

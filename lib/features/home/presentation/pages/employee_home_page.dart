@@ -358,24 +358,30 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(
-                      16,
-                      (i) => Container(
-                        width: 12.0 + (i % 3) * 6,
-                        height: 16.0 + (i % 5) * 5,
-                        color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
-                            .withValues(alpha: 0.6),
-                      ),
+                  child: ClipRect(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final count = (constraints.maxWidth / 22).floor().clamp(4, 40);
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: List.generate(
+                            count,
+                            (i) => Container(
+                              width: 12.0 + (i % 3) * 6,
+                              height: 16.0 + (i % 5) * 5,
+                              color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Row(
@@ -403,26 +409,32 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                     ],
                   ),
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          timeStr,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF78350F),
-                          ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              timeStr,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF78350F),
+                              ),
+                            ),
+                            Text(
+                              amPmStr,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          amPmStr,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF92400E),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -446,11 +458,15 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                         children: [
                           Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                           const SizedBox(width: 6),
-                          Text(
-                            fullDateStr,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          Expanded(
+                            child: Text(
+                              fullDateStr,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
                             ),
                           ),
                         ],
@@ -490,6 +506,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           Expanded(
             child: Text(
               '$_exceptionDaysCount Exception days (Absent this month)',
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -497,18 +514,21 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
               ),
             ),
           ),
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening Regularization Request Portal...')),
-              );
-            },
-            child: const Text(
-              'Regularize',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4F46E5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Opening Regularization Request Portal...')),
+                );
+              },
+              child: const Text(
+                'Regularize',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4F46E5),
+                ),
               ),
             ),
           ),
@@ -541,22 +561,30 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Payslip Title & Month Info Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      'Payslip',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Payslip',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.north_east_rounded, size: 18, color: Color(0xFF0D9488)),
-                  ],
+                      const SizedBox(width: 6),
+                      const Icon(Icons.north_east_rounded, size: 18, color: Color(0xFF0D9488)),
+                    ],
+                  ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -604,15 +632,20 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Net Pay',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF15803D),
+                          const Flexible(
+                            child: Text(
+                              'Net Pay',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF15803D),
+                              ),
                             ),
                           ),
                           IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                             icon: const Icon(Icons.download_rounded, size: 20, color: Color(0xFF3B82F6)),
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -622,75 +655,84 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                           ),
                         ],
                       ),
-                      Text(
-                        _showSalary ? '₹20,000.00' : '₹*****',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF15803D),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _showSalary ? '₹20,000.00' : '₹*****',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF15803D),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Gross Pay', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _showSalary ? '₹20,000.00' : '₹*****',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Deductions', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _showSalary ? '₹0.00' : '₹*****',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Green Toggle Switch in Bottom Right
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Text('Gross Pay', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                              const SizedBox(height: 2),
                               Text(
-                                'Show Salary',
+                                _showSalary ? '₹20,000.00' : '₹*****',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Switch.adaptive(
-                                value: _showSalary,
-                                activeThumbColor: const Color(0xFF10B981),
-                                activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _showSalary = val;
-                                  });
-                                },
                               ),
                             ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Deductions', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                              const SizedBox(height: 2),
+                              Text(
+                                _showSalary ? '₹0.00' : '₹*****',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Show Salary',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Switch.adaptive(
+                                  value: _showSalary,
+                                  activeThumbColor: const Color(0xFF10B981),
+                                  activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _showSalary = val;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -764,8 +806,11 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
           children: [
             Text(
               'Upcoming Holidays',
@@ -805,56 +850,81 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.beach_access_rounded, color: Color(0xFF0D9488), size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          h.statusLabel.isNotEmpty ? h.statusLabel : 'Company Holiday',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$dayStr • Official Holiday',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
+              child: LayoutBuilder(
+                builder: (context, cardConstraints) {
+                  final badge = Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      dateStr,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF334155),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        dateStr,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF334155),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  return Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: cardConstraints.maxWidth),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.beach_access_rounded, color: Color(0xFF0D9488), size: 20),
+                            ),
+                            const SizedBox(width: 14),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    h.statusLabel.isNotEmpty ? h.statusLabel : 'Company Holiday',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$dayStr • Official Holiday',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      badge,
+                    ],
+                  );
+                },
               ),
             );
           }),
@@ -887,54 +957,71 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+          LayoutBuilder(
+            builder: (context, headerConstraints) {
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: headerConstraints.maxWidth),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.assignment_ind_rounded, color: Color(0xFF3B82F6), size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Team Pending Approvals',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Review requests from your direct reports & team',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                      color: _teamPendingApprovals.isNotEmpty ? const Color(0xFFF59E0B) : Colors.grey.shade400,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.assignment_ind_rounded, color: Color(0xFF3B82F6), size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Team Pending Approvals',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      Text(
-                        'Review requests from your direct reports & team',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
+                    child: Text(
+                      '${_teamPendingApprovals.length} Pending',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _teamPendingApprovals.isNotEmpty ? const Color(0xFFF59E0B) : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${_teamPendingApprovals.length} Pending',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           if (_isLoadingTeamApprovals)
@@ -951,12 +1038,15 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 children: [
                   const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981), size: 22),
                   const SizedBox(width: 10),
-                  Text(
-                    'All caught up! No pending team requests.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                  Expanded(
+                    child: Text(
+                      'All caught up! No pending team requests.',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                      ),
                     ),
                   ),
                 ],
@@ -1008,44 +1098,9 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                child: Text(
-                  initials.isNotEmpty ? initials : 'TM',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0D9488),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      empName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                    Text(
-                      dept,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final badgeWidget = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isTimeBased
@@ -1053,16 +1108,76 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                       : const Color(0xFF0D9488).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  leaveType.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isTimeBased ? const Color(0xFF6366F1) : const Color(0xFF0D9488),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    leaveType.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isTimeBased ? const Color(0xFF6366F1) : const Color(0xFF0D9488),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              );
+
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                          child: Text(
+                            initials.isNotEmpty ? initials : 'TM',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF0D9488),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                empName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                dept,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  badgeWidget,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 10),
           Row(
@@ -1073,14 +1188,17 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 color: isDark ? Colors.white60 : const Color(0xFF64748B),
               ),
               const SizedBox(width: 6),
-              Text(
-                isTimeBased
-                    ? '$startDate ($startTime - $endTime)'
-                    : '$startDate to $endDate ($totalDays ${totalDays == 1 ? "day" : "days"})',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+              Expanded(
+                child: Text(
+                  isTimeBased
+                      ? '$startDate ($startTime - $endTime)'
+                      : '$startDate to $endDate ($totalDays ${totalDays == 1 ? "day" : "days"})',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                  ),
                 ),
               ),
             ],
@@ -1107,10 +1225,13 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red.shade600,
                     side: BorderSide(color: Colors.red.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Reject', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Reject', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1120,11 +1241,14 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
-                  child: const Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ),
             ],

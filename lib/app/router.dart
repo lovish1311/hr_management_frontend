@@ -4,8 +4,12 @@ import 'package:hr_management/features/attendance/presentation/pages/attendance_
 import 'package:hr_management/features/auth/presentation/pages/login_page.dart';
 import 'package:hr_management/features/auth/presentation/pages/splash_screen.dart';
 import 'package:hr_management/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/presentation/pages/employee_directory_page.dart';
 import 'package:hr_management/features/employees/presentation/pages/employee_profile_page.dart';
+import 'package:hr_management/features/employees/presentation/pages/employee_form_page.dart';
+import 'package:hr_management/features/holidays/presentation/pages/holiday_calendar_page.dart';
+import 'package:hr_management/features/holidays/presentation/pages/holiday_management_page.dart';
 import 'package:hr_management/features/leaves/presentation/pages/leave_management_page.dart';
 import 'package:hr_management/features/leaves/presentation/pages/hr_leave_settings_page.dart';
 import 'package:hr_management/features/leaves/presentation/pages/leave_policy_handbook_page.dart';
@@ -25,8 +29,14 @@ class AppRouter {
       '/': (context) => AuthStorage.isSuperAdmin ? const DashboardPage() : const EmployeeHomePage(),
       '/employees': (context) => const EmployeeDirectoryPage(),
       '/employee_profile': (context) => const EmployeeProfilePage(),
+      '/employee_create': (context) => const EmployeeFormPage(),
+      '/employee_edit': (context) => EmployeeFormPage(
+            initialEmployee: ModalRoute.of(context)?.settings.arguments as Employee?,
+          ),
       '/attendance': (context) => const AttendanceCalendarPage(),
       '/leaves': (context) => const LeaveManagementPage(),
+      '/holidays': (context) => const HolidayCalendarPage(),
+      '/holiday_management': (context) => const HolidayManagementPage(),
       '/hr_leave_settings': (context) => const HrLeaveSettingsPage(),
       '/leave_policy': (context) => const LeavePolicyHandbookPage(),
       '/payslip': (context) => const PayslipPage(),

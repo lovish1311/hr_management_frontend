@@ -108,19 +108,24 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       drawer: const HrDrawer(),
       appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.sports_esports_rounded, color: Color(0xFFF59E0B), size: 24),
-            SizedBox(width: 10),
-            Text(
-              'GAME ZONE',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-                fontSize: 18,
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.sports_esports_rounded, color: Color(0xFFF59E0B), size: 24),
+              SizedBox(width: 10),
+              Text(
+                'GAME ZONE',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  fontSize: 18,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
@@ -237,42 +242,55 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
               const SizedBox(height: 24),
 
               // Game Catalog Header
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  const Icon(Icons.grid_view_rounded, size: 20, color: Color(0xFFF59E0B)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AVAILABLE GAMES (${_games.length})',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.grid_view_rounded, size: 20, color: Color(0xFFF59E0B)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'AVAILABLE GAMES (${_games.length})',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
                   if (isAdmin)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.admin_panel_settings_rounded, size: 14, color: Color(0xFF38BDF8)),
-                          SizedBox(width: 4),
-                          Text(
-                            'ADMIN GOVERNANCE ACTIVE',
-                            style: TextStyle(
-                              color: Color(0xFF38BDF8),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.admin_panel_settings_rounded, size: 14, color: Color(0xFF38BDF8)),
+                            SizedBox(width: 4),
+                            Text(
+                              'ADMIN GOVERNANCE ACTIVE',
+                              style: TextStyle(
+                                color: Color(0xFF38BDF8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -356,9 +374,10 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
+              child: Builder(
+                builder: (context) {
+                  final isNarrow = MediaQuery.of(context).size.width < 500;
+                  final iconBox = Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
@@ -383,24 +402,27 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                     ),
                     alignment: Alignment.center,
                     child: const Text('🎟️', style: TextStyle(fontSize: 24)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              game.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                              ),
+                  );
+
+                  final titleCol = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            game.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
                             ),
-                            const SizedBox(width: 10),
-                            Container(
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: (isEnabled ? const Color(0xFF10B981) : const Color(0xFFEF4444))
@@ -420,46 +442,93 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                                 ),
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${game.category} • ${game.minPlayers}-${game.maxPlayers} Players',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  );
+
+                  if (isNarrow && isAdmin) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            iconBox,
+                            const SizedBox(width: 14),
+                            Expanded(child: titleCol),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${game.category} • ${game.minPlayers}-${game.maxPlayers} Players',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                isEnabled ? 'Status: Enabled' : 'Status: Disabled',
+                                style: TextStyle(
+                                  color: isEnabled ? const Color(0xFF34D399) : Colors.white60,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Switch(
+                              value: isEnabled,
+                              activeThumbColor: const Color(0xFF10B981),
+                              activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.4),
+                              inactiveThumbColor: Colors.grey.shade400,
+                              inactiveTrackColor: Colors.grey.shade700,
+                              onChanged: (val) => _toggleGameStatus(game, val),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ),
+                    );
+                  }
 
-                  // Admin Enable / Disable Toggle Switch
-                  if (isAdmin)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isEnabled ? 'Enabled' : 'Disabled',
-                          style: TextStyle(
-                            color: isEnabled ? const Color(0xFF34D399) : Colors.white60,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Switch(
-                          value: isEnabled,
-                          activeThumbColor: const Color(0xFF10B981),
-                          activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.4),
-                          inactiveThumbColor: Colors.grey.shade400,
-                          inactiveTrackColor: Colors.grey.shade700,
-                          onChanged: (val) => _toggleGameStatus(game, val),
+                  return Row(
+                    children: [
+                      iconBox,
+                      const SizedBox(width: 16),
+                      Expanded(child: titleCol),
+                      if (isAdmin) ...[
+                        const SizedBox(width: 10),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isEnabled ? 'Enabled' : 'Disabled',
+                              style: TextStyle(
+                                color: isEnabled ? const Color(0xFF34D399) : Colors.white60,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Switch(
+                              value: isEnabled,
+                              activeThumbColor: const Color(0xFF10B981),
+                              activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.4),
+                              inactiveThumbColor: Colors.grey.shade400,
+                              inactiveTrackColor: Colors.grey.shade700,
+                              onChanged: (val) => _toggleGameStatus(game, val),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -500,9 +569,12 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                         Expanded(
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.tune_rounded, size: 18),
-                            label: const Text(
-                              'OPEN TAMBOLA HUB (HOST / MONITOR)',
-                              style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                            label: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'OPEN TAMBOLA HUB (HOST / MONITOR)',
+                                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF38BDF8),
@@ -523,9 +595,12 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                           child: isEnabled
                               ? ElevatedButton.icon(
                                   icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                                  label: const Text(
-                                    'PLAY TAMBOLA NOW',
-                                    style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                                  label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'PLAY TAMBOLA NOW',
+                                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                                    ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFFF59E0B),
@@ -538,9 +613,12 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                                 )
                               : ElevatedButton.icon(
                                   icon: const Icon(Icons.lock_outline_rounded, size: 18),
-                                  label: const Text(
-                                    'GAME CURRENTLY DISABLED',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'GAME CURRENTLY DISABLED',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),

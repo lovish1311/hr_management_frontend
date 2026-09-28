@@ -3,7 +3,7 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/hr_drawer.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 
-class ResponsiveScaffold extends StatelessWidget {
+class ResponsiveScaffold extends StatefulWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? floatingActionButton;
@@ -17,12 +17,21 @@ class ResponsiveScaffold extends StatelessWidget {
     this.backgroundColor,
   });
 
+  // Global static notifier so sidebar collapse state is remembered across pages
+  static final ValueNotifier<bool> isSidebarCollapsed = ValueNotifier<bool>(false);
+
+  @override
+  State<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
+}
+
+class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: ThemeManager.instance,
+      listenable: Listenable.merge([ThemeManager.instance, ResponsiveScaffold.isSidebarCollapsed]),
       builder: (context, _) {
         final t = context.appTheme;
+        final isCollapsed = ResponsiveScaffold.isSidebarCollapsed.value;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -41,51 +50,121 @@ class ResponsiveScaffold extends StatelessWidget {
                 extendBodyBehindAppBar: false,
                 appBar: isDesktop
                     ? null
-                    : (appBar != null
+                    : (widget.appBar != null
                         ? PreferredSize(
-                            preferredSize: appBar!.preferredSize,
+                            preferredSize: widget.appBar!.preferredSize,
                             child: Theme(
                               data: Theme.of(context).copyWith(
-                                iconTheme: const IconThemeData(color: Colors.white),
-                                appBarTheme: const AppBarTheme(
+                                iconTheme: IconThemeData(color: t.onBackgroundText),
+                                appBarTheme: AppBarTheme(
                                   backgroundColor: Colors.transparent,
                                   elevation: 0,
-                                  iconTheme: IconThemeData(color: Colors.white),
-                                  actionsIconTheme: IconThemeData(color: Colors.white),
+                                  iconTheme: IconThemeData(color: t.onBackgroundText),
+                                  actionsIconTheme: IconThemeData(color: t.onBackgroundText),
+                                  titleTextStyle: TextStyle(
+                                    color: t.onBackgroundText,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                              child: appBar!,
+                              child: widget.appBar!,
                             ),
                           )
                         : null),
-                drawer: isDesktop ? null : const HrDrawer(),
-                floatingActionButton: floatingActionButton,
+                drawer: isDesktop ? null : HrDrawer(key: ValueKey('drawer_${t.name}')),
+                floatingActionButton: widget.floatingActionButton,
                 body: Row(
                   children: [
                     if (isDesktop)
-                      const SizedBox(
-                        width: 280,
-                        child: HrDrawer(),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOutCubic,
+                        width: isCollapsed ? 0 : 280,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(
+                              color: isCollapsed ? Colors.transparent : t.border.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: OverflowBox(
+                          minWidth: 280,
+                          maxWidth: 280,
+                          alignment: Alignment.topLeft,
+                          child: HrDrawer(
+                            key: ValueKey('sidebar_${t.name}'),
+                            onCollapse: () {
+                              ResponsiveScaffold.isSidebarCollapsed.value = true;
+                            },
+                          ),
+                        ),
                       ),
                     Expanded(
                       child: Column(
                         children: [
-                          if (isDesktop && appBar != null)
+                          if (isDesktop)
                             SafeArea(
                               bottom: false,
                               child: SizedBox(
-                                height: appBar!.preferredSize.height,
-                                child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    iconTheme: const IconThemeData(color: Colors.white),
-                                    appBarTheme: const AppBarTheme(
-                                      backgroundColor: Colors.transparent,
-                                      elevation: 0,
-                                      iconTheme: IconThemeData(color: Colors.white),
-                                      actionsIconTheme: IconThemeData(color: Colors.white),
-                                    ),
-                                  ),
-                                  child: appBar!,
+                                height: widget.appBar?.preferredSize.height ?? 52,
+                                child: Row(
+                                  children: [
+                                    if (isCollapsed)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+                                        child: Tooltip(
+                                          message: 'Open Sidebar',
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              borderRadius: BorderRadius.circular(10),
+                                              onTap: () {
+                                                ResponsiveScaffold.isSidebarCollapsed.value = false;
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(
+                                                    color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Icon(
+                                                  Icons.menu_rounded,
+                                                  size: 20,
+                                                  color: t.isDarkTheme ? Colors.white : Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (widget.appBar != null)
+                                      Expanded(
+                                        child: Theme(
+                                          data: Theme.of(context).copyWith(
+                                            iconTheme: IconThemeData(color: t.onBackgroundText),
+                                            appBarTheme: AppBarTheme(
+                                              backgroundColor: Colors.transparent,
+                                              elevation: 0,
+                                              iconTheme: IconThemeData(color: t.onBackgroundText),
+                                              actionsIconTheme: IconThemeData(color: t.onBackgroundText),
+                                              titleTextStyle: TextStyle(
+                                                color: t.onBackgroundText,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          child: widget.appBar!,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -93,8 +172,8 @@ class ResponsiveScaffold extends StatelessWidget {
                             child: SafeArea(
                               bottom: true,
                               right: false,
-                              top: isDesktop || appBar == null,
-                              child: body,
+                              top: isDesktop || widget.appBar == null,
+                              child: widget.body,
                             ),
                           ),
                         ],

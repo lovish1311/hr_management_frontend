@@ -3,15 +3,19 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 
 class HrDrawer extends StatelessWidget {
-  const HrDrawer({super.key});
+  final VoidCallback? onCollapse;
+  const HrDrawer({super.key, this.onCollapse});
 
   @override
   Widget build(BuildContext context) {
-    final t = context.appTheme;
-    final activeRoute = ModalRoute.of(context)?.settings.name ?? '/';
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) {
+        final t = context.appTheme;
+        final activeRoute = ModalRoute.of(context)?.settings.name ?? '/';
 
-    return Drawer(
-      backgroundColor: t.sidebar,
+        return Drawer(
+          backgroundColor: t.sidebar,
       child: SafeArea(
         child: Column(
           children: [
@@ -45,24 +49,57 @@ class HrDrawer extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'TeamJoy HR',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'TeamJoy HR',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: t.isDarkTheme ? Colors.white : t.text,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                'Enterprise Portal',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: t.isDarkTheme ? Colors.white70 : t.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (onCollapse != null)
+                          Tooltip(
+                            message: 'Collapse Sidebar',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: onCollapse,
+                                child: Container(
+                                  padding: const EdgeInsets.all(7),
+                                  margin: const EdgeInsets.only(left: 4),
+                                  decoration: BoxDecoration(
+                                    color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    size: 17,
+                                    color: t.isDarkTheme ? Colors.white : Colors.black87,
+                                  ),
+                                ),
                               ),
                             ),
-                            Text(
-                              'Enterprise Portal',
-                              style: TextStyle(fontSize: 12, color: Colors.white70),
-                            ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
                   ),
@@ -76,6 +113,8 @@ class HrDrawer extends StatelessWidget {
                     _item(context, t, Icons.group_outlined, 'People Directory', '/people', activeRoute),
                     _item(context, t, Icons.calendar_month_rounded, 'Attendance', '/attendance', activeRoute),
                     _item(context, t, Icons.beach_access_rounded, 'Leaves', '/leaves', activeRoute),
+                    _item(context, t, Icons.event_available_rounded, 'Holiday Calendar', '/holidays', activeRoute),
+                    _item(context, t, Icons.calendar_today_rounded, 'Holiday Management', '/holiday_management', activeRoute),
                     _item(context, t, Icons.admin_panel_settings_rounded, 'Leave Policy & Quotas', '/hr_leave_settings', activeRoute),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -89,6 +128,10 @@ class HrDrawer extends StatelessWidget {
                     _item(context, t, Icons.group_outlined, 'People', '/people', activeRoute),
                     _item(context, t, Icons.calendar_month_rounded, 'My Attendance', '/attendance', activeRoute),
                     _item(context, t, Icons.beach_access_rounded, 'My Leaves', '/leaves', activeRoute),
+                    _item(context, t, Icons.event_available_rounded, 'Holiday Calendar', '/holidays', activeRoute),
+                    if (AuthStorage.isHr) ...[
+                      _item(context, t, Icons.calendar_today_rounded, 'Holiday Management', '/holiday_management', activeRoute),
+                    ],
                     _item(context, t, Icons.menu_book_rounded, 'Leave Policy', '/leave_policy', activeRoute),
                     _item(context, t, Icons.receipt_long_rounded, 'My Payslips', '/payslip', activeRoute),
                     Padding(
@@ -199,7 +242,9 @@ class HrDrawer extends StatelessWidget {
         ),
       ),
     );
-  }
+  },
+);
+}
 
   Widget _item(
     BuildContext context,

@@ -184,7 +184,9 @@ class _PeoplePageState extends State<PeoplePage> {
   @override
   Widget build(BuildContext context) {
     final t = context.appTheme;
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 900;
+    final isCompact = width < 600;
 
     return ResponsiveScaffold(
       backgroundColor: Colors.transparent,
@@ -192,43 +194,58 @@ class _PeoplePageState extends State<PeoplePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: t.onBackgroundText),
-        title: Text(
-          'People Directory',
-          style: TextStyle(
-            color: t.onBackgroundText,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            isCompact ? 'People' : 'People Directory',
+            style: TextStyle(
+              color: t.onBackgroundText,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
         ),
         centerTitle: false,
         actions: [
           Center(
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: t.card.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: t.border),
-                boxShadow: [BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              child: Row(
-                children: [
-                  _buildViewTabButton('Directory', t),
-                  _buildViewTabButton('Org Chart', t),
-                ],
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isCompact ? width * 0.50 : 280),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: t.card.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: t.border),
+                    boxShadow: [BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildViewTabButton('Directory', t, isCompact),
+                      _buildViewTabButton('Org Chart', t, isCompact),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
-          IconButton(
-            icon: Icon(Icons.notifications_none_rounded, color: t.onBackgroundTextSecondary),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(Icons.power_settings_new_rounded, color: t.onBackgroundTextSecondary),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 12),
+          if (!isCompact) ...[
+            const SizedBox(width: 16),
+            IconButton(
+              icon: Icon(Icons.notifications_none_rounded, color: t.onBackgroundTextSecondary),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: Icon(Icons.power_settings_new_rounded, color: t.onBackgroundTextSecondary),
+              onPressed: () {},
+            ),
+            const SizedBox(width: 12),
+          ] else ...[
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: _isLoadingInitial
@@ -239,7 +256,7 @@ class _PeoplePageState extends State<PeoplePage> {
     );
   }
 
-  Widget _buildViewTabButton(String title, AppThemeConfig t) {
+  Widget _buildViewTabButton(String title, AppThemeConfig t, [bool isCompact = false]) {
     final isSelected = _selectedView == title;
     return InkWell(
       onTap: () {
@@ -250,7 +267,7 @@ class _PeoplePageState extends State<PeoplePage> {
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? t.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -279,13 +296,16 @@ class _PeoplePageState extends State<PeoplePage> {
             border: Border.all(color: t.border),
             boxShadow: [BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4))],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSubTab('Starred', t),
-              const SizedBox(width: 8),
-              _buildSubTab('Everyone', t),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSubTab('Starred', t),
+                const SizedBox(width: 8),
+                _buildSubTab('Everyone', t),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -335,6 +355,7 @@ class _PeoplePageState extends State<PeoplePage> {
           border: isSelected ? Border.all(color: t.primary, width: 1.5) : null,
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               title == 'Starred' ? Icons.star_rounded : Icons.people_alt_rounded,
@@ -599,7 +620,10 @@ class _PeoplePageState extends State<PeoplePage> {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -612,7 +636,6 @@ class _PeoplePageState extends State<PeoplePage> {
                                     style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
@@ -711,19 +734,22 @@ class _PeoplePageState extends State<PeoplePage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-          ],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
     );
@@ -750,13 +776,19 @@ class _PeoplePageState extends State<PeoplePage> {
             children: [
               Icon(icon, size: 18, color: t.primary),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: t.primary,
-                  letterSpacing: 0.8,
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: t.primary,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
               ),
             ],

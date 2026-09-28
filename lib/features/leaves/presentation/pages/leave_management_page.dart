@@ -1,3 +1,5 @@
+import 'package:hr_management/features/employees/domain/entities/employee.dart';
+import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -32,6 +34,7 @@ class LeaveManagementPage extends StatefulWidget {
 }
 
 class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTickerProviderStateMixin {
+  Employee? _currentEmployee;
   late TabController _tabController;
   bool _isLoading = true;
   String _selectedStatusFilter = 'All';
@@ -136,6 +139,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     });
     final headers = AuthStorage.authHeaders;
     final empId = AuthStorage.employeeId ?? 1;
+    try {
+      final empRepo = EmployeeRepositoryImpl();
+      _currentEmployee = await empRepo.getEmployeeById(empId.toString());
+    } catch (_) {}
 
     try {
       // 1. Fetch employee leave balances from DB (fresh, un-cached)
@@ -458,7 +465,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
 
   Widget _buildErrorView(AppThemeConfig t) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -540,6 +547,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             ],
           ),
           const SizedBox(height: 14),
+                    if (_currentEmployee != null && (_currentEmployee!.isProbation || _currentEmployee!.status == 'PROBATION'))
+            _buildProbationWarningBanner(t),
+          if (_currentEmployee != null && (_currentEmployee!.isNoticePeriod || _currentEmployee!.status == 'NOTICE_PERIOD' || _currentEmployee!.status == 'NOTICE'))
+            _buildNoticeWarningBanner(t),
           _buildQuotaGrid(t),
           const SizedBox(height: 32),
 
@@ -642,33 +653,49 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             ),
           ),
           const SizedBox(width: 16),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [t.primary, t.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: t.primary.withValues(alpha: 0.35),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [t.primary, t.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: t.primary.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: _showApplyRequestOptions,
-              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-              label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: ElevatedButton.icon(
+                  onPressed: _showApplyRequestOptions,
+                  icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                  label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/holidays'),
+                icon: Icon(Icons.event_available_rounded, size: 16, color: t.primary),
+                label: Text('Holidays & RH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.primary)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: t.primary.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1196,7 +1223,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               children: [
                 Icon(Icons.calendar_today_outlined, size: 16, color: t.textSecondary),
                 const SizedBox(width: 8),
-                Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
+                Expanded(
+                  child: Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text), overflow: TextOverflow.ellipsis),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -1211,8 +1240,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ],
             ),
             const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED', rejectionReason: 'Manager Rejected'),
@@ -1392,6 +1423,61 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       ),
     );
   }
+
+  Widget _buildProbationWarningBanner(AppThemeConfig t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Probation Active: Earned Leave Accrual = 0.0', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706))),
+                Text('Earned Leaves do not accrue during probation. Prorated balance will be evaluated according to the 15th-day rule upon completion.', style: TextStyle(fontSize: 11.5, color: Color(0xFFB45309))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoticeWarningBanner(AppThemeConfig t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.exit_to_app_rounded, color: Color(0xFF7C3AED), size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Notice Period Active: Normal Leave Requests Locked', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF7C3AED))),
+                Text('Per company policy, Casual, Sick, and Earned leaves cannot be applied during notice period. Loss of Pay (LOP) remains permitted. Balances are preserved.', style: TextStyle(fontSize: 11.5, color: Color(0xFF6D28D9))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }
 
 class _QuotaCardTile extends StatefulWidget {

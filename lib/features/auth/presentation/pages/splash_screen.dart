@@ -20,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late Animation<double> _slideAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _shineAnimation;
+  Timer? _navTimer;
 
   @override
   void initState() {
@@ -77,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _entryController.forward();
 
     // Navigate to respective initial screen after splash animation
-    Timer(const Duration(milliseconds: 2600), _handleNavigation);
+    _navTimer = Timer(const Duration(milliseconds: 2600), _handleNavigation);
   }
 
   void _handleNavigation() {
@@ -93,6 +94,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   void dispose() {
+    _navTimer?.cancel();
     _entryController.dispose();
     _pulseController.dispose();
     _shineController.dispose();

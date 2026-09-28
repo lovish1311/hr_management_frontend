@@ -252,6 +252,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isNarrow = screenWidth < 500;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
 
     final firstDayOfMonth = DateTime(activeMonth.year, activeMonth.month, 1);
     final daysInMonth = DateTime(activeMonth.year, activeMonth.month + 1, 0).day;
@@ -296,7 +297,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisExtent: isNarrow ? 56 : 68,
+            mainAxisExtent: ((isNarrow ? 56.0 : 68.0) + (textScale - 1.0) * 24.0).clamp(56.0, 110.0),
             crossAxisSpacing: isNarrow ? 4 : 8,
             mainAxisSpacing: isNarrow ? 4 : 8,
           ),
@@ -368,36 +369,45 @@ class AttendanceCalendarGrid extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Top Row: Day Number & Today indicator
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '$dayNumber',
-                          style: TextStyle(
-                            fontSize: isNarrow ? 12 : 14,
-                            fontWeight: isToday || dayData.status != 'UPCOMING' ? FontWeight.w800 : FontWeight.w600,
-                            color: dayData.status == 'WEEKEND'
-                                ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
-                                : (isDark ? Colors.white : const Color(0xFF0F172A)),
-                          ),
-                        ),
-                        if (isToday)
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF3B82F6),
-                              shape: BoxShape.circle,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$dayNumber',
+                            style: TextStyle(
+                              fontSize: isNarrow ? 12 : 14,
+                              fontWeight: isToday || dayData.status != 'UPCOMING' ? FontWeight.w800 : FontWeight.w600,
+                              color: dayData.status == 'WEEKEND'
+                                  ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
+                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
                             ),
                           ),
-                      ],
+                          if (isToday) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF3B82F6),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
 
                     // Bottom: Status Indicator
                     if (dayData.status != 'WEEKEND' && dayData.status != 'UPCOMING')
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Container(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: isNarrow ? 3 : 5,
                             vertical: 1.5,
@@ -429,6 +439,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
                               ),
                             ],
                           ),
+                        ),
                         ),
                       ),
                   ],

@@ -7,7 +7,7 @@ class Employee {
   final String role;
   final String department;
   final String designation;
-  final String status;
+  final String status; // ACTIVE, PROBATION, NOTICE_PERIOD, INACTIVE, TERMINATED
   final String email;
   final String phone;
   final String managerName;
@@ -26,6 +26,18 @@ class Employee {
   final String? lateArrivalAllowedUntil;
   final String? earlyOutAllowedAfter;
   final String todayAttendanceStatus;
+
+  // Probation State
+  final bool isProbation;
+  final String? probationStartDate;
+  final int? probationDurationMonths;
+  final String? probationEndDate;
+
+  // Notice Period State
+  final bool isNoticePeriod;
+  final String? noticeStartDate;
+  final int? noticeDurationDays;
+  final String? noticeEndDate;
 
   Employee({
     required this.id,
@@ -55,12 +67,100 @@ class Employee {
     this.lateArrivalAllowedUntil,
     this.earlyOutAllowedAfter,
     this.todayAttendanceStatus = 'ABSENT',
+    this.isProbation = false,
+    this.probationStartDate,
+    this.probationDurationMonths,
+    this.probationEndDate,
+    this.isNoticePeriod = false,
+    this.noticeStartDate,
+    this.noticeDurationDays,
+    this.noticeEndDate,
   });
+
+  Employee copyWith({
+    String? id,
+    String? employeeCode,
+    String? name,
+    String? firstName,
+    String? lastName,
+    String? role,
+    String? department,
+    String? designation,
+    String? status,
+    String? email,
+    String? phone,
+    String? managerName,
+    String? managerId,
+    String? dateOfBirth,
+    String? joiningDate,
+    String? employmentType,
+    String? address,
+    String? location,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    int? leaveBalance,
+    int? attendanceRate,
+    bool? isAttendanceTracked,
+    String? departmentCategory,
+    String? lateArrivalAllowedUntil,
+    String? earlyOutAllowedAfter,
+    String? todayAttendanceStatus,
+    bool? isProbation,
+    String? probationStartDate,
+    int? probationDurationMonths,
+    String? probationEndDate,
+    bool? isNoticePeriod,
+    String? noticeStartDate,
+    int? noticeDurationDays,
+    String? noticeEndDate,
+  }) {
+    return Employee(
+      id: id ?? this.id,
+      employeeCode: employeeCode ?? this.employeeCode,
+      name: name ?? this.name,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      role: role ?? this.role,
+      department: department ?? this.department,
+      designation: designation ?? this.designation,
+      status: status ?? this.status,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      managerName: managerName ?? this.managerName,
+      managerId: managerId ?? this.managerId,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      joiningDate: joiningDate ?? this.joiningDate,
+      employmentType: employmentType ?? this.employmentType,
+      address: address ?? this.address,
+      location: location ?? this.location,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      leaveBalance: leaveBalance ?? this.leaveBalance,
+      attendanceRate: attendanceRate ?? this.attendanceRate,
+      isAttendanceTracked: isAttendanceTracked ?? this.isAttendanceTracked,
+      departmentCategory: departmentCategory ?? this.departmentCategory,
+      lateArrivalAllowedUntil: lateArrivalAllowedUntil ?? this.lateArrivalAllowedUntil,
+      earlyOutAllowedAfter: earlyOutAllowedAfter ?? this.earlyOutAllowedAfter,
+      todayAttendanceStatus: todayAttendanceStatus ?? this.todayAttendanceStatus,
+      isProbation: isProbation ?? this.isProbation,
+      probationStartDate: probationStartDate ?? this.probationStartDate,
+      probationDurationMonths: probationDurationMonths ?? this.probationDurationMonths,
+      probationEndDate: probationEndDate ?? this.probationEndDate,
+      isNoticePeriod: isNoticePeriod ?? this.isNoticePeriod,
+      noticeStartDate: noticeStartDate ?? this.noticeStartDate,
+      noticeDurationDays: noticeDurationDays ?? this.noticeDurationDays,
+      noticeEndDate: noticeEndDate ?? this.noticeEndDate,
+    );
+  }
 
   factory Employee.fromJson(Map<String, dynamic> json) {
     final fn = json['firstName'] ?? '';
     final ln = json['lastName'] ?? '';
     final fullName = '$fn $ln'.trim();
+
+    final rawStatus = (json['status'] ?? 'ACTIVE').toString().toUpperCase();
+    final bool parsedProbation = json['isProbation'] ?? (rawStatus == 'PROBATION');
+    final bool parsedNotice = json['isNoticePeriod'] ?? (rawStatus == 'NOTICE' || rawStatus == 'NOTICE_PERIOD');
 
     return Employee(
       id: (json['id'] ?? '').toString(),
@@ -71,7 +171,7 @@ class Employee {
       role: json['role'] ?? 'EMPLOYEE',
       department: json['department'] ?? 'General',
       designation: json['designation'] ?? json['role'] ?? 'Team Member',
-      status: json['status'] ?? 'ACTIVE',
+      status: rawStatus,
       email: json['email'] ?? '',
       phone: json['phoneNumber'] ?? json['phone'] ?? '',
       managerName: json['managerName'] ?? 'Unassigned',
@@ -90,6 +190,14 @@ class Employee {
       lateArrivalAllowedUntil: json['lateArrivalAllowedUntil']?.toString(),
       earlyOutAllowedAfter: json['earlyOutAllowedAfter']?.toString(),
       todayAttendanceStatus: json['todayAttendanceStatus'] ?? ((json['isAttendanceTracked'] == false) ? 'EXEMPT' : 'ABSENT'),
+      isProbation: parsedProbation,
+      probationStartDate: json['probationStartDate']?.toString(),
+      probationDurationMonths: json['probationDurationMonths'] != null ? (json['probationDurationMonths'] as num).toInt() : null,
+      probationEndDate: json['probationEndDate']?.toString(),
+      isNoticePeriod: parsedNotice,
+      noticeStartDate: json['noticeStartDate']?.toString(),
+      noticeDurationDays: json['noticeDurationDays'] != null ? (json['noticeDurationDays'] as num).toInt() : null,
+      noticeEndDate: json['noticeEndDate']?.toString(),
     );
   }
 
@@ -102,4 +210,3 @@ class Employee {
   @override
   int get hashCode => id.hashCode;
 }
-

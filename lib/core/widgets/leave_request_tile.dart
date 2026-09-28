@@ -75,7 +75,8 @@ class LeaveRequestTile extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 480;
+          final textScale = MediaQuery.maybeTextScalerOf(context)?.scale(1.0) ?? 1.0;
+          final isNarrow = constraints.maxWidth < (560 * textScale.clamp(1.0, 1.4));
 
           final infoSection = Row(
             children: [
@@ -108,20 +109,20 @@ class LeaveRequestTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        Flexible(
-                          child: Text(
-                            employeeName,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: primaryTextColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          employeeName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: primaryTextColor,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
@@ -140,32 +141,40 @@ class LeaveRequestTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 2,
                       children: [
-                        Icon(Icons.calendar_today_rounded, size: 12, color: secondaryTextColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          dates,
-                          style: TextStyle(
-                            color: secondaryTextColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.calendar_today_rounded, size: 12, color: secondaryTextColor),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                dates,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text('•', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                        if (reason.isNotEmpty) ...[
+                          Text('•', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                          Text(
                             reason,
                             style: TextStyle(
                               color: secondaryTextColor,
                               fontSize: 12,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
@@ -174,8 +183,10 @@ class LeaveRequestTile extends StatelessWidget {
             ],
           );
 
-          final actionButtons = Row(
-            mainAxisSize: MainAxisSize.min,
+          final actionButtons = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: isNarrow ? WrapAlignment.end : WrapAlignment.start,
             children: [
               // Decline Button
               OutlinedButton(
@@ -187,16 +198,19 @@ class LeaveRequestTile extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   backgroundColor: const Color(0xFFFEF2F2),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
-                    SizedBox(width: 4),
-                    Text(
-                      'Decline',
-                      style: TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close_rounded, size: 16, color: Color(0xFFDC2626)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Decline',
+                        style: TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -213,13 +227,16 @@ class LeaveRequestTile extends StatelessWidget {
                   ),
                 ),
                 onPressed: onApprove,
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ),
             ],

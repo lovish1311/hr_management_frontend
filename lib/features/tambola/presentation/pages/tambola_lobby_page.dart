@@ -211,9 +211,14 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('🎟️ Company Tambola Hub', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('🎟️ Company Tambola Hub', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        ),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         actions: [
           IconButton(
@@ -252,28 +257,28 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 14),
-                                SizedBox(width: 4),
-                                Text(
-                                  'MULTIPLAYER HOUSIE',
-                                  style: TextStyle(color: Color(0xFFFBBF24), fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
                           ),
-                        ],
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 14),
+                              SizedBox(width: 4),
+                              Text(
+                                'MULTIPLAYER HOUSIE',
+                                style: TextStyle(color: Color(0xFFFBBF24), fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -291,78 +296,103 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                 const SizedBox(height: 20),
 
                 // Quick Join / Host Toolbar
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 540;
+                    final joinBox = Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.vpn_key_rounded, color: Color(0xFFF59E0B), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _roomCodeController,
+                              textCapitalization: TextCapitalization.characters,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: 'ROOM CODE',
+                                hintStyle: TextStyle(fontSize: 12, letterSpacing: 1.0),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (val) => _handleJoinGame(val),
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.vpn_key_rounded, color: Color(0xFFF59E0B), size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller: _roomCodeController,
-                                textCapitalization: TextCapitalization.characters,
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2.0,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'ENTER 6-DIGIT ROOM CODE',
-                                  hintStyle: TextStyle(fontSize: 12, letterSpacing: 1.0),
-                                  border: InputBorder.none,
-                                ),
-                                onSubmitted: (val) => _handleJoinGame(val),
-                              ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3B82F6),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B82F6),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                              ),
-                              onPressed: () => _handleJoinGame(),
-                              child: const Text('JOIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () => _handleJoinGame(),
+                            child: const FittedBox(fit: BoxFit.scaleDown, child: Text('JOIN', style: TextStyle(fontWeight: FontWeight.bold))),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    final hostBtn = canHost
+                        ? ElevatedButton.icon(
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text('HOST GAME', style: TextStyle(fontWeight: FontWeight.bold))),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF59E0B),
+                              foregroundColor: const Color(0xFF0F172A),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              elevation: 2,
                             ),
+                            onPressed: _showCreateGameDialog,
+                          )
+                        : null;
+
+                    if (isCompact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          joinBox,
+                          if (hostBtn != null) ...[
+                            const SizedBox(height: 12),
+                            hostBtn,
                           ],
-                        ),
-                      ),
-                    ),
-                    if (canHost) ...[
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.add_rounded, size: 20),
-                        label: const Text('HOST GAME', style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF59E0B),
-                          foregroundColor: const Color(0xFF0F172A),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          elevation: 2,
-                        ),
-                        onPressed: _showCreateGameDialog,
-                      ),
-                    ],
-                  ],
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: joinBox),
+                        if (hostBtn != null) ...[
+                          const SizedBox(width: 12),
+                          hostBtn,
+                        ],
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
                 // Active Games Section
                 Row(
                   children: [
-                    const Text(
-                      'Live & Waiting Rooms',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    const Expanded(
+                      child: Text(
+                        'Live & Waiting Rooms',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -502,7 +532,9 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
           ),
         ],
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         leading: Container(
           width: 52,
@@ -518,31 +550,38 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
           alignment: Alignment.center,
           child: const Text('🎟️', style: TextStyle(fontSize: 24)),
         ),
-        title: Row(
+        title: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
-              child: Text(
-                game.title,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-              ),
+            Text(
+              game.title,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusColor.withValues(alpha: 0.4)),
-              ),
-              child: Text(
-                statusLabel,
-                style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w800),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w800),
+                ),
               ),
             ),
           ],
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Row(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -560,19 +599,27 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              const Icon(Icons.person_rounded, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                'Host: ${game.createdByName}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_rounded, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Host: ${game.createdByName}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Icon(Icons.group_rounded, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                '${game.playerCount} Players',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.group_rounded, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${game.playerCount} Players',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
               ),
             ],
           ),
@@ -588,7 +635,8 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
           child: const Text('ENTER', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

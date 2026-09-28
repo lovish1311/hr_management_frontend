@@ -905,8 +905,11 @@ class _PayslipPageState extends State<PayslipPage> {
                   const SizedBox(height: 20),
 
                   // Footer & Close
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       const Text('This is a system-generated document and requires no signature.', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
                       ElevatedButton.icon(

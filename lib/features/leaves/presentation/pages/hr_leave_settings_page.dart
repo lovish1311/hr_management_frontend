@@ -601,33 +601,36 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                       runSpacing: 10,
                       children: [
                         Text('Allocation Days to Grant:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: t.text)),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.remove_circle_outline_rounded, color: t.primary),
-                              onPressed: () {
-                                if (_grantDays > 0.5) setState(() => _grantDays -= 0.5);
-                              },
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: t.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.remove_circle_outline_rounded, color: t.primary),
+                                onPressed: () {
+                                  if (_grantDays > 0.5) setState(() => _grantDays -= 0.5);
+                                },
                               ),
-                              child: Text(
-                                '$_grantDays Days',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.primary),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: t.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$_grantDays Days',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.primary),
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.add_circle_outline_rounded, color: t.primary),
-                              onPressed: () {
-                                setState(() => _grantDays += 0.5);
-                              },
-                            ),
-                          ],
+                              IconButton(
+                                icon: Icon(Icons.add_circle_outline_rounded, color: t.primary),
+                                onPressed: () {
+                                  setState(() => _grantDays += 0.5);
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -813,7 +816,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                     itemBuilder: (context, index) {
                       final emp = list[index];
                       final isSelected = _selectedEmployee?.id == emp.id;
-                      return ListTile(
+                      return Material(
+                        color: Colors.transparent,
+                        child: ListTile(
                         selected: isSelected,
                         selectedTileColor: t.primary.withValues(alpha: 0.12),
                         leading: CircleAvatar(
@@ -828,6 +833,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                             _pendingQuotaDeltas.clear();
                           });
                         },
+                        ),
                       );
                     },
                   ),

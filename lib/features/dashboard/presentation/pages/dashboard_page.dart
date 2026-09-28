@@ -126,35 +126,38 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: t.cardSoft,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: t.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today_rounded, size: 14, color: t.textSecondary),
-                  const SizedBox(width: 6),
-                  Text(
+        iconTheme: IconThemeData(color: t.onBackgroundText),
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: t.cardSoft,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: t.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 14, color: t.textSecondary),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
                     'Friday, Aug 21',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.textSecondary),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         actions: [
           IconButton(
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.notifications_outlined, color: Colors.white),
+                Icon(Icons.notifications_outlined, color: t.onBackgroundText),
                 Positioned(
                   right: -2,
                   top: -2,
@@ -169,7 +172,7 @@ class _DashboardPageState extends State<DashboardPage> {
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
             tooltip: 'Refresh Dashboard',
             onPressed: () {
               setState(() { _isLoading = true; });
@@ -250,9 +253,12 @@ class _DashboardPageState extends State<DashboardPage> {
                                             children: [
                                               Icon(Icons.bolt, color: Color(0xFFFACC15), size: 14),
                                               SizedBox(width: 4),
-                                              Text(
-                                                'LIVE HR METRICS',
-                                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                              Flexible(
+                                                child: Text(
+                                                  'LIVE HR METRICS',
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -284,6 +290,51 @@ class _DashboardPageState extends State<DashboardPage> {
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 final isNarrow = constraints.maxWidth < 650;
+                                final isUltraNarrow = constraints.maxWidth < 360;
+                                if (isUltraNarrow) {
+                                  return Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          KpiCard(
+                                            title: 'Total Employees',
+                                            value: (_stats?.totalEmployees ?? 0).toString(),
+                                            icon: Icons.people_alt_rounded,
+                                            cardType: KpiCardType.primary,
+                                            trendText: '+12.4%',
+                                            isTrendPositive: true,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          KpiCard(
+                                            title: 'Present Today',
+                                            value: (_stats?.presentToday ?? 0).toString(),
+                                            icon: Icons.verified_user_rounded,
+                                            cardType: KpiCardType.success,
+                                            trendText: '96.2%',
+                                            isTrendPositive: true,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          KpiCard(
+                                            title: 'On Leave Today',
+                                            value: (_stats?.onLeaveToday ?? 0).toString(),
+                                            icon: Icons.event_busy_rounded,
+                                            cardType: KpiCardType.warning,
+                                            trendText: '${_pendingLeaves.length} pending',
+                                            isTrendPositive: false,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                }
                                 if (isNarrow) {
                                   return Column(
                                     children: [
@@ -376,7 +427,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   spacing: spacing,
                                   runSpacing: spacing,
                                   children: [
-                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.person_add_alt_1_rounded, title: 'Add Employee', subtitle: 'Onboard new hire', onTap: () => Navigator.pushNamed(context, '/employees'))),
+                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.person_add_alt_1_rounded, title: 'Add Employee', subtitle: 'Onboard new hire', onTap: () => Navigator.pushNamed(context, '/employee_create'))),
                                     SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.rule_rounded, title: 'Attendance', subtitle: 'Mark log today', onTap: () => Navigator.pushNamed(context, '/attendance'))),
                                     SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.beach_access_rounded, title: 'Apply Leave', subtitle: 'Time off request', onTap: () => Navigator.pushNamed(context, '/leaves'))),
                                   ],
@@ -444,32 +495,49 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+          LayoutBuilder(
+            builder: (context, headerConstraints) {
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
-                  Text('Pending Leave Approvals',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text)),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: t.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_pendingLeaves.length}',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: headerConstraints.maxWidth),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Pending Leave Approvals',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: t.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/leaves'),
+                    child: Text('View All', style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
                 ],
-              ),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/leaves'),
-                child: Text('View All', style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 18),
           _buildPendingLeavesList(),

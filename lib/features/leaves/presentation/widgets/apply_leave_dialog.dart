@@ -554,6 +554,55 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if ((widget.targetEmployee ?? _selectedOnBehalfEmployee) != null && 
+                  ((widget.targetEmployee ?? _selectedOnBehalfEmployee)!.isNoticePeriod || 
+                   (widget.targetEmployee ?? _selectedOnBehalfEmployee)!.status == 'NOTICE_PERIOD' ||
+                   (widget.targetEmployee ?? _selectedOnBehalfEmployee)!.status == 'NOTICE'))
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.shield_outlined, color: Color(0xFF7C3AED), size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Notice Period Active: Normal leaves locked. Only Loss of Pay (LOP) is permitted.',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if ((widget.targetEmployee ?? _selectedOnBehalfEmployee) != null && 
+                  ((widget.targetEmployee ?? _selectedOnBehalfEmployee)!.isProbation || 
+                   (widget.targetEmployee ?? _selectedOnBehalfEmployee)!.status == 'PROBATION'))
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Probation Active: Earned Leave does not accrue (0.0). Proration evaluated upon completion.',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(
                 'Tap to select a leave type to continue.',
                 style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
@@ -584,8 +633,36 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
             itemCount: leaveOptions.length,
             itemBuilder: (context, index) {
               final item = leaveOptions[index];
+              final currentEmp = widget.targetEmployee ?? _selectedOnBehalfEmployee;
+              final isEmpProbation = currentEmp != null && (currentEmp.isProbation || currentEmp.status == 'PROBATION');
+              final isEmpNotice = currentEmp != null && (currentEmp.isNoticePeriod || currentEmp.status == 'NOTICE_PERIOD' || currentEmp.status == 'NOTICE');
+              
+              final isEarnedBlocked = isEmpProbation && item.type == 'Earned Leave';
+              final isNoticeBlocked = isEmpNotice && item.type != 'Loss Of Pay';
+              final isBlocked = isEarnedBlocked || isNoticeBlocked;
+
               return InkWell(
-                onTap: () => _selectLeaveType(item),
+                onTap: () {
+                  if (isEarnedBlocked) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Earned Leave does not accrue during probation (Accrual = 0.0).'),
+                        backgroundColor: Color(0xFFD97706),
+                      ),
+                    );
+                    return;
+                  }
+                  if (isNoticeBlocked) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Normal leave is blocked during notice period. Only Loss Of Pay (LOP) is permitted.'),
+                        backgroundColor: Color(0xFFDC2626),
+                      ),
+                    );
+                    return;
+                  }
+                  _selectLeaveType(item);
+                },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.all(14),
@@ -597,46 +674,68 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                       width: 1.2,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.type,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  child: Opacity(
+                    opacity: isBlocked ? 0.45 : 1.0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.type,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isBlocked)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDC2626).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'BLOCKED',
+                                      style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${item.balance}',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            const SizedBox(height: 4),
+                            Text(
+                              '',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(item.icon, color: item.iconColor, size: 24),
+                          ],
                         ),
-                      ),
-                    ],
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.8),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(item.icon, color: item.iconColor, size: 24),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
