@@ -411,8 +411,10 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: t.border),
             ),
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(t.cardSoft),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(t.cardSoft),
               horizontalMargin: 16,
               columnSpacing: 18,
               columns: const [
@@ -524,8 +526,9 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
               }).toList(),
             ),
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 
