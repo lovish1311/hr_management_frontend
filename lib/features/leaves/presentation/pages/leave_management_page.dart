@@ -895,9 +895,32 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     final startSession = leave['startSession'] ?? 'Session 1';
     final endDate = leave['endDate'] ?? '19 Mar 2026';
     final endSession = leave['endSession'] ?? 'Session 2';
-    final status = leave['status'] ?? 'PENDING';
+    final status = (leave['status'] ?? 'PENDING').toString().toUpperCase();
 
-    final isPending = status == 'PENDING';
+    final canWithdraw = status == 'PENDING' || status == 'IN_REVIEW';
+
+    Color statusBgColor;
+    Color statusTextColor;
+    IconData statusIcon;
+
+    if (status == 'APPROVED') {
+      statusBgColor = const Color(0xFF10B981).withValues(alpha: 0.15);
+      statusTextColor = const Color(0xFF10B981);
+      statusIcon = Icons.check_circle_rounded;
+    } else if (status == 'REJECTED') {
+      statusBgColor = const Color(0xFFEF4444).withValues(alpha: 0.15);
+      statusTextColor = const Color(0xFFEF4444);
+      statusIcon = Icons.cancel_rounded;
+    } else if (status == 'WITHDRAWN' || status == 'CANCELLED') {
+      statusBgColor = const Color(0xFF64748B).withValues(alpha: 0.15);
+      statusTextColor = const Color(0xFF94A3B8);
+      statusIcon = Icons.undo_rounded;
+    } else {
+      // PENDING or IN_REVIEW
+      statusBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.15);
+      statusTextColor = const Color(0xFFD97706);
+      statusIcon = Icons.access_time_rounded;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -932,24 +955,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: status == 'APPROVED'
-                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                            : status == 'REJECTED'
-                                ? Colors.red.withValues(alpha: 0.15)
-                                : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                        color: statusBgColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: status == 'APPROVED'
-                              ? const Color(0xFF10B981)
-                              : status == 'REJECTED'
-                                  ? Colors.red
-                                  : const Color(0xFFD97706),
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 13, color: statusTextColor),
+                          const SizedBox(width: 5),
+                          Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: statusTextColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1024,19 +1046,20 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     ),
                   ],
                 ),
-                if (isPending) ...[
+                if (canWithdraw) ...[
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () => _withdrawLeave(leave),
+                      icon: const Icon(Icons.undo_rounded, size: 14),
+                      label: const Text('Withdraw', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: t.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
-                      child: const Text('Withdraw', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                   ),
                 ],
@@ -1307,36 +1330,60 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ],
             ),
             const SizedBox(height: 18),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED', rejectionReason: 'Manager Rejected'),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            if (empId != null && AuthStorage.employeeId != null && empId.toString() == AuthStorage.employeeId.toString())
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: t.cardSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: t.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.shield_outlined, size: 16, color: t.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Self Request (Self-Approval Prohibited)',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.textSecondary),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: () => _updateLeaveStatus(leave['id'], 'APPROVED'),
-                  icon: const Icon(Icons.check_rounded, size: 16),
-                  label: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              )
+            else
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED', rejectionReason: 'Manager Rejected'),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                      side: const BorderSide(color: Color(0xFFEF4444)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _updateLeaveStatus(leave['id'], 'APPROVED'),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
