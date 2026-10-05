@@ -14,7 +14,10 @@ import 'package:hr_management/features/leaves/presentation/pages/leave_managemen
 import 'package:hr_management/features/leaves/presentation/pages/hr_leave_settings_page.dart';
 import 'package:hr_management/features/leaves/presentation/pages/leave_policy_handbook_page.dart';
 import 'package:hr_management/features/home/presentation/pages/employee_home_page.dart';
-import 'package:hr_management/features/payroll/presentation/pages/payslip_page.dart';
+import 'package:hr_management/features/payroll/presentation/screens/payslip_screen.dart';
+import 'package:hr_management/features/payroll/presentation/screens/salary_structure_screen.dart';
+import 'package:hr_management/features/payroll/presentation/screens/monthly_payroll_inputs_screen.dart';
+import 'package:hr_management/features/payroll/presentation/screens/payroll_processing_screen.dart';
 import 'package:hr_management/features/people/presentation/pages/people_page.dart';
 import 'package:hr_management/features/settings/presentation/pages/settings_page.dart';
 import 'package:hr_management/features/games/presentation/pages/game_directory_page.dart';
@@ -43,7 +46,7 @@ class AppRouter {
       '/holiday_management': (context) => const HolidayManagementPage(),
       '/hr_leave_settings': (context) => const HrLeaveSettingsPage(),
       '/leave_policy': (context) => const LeavePolicyHandbookPage(),
-      '/payslip': (context) => const PayslipPage(),
+      '/payslip': (context) => const PayslipScreen(),
       '/people': (context) => const PeoplePage(),
       '/settings': (context) => const SettingsPage(),
       '/games': (context) => const GameDirectoryPage(),
@@ -56,7 +59,10 @@ class AppRouter {
       },
       '/profile': (context) => const EmployeeProfilePage(),
       '/leave': (context) => const LeaveManagementPage(),
-      '/payroll': (context) => const PayslipPage(),
+      '/payroll': (context) => const PayslipScreen(),
+      '/payroll_process': (context) => const PayrollProcessingScreen(),
+      '/payroll_inputs': (context) => const MonthlyPayrollInputsScreen(),
+      '/salary_structure': (context) => const SalaryStructureScreen(),
       '/dashboard': (context) => const DashboardPage(),
     };
   }

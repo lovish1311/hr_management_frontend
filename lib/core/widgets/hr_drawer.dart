@@ -116,6 +116,10 @@ class HrDrawer extends StatelessWidget {
                     _item(context, t, Icons.event_available_rounded, 'Holiday Calendar', '/holidays', activeRoute),
                     _item(context, t, Icons.calendar_today_rounded, 'Holiday Management', '/holiday_management', activeRoute),
                     _item(context, t, Icons.admin_panel_settings_rounded, 'Leave Policy & Quotas', '/hr_leave_settings', activeRoute),
+                    _item(context, t, Icons.payments_rounded, 'Run Payroll', '/payroll_process', activeRoute),
+                    _item(context, t, Icons.edit_calendar_rounded, 'Payroll Inputs & LOP', '/payroll_inputs', activeRoute),
+                    _item(context, t, Icons.account_balance_wallet_rounded, 'Salary Structures', '/salary_structure', activeRoute),
+                    _item(context, t, Icons.receipt_long_rounded, 'All Payslips', '/payslip', activeRoute),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Divider(height: 28, thickness: 1, color: t.border),
@@ -131,6 +135,9 @@ class HrDrawer extends StatelessWidget {
                     _item(context, t, Icons.event_available_rounded, 'Holiday Calendar', '/holidays', activeRoute),
                     if (AuthStorage.isHr) ...[
                       _item(context, t, Icons.calendar_today_rounded, 'Holiday Management', '/holiday_management', activeRoute),
+                      _item(context, t, Icons.payments_rounded, 'Run Payroll', '/payroll_process', activeRoute),
+                      _item(context, t, Icons.edit_calendar_rounded, 'Payroll Inputs & LOP', '/payroll_inputs', activeRoute),
+                      _item(context, t, Icons.account_balance_wallet_rounded, 'Salary Structures', '/salary_structure', activeRoute),
                     ],
                     _item(context, t, Icons.menu_book_rounded, 'Leave Policy', '/leave_policy', activeRoute),
                     _item(context, t, Icons.receipt_long_rounded, 'My Payslips', '/payslip', activeRoute),
