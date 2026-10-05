@@ -62,6 +62,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     if (AuthStorage.isSuperAdmin) {
       _isLoading = false;
       _dropdownScrollController.addListener(() {
+        if (!_dropdownScrollController.hasClients) return;
         if (_dropdownScrollController.position.pixels >=
             _dropdownScrollController.position.maxScrollExtent - 200) {
           if (_hasMoreDropdown && !_isDropdownLoading) {
@@ -209,7 +210,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       );
       if (res.statusCode == 200) {
         final decoded = json.decode(res.body);
-        final updatedEmp = Employee.fromJson(decoded);
+        final updatedEmp = Employee.fromJson(Map<String, dynamic>.from(decoded as Map));
         setState(() {
           _selectedEmployee = updatedEmp;
         });
@@ -218,11 +219,11 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   Future<void> _submitLeaveRequest(Map<String, dynamic> data) async {
-    final type = data['leaveType'] as String;
-    final fromDateStr = data['fromDate'] as String;
-    final toDateStr = data['toDate'] as String;
-    final fromSession = data['fromSession'] as String;
-    final toSession = data['toSession'] as String;
+    final type = data['leaveType']?.toString() ?? 'CASUAL';
+    final fromDateStr = data['fromDate']?.toString() ?? DateTime.now().toIso8601String().split('T')[0];
+    final toDateStr = data['toDate']?.toString() ?? fromDateStr;
+    final fromSession = data['fromSession']?.toString() ?? 'Session 1';
+    final toSession = data['toSession']?.toString() ?? 'Session 2';
 
     double days = 1.0;
     try {

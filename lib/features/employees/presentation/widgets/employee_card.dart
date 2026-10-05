@@ -114,7 +114,7 @@ class EmployeeCard extends StatelessWidget {
                           ),
                           child: ClipOval(
                             child: Image.network(
-                              'https://api.dicebear.com/7.x/adventurer/png?seed=',
+                              'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(employee.name.isNotEmpty ? employee.name : employee.id)}',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) => CircleAvatar(
                                 backgroundColor: t.primary.withValues(alpha: 0.15),

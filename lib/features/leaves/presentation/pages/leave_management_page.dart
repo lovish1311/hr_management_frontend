@@ -2,7 +2,6 @@ import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -198,14 +197,19 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       }
 
       // 3. Fetch pending approval requests for Manager / HR
-      final endpoint = AuthStorage.isHr ? '$_baseUrl/pending/all' : '$_baseUrl/pending/manager/$empId';
-      final pendingRes = await http.get(Uri.parse(endpoint), headers: headers);
-      if (pendingRes.statusCode == 200) {
-        final List<dynamic> pendingList = json.decode(pendingRes.body);
-        _pendingApprovals = pendingList;
-      } else if (!_hasError) {
-        _hasError = true;
-        _errorMessage = 'Failed to fetch pending approval requests from server.';
+      if (AuthStorage.isManager || AuthStorage.isHr) {
+        final endpoint = AuthStorage.isHr ? '$_baseUrl/pending/all' : '$_baseUrl/pending/manager/$empId';
+        try {
+          final pendingRes = await http.get(Uri.parse(endpoint), headers: headers);
+          if (pendingRes.statusCode == 200) {
+            final List<dynamic> pendingList = json.decode(pendingRes.body);
+            _pendingApprovals = pendingList;
+          }
+        } catch (_) {
+          // Non-fatal for personal leave dashboard
+        }
+      } else {
+        _pendingApprovals = [];
       }
     } catch (e) {
       debugPrint('[LEAVE FETCH ERROR] Failed to load leave data: $e');
@@ -217,11 +221,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   Future<void> _applyForLeaveFromMap(Map<String, dynamic> data) async {
-    final type = data['leaveType'] as String;
-    final fromDateStr = data['fromDate'] as String;
-    final toDateStr = data['toDate'] as String;
-    final fromSession = data['fromSession'] as String;
-    final toSession = data['toSession'] as String;
+    final type = data['leaveType']?.toString() ?? 'CASUAL';
+    final fromDateStr = data['fromDate']?.toString() ?? DateTime.now().toIso8601String().split('T')[0];
+    final toDateStr = data['toDate']?.toString() ?? fromDateStr;
+    final fromSession = data['fromSession']?.toString() ?? 'Session 1';
+    final toSession = data['toSession']?.toString() ?? 'Session 2';
 
     double days = 1.0;
     try {
@@ -274,11 +278,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         );
       } else {
         if (!mounted) return;
-        final errorBody = res.body;
+        final errorMsg = _formatErrorMessage(res);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to apply: $errorBody'),
-            backgroundColor: Colors.red,
+            content: Text(errorMsg),
+            backgroundColor: Colors.red.shade700,
           ),
         );
       }
@@ -287,17 +291,44 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error applying leave: $e'),
-          backgroundColor: Colors.red,
+          content: Text('Network error applying leave: $e'),
+          backgroundColor: Colors.red.shade700,
         ),
       );
     }
   }
 
+  String _formatErrorMessage(http.Response res) {
+    if (res.statusCode == 403) {
+      return 'Access Denied: You do not have permission to perform this action.';
+    }
+    if (res.statusCode == 401) {
+      return 'Session expired. Please log in again.';
+    }
+    if (res.statusCode == 404) {
+      return 'The requested leave record was not found.';
+    }
+    String msg = res.body;
+    try {
+      final decoded = json.decode(res.body);
+      if (decoded is Map) {
+        if (decoded.containsKey('message') && decoded['message'] != null && decoded['message'].toString().isNotEmpty) {
+          msg = decoded['message'].toString();
+        } else if (decoded.containsKey('error') && decoded['error'] != null) {
+          msg = decoded['error'].toString();
+        }
+      }
+    } catch (_) {}
+    msg = msg.replaceAll(RegExp(r'^[a-zA-Z0-9_.]+(Exception|Error):\s*'), '');
+    msg = msg.replaceAll('AccessDenied: ', '');
+    return msg;
+  }
+
   Future<void> _withdrawLeave(dynamic leave) async {
     final leaveId = leave['id'];
+    final type = leave['leaveType'] as String? ?? 'Leave';
+
     try {
-      // Call backend to withdraw approved leave — this triggers LeaveWithdrawnEvent & balance refund
       final res = await http.put(
         Uri.parse('$_baseUrl/$leaveId/withdraw'),
         headers: AuthStorage.authHeaders,
@@ -307,20 +338,19 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         // Refetch FRESH balance and leave history from backend — never trust local state
         await _fetchLeaveData();
         if (!mounted) return;
-        final type = leave['leaveType'] as String;
-        final days = (leave['totalDays'] as num).toDouble();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Withdrew $type request. $days day(s) restored to balance.'),
-            backgroundColor: const Color(0xFF3B82F6),
+            content: Text('$type request withdrawn successfully.'),
+            backgroundColor: const Color(0xFF10B981),
           ),
         );
       } else {
         if (!mounted) return;
+        final errorMsg = _formatErrorMessage(res);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Withdraw failed: ${res.body}'),
-            backgroundColor: Colors.red,
+            content: Text(errorMsg),
+            backgroundColor: Colors.red.shade700,
           ),
         );
       }
@@ -328,7 +358,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       debugPrint('[WITHDRAW ERROR] $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -342,22 +372,36 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     });
 
     try {
-      await http.put(
+      final res = await http.put(
         Uri.parse('$_baseUrl/$leaveId/status'),
         headers: AuthStorage.authHeaders,
         body: body,
       );
-      // Refetch all data from backend so balances update after approval
-      await _fetchLeaveData();
-    } catch (_) {}
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Leave request $status!'),
-        backgroundColor: status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
-      ),
-    );
+      if (res.statusCode == 200) {
+        await _fetchLeaveData();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Leave request $status successfully!'),
+            backgroundColor: status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        final errorMsg = _formatErrorMessage(res);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $errorMsg'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating status: $e'), backgroundColor: Colors.red.shade700),
+      );
+    }
   }
 
   @override
@@ -501,16 +545,39 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _fetchLeaveData,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try Again'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: t.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _fetchLeaveData,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: t.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await AuthStorage.clear();
+                    if (mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Log In Again'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: t.primary,
+                    side: BorderSide(color: t.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -738,7 +805,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   Widget _buildHistorySection(AppThemeConfig t) {
     final filtered = _myLeaves.where((leave) {
       if (_selectedStatusFilter == 'All') return true;
-      return (leave['status'] as String).toLowerCase() == _selectedStatusFilter.toLowerCase();
+      return (leave['status']?.toString() ?? '').toLowerCase() == _selectedStatusFilter.toLowerCase();
     }).toList();
 
     return Container(
@@ -1507,7 +1574,7 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
     final rem = widget.remaining;
     final limit = widget.limit;
     final color = item.color;
-    final isDesktop = kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final isDesktop = kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1571,7 +1638,7 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Out of ${limit.toInt()} Allocated Days',
+                  item.key == 'Work From Home' ? 'Cumulative Remote Days Taken' : 'Out of ${limit.toInt()} Allocated Days',
                   style: TextStyle(fontSize: 11, color: t.textSecondary),
                 ),
               ],
@@ -1579,7 +1646,7 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
-                value: limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0,
+                value: item.key == 'Work From Home' ? 1.0 : (limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0),
                 backgroundColor: t.border,
                 valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 5,

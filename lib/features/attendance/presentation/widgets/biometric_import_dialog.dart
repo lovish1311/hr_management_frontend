@@ -50,6 +50,16 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
       return;
     }
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    if (targetDateOnly.isAfter(today)) {
+      setState(() {
+        _errorMessage = 'Biometric attendance cannot be recorded or imported for future dates.';
+      });
+      return;
+    }
+
     setState(() {
       _isUploading = true;
       _errorMessage = null;
@@ -84,11 +94,13 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate.isAfter(today) ? today : _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
+      lastDate: today,
     );
     if (picked != null) {
       setState(() {

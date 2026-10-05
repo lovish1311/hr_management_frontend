@@ -163,11 +163,17 @@ class HrDrawer extends StatelessWidget {
                               );
                             }
                           : () {
-                              Navigator.pushNamed(
-                                context,
-                                '/employee_profile',
-                                arguments: AuthStorage.employeeId?.toString(),
-                              );
+                              final scaffold = Scaffold.maybeOf(context);
+                              if (scaffold != null && scaffold.isDrawerOpen) {
+                                Navigator.pop(context);
+                              }
+                              if (activeRoute != '/employee_profile') {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/employee_profile',
+                                  arguments: AuthStorage.employeeId?.toString(),
+                                );
+                              }
                             },
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
@@ -278,10 +284,12 @@ class HrDrawer extends StatelessWidget {
             ),
           ),
           onTap: () {
+            final scaffold = Scaffold.maybeOf(context);
+            if (scaffold != null && scaffold.isDrawerOpen) {
+              Navigator.pop(context); // close mobile drawer overlay only if open
+            }
             if (activeRoute != route) {
               Navigator.pushReplacementNamed(context, route);
-            } else {
-              Navigator.pop(context); // close drawer
             }
           },
         ),

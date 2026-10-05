@@ -35,8 +35,21 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_employee == null) {
-      final employeeId = ModalRoute.of(context)?.settings.arguments as String?;
-      if (employeeId != null) {
+      final rawArg = ModalRoute.of(context)?.settings.arguments;
+      String? employeeId;
+      if (rawArg is String && rawArg.isNotEmpty) {
+        employeeId = rawArg;
+      } else if (rawArg is int) {
+        employeeId = rawArg.toString();
+      } else if (rawArg is Employee) {
+        _employee = rawArg;
+        _isLoading = false;
+        employeeId = rawArg.id;
+      } else {
+        employeeId = AuthStorage.employeeId?.toString();
+      }
+
+      if (employeeId != null && employeeId.isNotEmpty) {
         _fetchEmployee(employeeId);
       } else {
         setState(() => _isLoading = false);
@@ -91,7 +104,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           
           _attendanceRecords = [
             ProfileAttendanceRecord(date: 'Jul 17, 2026', clockIn: '09:00 AM', clockOut: '05:30 PM', totalHours: '8.5 hrs', status: 'On Time'),
-            ProfileAttendanceRecord(date: 'Jul 16, 2026', clockIn: '09:15 AM', clockOut: '06:00 PM', totalHours: '8.75 hrs', status: 'Late'),
+            ProfileAttendanceRecord(date: 'Jul 16, 2026', clockIn: '09:15 AM', clockOut: '07:00 PM', totalHours: '8.75 hrs', status: 'Late'),
             ProfileAttendanceRecord(date: 'Jul 15, 2026', clockIn: '08:55 AM', clockOut: '05:00 PM', totalHours: '8.0 hrs', status: 'On Time'),
             ProfileAttendanceRecord(date: 'Jul 14, 2026', clockIn: '09:05 AM', clockOut: '05:30 PM', totalHours: '8.4 hrs', status: 'On Time'),
             ProfileAttendanceRecord(date: 'Jul 13, 2026', clockIn: '--:--', clockOut: '--:--', totalHours: '0.0 hrs', status: 'Absent'),
@@ -258,6 +271,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         backgroundImage: NetworkImage(
                           'https://api.dicebear.com/7.x/adventurer/png?seed=${Uri.encodeComponent(emp.name)}',
                         ),
+                        onBackgroundImageError: (_, __) {},
                       ),
                     ),
                     Positioned(
@@ -1008,8 +1022,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               Expanded(
                                 child: Text(
                                   selectedLateTime != 'CLEAR' && selectedLateTime.isNotEmpty
-                                      ? 'Late Allowed Upto: ${_formatTimeDisplay(selectedLateTime, "09:30 AM")}'
-                                      : 'Standard Cutoff (09:30 AM)',
+                                      ? 'Late Allowed Upto: ${_formatTimeDisplay(selectedLateTime, "10:15 AM")}'
+                                      : 'Standard Cutoff (10:15 AM)',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -1075,8 +1089,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               Expanded(
                                 child: Text(
                                   selectedEarlyTime != 'CLEAR' && selectedEarlyTime.isNotEmpty
-                                      ? 'Early Out Allowed After: ${_formatTimeDisplay(selectedEarlyTime, "06:00 PM")}'
-                                      : 'Standard Shift End (06:00 PM)',
+                                      ? 'Early Out Allowed After: ${_formatTimeDisplay(selectedEarlyTime, "07:00 PM")}'
+                                      : 'Standard Shift End (07:00 PM)',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,

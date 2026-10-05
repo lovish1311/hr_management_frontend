@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -1056,7 +1055,7 @@ class _EmployeeListTileState extends State<_EmployeeListTile> {
   Widget build(BuildContext context) {
     final t = widget.t;
     final emp = widget.emp;
-    final isDesktop = kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final isDesktop = kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux;
 
     Widget cardChild = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

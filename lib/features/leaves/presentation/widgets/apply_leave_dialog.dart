@@ -116,8 +116,8 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     super.initState();
     _fromDate = widget.initialStartDate ?? DateTime.now();
     _toDate = widget.initialEndDate ?? widget.initialStartDate ?? DateTime.now();
-    _fromTime = const TimeOfDay(hour: 9, minute: 0);
-    _toTime = const TimeOfDay(hour: 11, minute: 0);
+    _fromTime = const TimeOfDay(hour: 10, minute: 0);
+    _toTime = const TimeOfDay(hour: 12, minute: 0);
     
     if (widget.initialRequestCategory != null) {
       _selectedCategory = widget.initialRequestCategory!;
@@ -714,7 +714,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '',
+                              item.type == 'Work From Home'
+                                  ? (item.balance <= 0 ? '' : '-')
+                                  : (item.type == 'Loss Of Pay'
+                                      ? 'Uncapped'
+                                      : ''),
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
@@ -1291,6 +1295,30 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   }
 
   void _submitForm() {
+    if (_selectedCategory != 'Leave') {
+      final startMins = _fromTime.hour * 60 + _fromTime.minute;
+      final endMins = _toTime.hour * 60 + _toTime.minute;
+      final durationMins = endMins - startMins;
+      if (durationMins <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('End time must be after start time.'),
+            backgroundColor: Color(0xFFDC2626),
+          ),
+        );
+        return;
+      }
+      if (durationMins > 120) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Intra-day permissions / short breaks are allowed up to 2 hours maximum (120 minutes).'),
+            backgroundColor: Color(0xFFDC2626),
+          ),
+        );
+        return;
+      }
+    }
+
     final leaveData = {
       'category': _selectedCategory,
       'leaveType': _selectedCategory == 'Leave' ? _selectedLeaveType : _selectedCategory,

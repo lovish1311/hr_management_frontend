@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
@@ -21,7 +20,7 @@ class ApiConfig {
       return 'http://localhost:8080';
     }
     try {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         return 'http://localhost:8080';
       }
     } catch (_) {}

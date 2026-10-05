@@ -66,12 +66,14 @@ class PayrollRecord {
 
   factory PayrollRecord.fromJson(Map<String, dynamic> json) {
     return PayrollRecord(
-      id: json['id'] as int? ?? 0,
-      employeeId: json['employeeId'] as int? ?? 0,
-      employeeName: json['employeeName'] as String? ?? 'Lovish Kumar',
-      employeeCode: json['employeeCode'] as String? ?? 'EMP-202',
-      designation: json['designation'] as String? ?? 'Senior Software Developer',
-      department: json['department'] as String? ?? 'Engineering',
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      employeeId: (json['employeeId'] as num?)?.toInt() ?? (AuthStorage.employeeId ?? 0),
+      employeeName: (json['employeeName'] as String?)?.isNotEmpty == true
+          ? json['employeeName'] as String
+          : (AuthStorage.userEmail != null ? AuthStorage.userEmail!.split('@').first.replaceAll('.', ' ') : 'Employee'),
+      employeeCode: json['employeeCode'] as String? ?? 'EMP-${json['employeeId'] ?? AuthStorage.employeeId ?? ""}',
+      designation: json['designation'] as String? ?? 'Team Member',
+      department: json['department'] as String? ?? 'General',
       basicSalary: (json['basicSalary'] as num?)?.toDouble() ?? 
                    (json['baseSalary'] as num?)?.toDouble() ?? 25000.0,
       hra: (json['hra'] as num?)?.toDouble() ?? 10000.0,
@@ -93,7 +95,7 @@ class PayrollRecord {
       daysWorked: json['daysWorked'] as int? ?? 30,
       unpaidDays: json['unpaidDays'] as int? ?? 0,
       paymentMethod: json['paymentMethod'] as String? ?? 'Bank Transfer (NEFT)',
-      bankAccountNumber: json['bankAccountNumber'] as String? ?? '•••• •••• 9842',
+      bankAccountNumber: (json['bankAccountNumber'] as String?)?.replaceAll(RegExp(r'[^0-9 ]'), '•') ?? '•••• 9842',
     );
   }
 }

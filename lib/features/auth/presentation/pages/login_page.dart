@@ -218,13 +218,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => _fillDemoCredentials('hr@company.com', 'hr123'),
+                              onPressed: () => _fillDemoCredentials('harsh.kaushal@company.com', 'manager123'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 side: BorderSide(color: const Color(0xFF0D9488).withValues(alpha: 0.5)),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              child: const Text('HR Lead', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                              child: const Text('Manager (Harsh)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                             ),
                           ),
                           const SizedBox(width: 8),

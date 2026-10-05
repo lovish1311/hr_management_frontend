@@ -30,11 +30,15 @@ class AppRouter {
       '/employees': (context) => const EmployeeDirectoryPage(),
       '/employee_profile': (context) => const EmployeeProfilePage(),
       '/employee_create': (context) => const EmployeeFormPage(),
-      '/employee_edit': (context) => EmployeeFormPage(
-            initialEmployee: ModalRoute.of(context)?.settings.arguments as Employee?,
-          ),
+      '/employee_edit': (context) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        return EmployeeFormPage(
+          initialEmployee: args is Employee ? args : null,
+        );
+      },
       '/attendance': (context) => const AttendanceCalendarPage(),
       '/leaves': (context) => const LeaveManagementPage(),
+      '/leave-management': (context) => const LeaveManagementPage(),
       '/holidays': (context) => const HolidayCalendarPage(),
       '/holiday_management': (context) => const HolidayManagementPage(),
       '/hr_leave_settings': (context) => const HrLeaveSettingsPage(),
@@ -44,9 +48,16 @@ class AppRouter {
       '/settings': (context) => const SettingsPage(),
       '/games': (context) => const GameDirectoryPage(),
       '/tambola': (context) => const TambolaLobbyPage(),
-      '/tambola_game': (context) => TambolaGameRoomPage(
-            roomCode: (ModalRoute.of(context)?.settings.arguments as String?) ?? '',
-          ),
+      '/tambola_game': (context) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        return TambolaGameRoomPage(
+          roomCode: args is String ? args : (args != null ? args.toString() : ''),
+        );
+      },
+      '/profile': (context) => const EmployeeProfilePage(),
+      '/leave': (context) => const LeaveManagementPage(),
+      '/payroll': (context) => const PayslipPage(),
+      '/dashboard': (context) => const DashboardPage(),
     };
   }
 }

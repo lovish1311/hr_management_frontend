@@ -68,11 +68,11 @@ class TambolaTicket {
 
   factory TambolaTicket.fromJson(Map<String, dynamic> json) {
     final rawGrid = json['grid'] as List<dynamic>? ?? [];
-    final grid = rawGrid.map((r) => (r as List<dynamic>).map((c) => (c as num).toInt()).toList()).toList();
+    final grid = rawGrid.map((r) => (r is List ? r : []).map((c) => (c is num ? c.toInt() : (int.tryParse(c?.toString() ?? '') ?? 0))).toList()).toList();
 
     List<int> parseList(dynamic val) {
       if (val is List) {
-        return val.map((e) => (e as num).toInt()).toList();
+        return val.map((e) => (e is num ? e.toInt() : (int.tryParse(e?.toString() ?? '') ?? 0))).toList();
       }
       return [];
     }

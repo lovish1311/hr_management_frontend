@@ -27,17 +27,17 @@ class AttendanceCalendarDay {
 
   factory AttendanceCalendarDay.fromJson(Map<String, dynamic> json) {
     return AttendanceCalendarDay(
-      date: DateTime.parse(json['date']),
-      status: json['status'] ?? 'UPCOMING',
-      statusLabel: json['statusLabel'] ?? '',
-      leaveType: json['leaveType'],
-      checkInTime: json['checkInTime'],
-      checkOutTime: json['checkOutTime'],
-      notes: json['notes'],
-      isWeekend: json['isWeekend'] ?? false,
-      isHoliday: json['isHoliday'] ?? false,
-      leaveRequestId: json['leaveRequestId'] != null ? (json['leaveRequestId'] as num).toInt() : null,
-      totalWorkingMinutes: json['totalWorkingMinutes'] != null ? (json['totalWorkingMinutes'] as num).toInt() : 0,
+      date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
+      status: json['status']?.toString() ?? 'UPCOMING',
+      statusLabel: json['statusLabel']?.toString() ?? '',
+      leaveType: json['leaveType']?.toString(),
+      checkInTime: json['checkInTime']?.toString(),
+      checkOutTime: json['checkOutTime']?.toString(),
+      notes: json['notes']?.toString(),
+      isWeekend: json['isWeekend'] == true,
+      isHoliday: json['isHoliday'] == true,
+      leaveRequestId: (json['leaveRequestId'] as num?)?.toInt() ?? (int.tryParse(json['leaveRequestId']?.toString() ?? '')),
+      totalWorkingMinutes: (json['totalWorkingMinutes'] as num?)?.toInt() ?? (int.tryParse(json['totalWorkingMinutes']?.toString() ?? '') ?? 0),
     );
   }
 }

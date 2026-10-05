@@ -45,3 +45,15 @@ app.*.map.json
 /android/app/release
 /screenshots
 /screenshot_tab
+/assets/avatars
+
+
+# Environment Variables & Secrets
+.env
+*.env
+.env.*
+!.env.example
+
+# Documentation (Stored centrally in workspace docs/)
+/docs/
+/assets/avatars/backup/

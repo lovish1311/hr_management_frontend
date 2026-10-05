@@ -21,7 +21,8 @@ class DashboardStats {
       onLeaveToday: json['onLeaveToday'] as int? ?? 0,
       pendingLeaves: pendingLeavesJson is List
           ? pendingLeavesJson
-              .map((e) => LeaveRequest.fromJson(e as Map<String, dynamic>))
+              .whereType<Map>()
+              .map((e) => LeaveRequest.fromJson(Map<String, dynamic>.from(e)))
               .toList()
           : [],
     );
@@ -45,11 +46,11 @@ class LeaveRequest {
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) {
     return LeaveRequest(
-      id: json['id'] as int,
-      employeeName: json['employeeName'] as String,
-      startDate: json['startDate'] as String,
-      endDate: json['endDate'] as String,
-      reason: json['reason'] as String,
+      id: (json['id'] as num?)?.toInt() ?? (int.tryParse(json['id']?.toString() ?? '') ?? 0),
+      employeeName: json['employeeName']?.toString() ?? 'Employee',
+      startDate: json['startDate']?.toString() ?? '',
+      endDate: json['endDate']?.toString() ?? '',
+      reason: json['reason']?.toString() ?? 'Leave request',
     );
   }
 
