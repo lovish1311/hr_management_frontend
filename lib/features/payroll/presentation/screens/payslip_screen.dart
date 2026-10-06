@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
+import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
+import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
 import 'package:hr_management/features/payroll/presentation/widgets/payslip_detail_modal.dart';
 
 class PayslipScreen extends StatefulWidget {
@@ -20,9 +22,10 @@ class _PayslipScreenState extends State<PayslipScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<PayrollRecordEntity> _payslips = [];
+  String? _downloadingRecordId;
 
-  String _selectedFinancialYear = 'FY 2026-27';
-  final List<String> _financialYears = ['FY 2026-27', 'FY 2025-26'];
+  String _selectedFinancialYear = 'All Financial Years';
+  final List<String> _financialYears = ['All Financial Years', 'FY 2026-27', 'FY 2025-26', 'FY 2024-25'];
 
   @override
   void initState() {
@@ -58,15 +61,78 @@ class _PayslipScreenState extends State<PayslipScreen> {
     }
   }
 
-  double get _ytdGross => _payslips.fold(0.0, (acc, p) => acc + p.totalGrossPay);
-  double get _ytdNet => _payslips.fold(0.0, (acc, p) => acc + p.netPay);
-  double get _ytdTaxDeductions => _payslips.fold(0.0, (acc, p) => acc + p.totalDeductions);
+  List<PayrollRecordEntity> get _filteredPayslips {
+    if (_selectedFinancialYear == 'All Financial Years') return _payslips;
+    return _payslips.where((p) {
+      final fyParts = _selectedFinancialYear.replaceAll('FY ', '').split('-');
+      if (fyParts.length == 2) {
+        final startYear = int.tryParse(fyParts[0]) ?? 2026;
+        final endYear = int.tryParse('20${fyParts[1]}') ?? (startYear + 1);
+        final monthUpper = p.payrollMonth.toUpperCase();
+        final isEarlyYear = ['JANUARY', 'FEBRUARY', 'MARCH'].contains(monthUpper);
+        if (isEarlyYear) {
+          return p.payrollYear == endYear;
+        } else {
+          return p.payrollYear == startYear;
+        }
+      }
+      return true;
+    }).toList();
+  }
+
+  double get _ytdGross => _filteredPayslips.fold(0.0, (acc, p) => acc + p.totalGrossPay);
+  double get _ytdNet => _filteredPayslips.fold(0.0, (acc, p) => acc + p.netPay);
+  double get _ytdTaxDeductions => _filteredPayslips.fold(0.0, (acc, p) => acc + p.totalDeductions);
+
+  Future<void> _downloadRecordPdf(PayrollRecordEntity record) async {
+    if (_downloadingRecordId != null) return;
+    setState(() => _downloadingRecordId = record.id);
+
+    try {
+      final pdfBytes = await PayslipPdfGenerator.generatePayslipPdf(record);
+      final empCode = record.employeeCode.isNotEmpty ? record.employeeCode : 'EMP${record.employeeId}';
+      final fileName = 'Payslip_${empCode}_${record.payrollMonth}_${record.payrollYear}.pdf';
+
+      FileDownloader.downloadBytes(
+        bytes: pdfBytes,
+        fileName: fileName,
+        mimeType: 'application/pdf',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Payslip downloaded: $fileName')),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download payslip: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _downloadingRecordId = null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.appTheme;
     final theme = Theme.of(context);
     final isPrivileged = AuthStorage.isSuperAdmin || AuthStorage.isHr;
+    final displayList = _filteredPayslips;
 
     return ResponsiveScaffold(
       body: Column(
@@ -122,7 +188,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                         ),
                                       ),
                                       Text(
-                                        '${_payslips.length} statement${_payslips.length == 1 ? '' : 's'}',
+                                        '${displayList.length} statement${displayList.length == 1 ? '' : 's'}',
                                         style: TextStyle(fontSize: 12, color: t.textSecondary),
                                       ),
                                     ],
@@ -130,16 +196,16 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                   const SizedBox(height: 14),
 
                                   // List of Months
-                                  if (_payslips.isEmpty)
+                                  if (displayList.isEmpty)
                                     _buildEmptyState(context, t)
                                   else
                                     ListView.separated(
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: _payslips.length,
+                                      itemCount: displayList.length,
                                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                                       itemBuilder: (context, idx) {
-                                        final record = _payslips[idx];
+                                        final record = displayList[idx];
                                         return _buildPayslipCard(context, record, t);
                                       },
                                     ),
@@ -189,7 +255,6 @@ class _PayslipScreenState extends State<PayslipScreen> {
                 onChanged: (v) {
                   if (v != null) {
                     setState(() => _selectedFinancialYear = v);
-                    _fetchPayslips();
                   }
                 },
               ),
@@ -265,6 +330,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
   }
 
   Widget _buildPayslipCard(BuildContext context, PayrollRecordEntity record, dynamic t) {
+    final isDownloading = _downloadingRecordId == record.id;
+
     return Container(
       decoration: BoxDecoration(
         color: t.card,
@@ -298,7 +365,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Disbursed via ${record.bankAccountNumber} • Paid Days: ${record.paidDays}/${record.totalDaysInMonth}',
+                      'Disbursed via ${record.bankAccountNumber} • Paid Days: ${record.paidDays.toStringAsFixed(record.paidDays.truncateToDouble() == record.paidDays ? 0 : 1)}/${record.totalDaysInMonth}',
                       style: TextStyle(fontSize: 11, color: t.textSecondary),
                     ),
                   ],
@@ -325,7 +392,19 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   ),
                 ],
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
+              IconButton(
+                icon: isDownloading
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: t.primary),
+                      )
+                    : Icon(Icons.download_rounded, color: t.primary, size: 22),
+                tooltip: 'Download PDF Payslip',
+                onPressed: isDownloading ? null : () => _downloadRecordPdf(record),
+              ),
+              const SizedBox(width: 4),
               Icon(Icons.chevron_right, color: t.textSecondary, size: 20),
             ],
           ),

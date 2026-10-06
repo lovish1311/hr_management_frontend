@@ -14,6 +14,7 @@ import '../widgets/draw_guess_scoreboard_widget.dart';
 import '../widgets/word_selection_dialog.dart';
 import '../widgets/round_result_dialog.dart';
 import '../widgets/final_results_dialog.dart';
+import 'draw_guess_leaderboard_screen.dart';
 
 class DrawGuessGameRoomPage extends StatefulWidget {
   final String roomCode;
@@ -54,6 +55,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
   String? _secretWord;
   int _wordLength = 0;
   String _category = 'GENERAL';
+  Map<int, int>? _lastRoundDeltas;
 
   bool _isWordSelectionOpen = false;
   bool _isRoundResultOpen = false;
@@ -234,7 +236,30 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           _hintPattern = null;
           _strokes.clear();
           _remainingSeconds = event['selectionTimeSeconds'] as int? ?? 15;
+          if (_room != null) {
+            _room = DrawGuessRoom(
+              id: _room!.id,
+              roomCode: _room!.roomCode,
+              roomName: _room!.roomName,
+              hostEmployeeId: _room!.hostEmployeeId,
+              hostName: _room!.hostName,
+              state: DrawGuessGameState.wordSelection,
+              maxRounds: _room!.maxRounds,
+              drawTimeSeconds: _room!.drawTimeSeconds,
+              wordChoiceCount: _room!.wordChoiceCount,
+              category: _room!.category,
+              customWordsOnly: _room!.customWordsOnly,
+              currentRound: event['currentRound'] as int? ?? _room!.currentRound,
+              currentTurnIndex: _room!.currentTurnIndex,
+              activeDrawerEmployeeId: _activeDrawerId,
+              currentHint: null,
+              remainingSeconds: _remainingSeconds,
+              players: _room!.players,
+              createdAt: _room!.createdAt,
+            );
+          }
         });
+        _startLocalTimer();
         break;
 
       case 'WORD_OPTIONS':
@@ -262,6 +287,28 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           _currentRound = event['currentRound'] as int? ?? _currentRound;
           _maxRounds = event['maxRounds'] as int? ?? _maxRounds;
           _strokes.clear();
+          if (_room != null) {
+            _room = DrawGuessRoom(
+              id: _room!.id,
+              roomCode: _room!.roomCode,
+              roomName: _room!.roomName,
+              hostEmployeeId: _room!.hostEmployeeId,
+              hostName: _room!.hostName,
+              state: DrawGuessGameState.drawing,
+              maxRounds: _maxRounds,
+              drawTimeSeconds: _room!.drawTimeSeconds,
+              wordChoiceCount: _room!.wordChoiceCount,
+              category: _room!.category,
+              customWordsOnly: _room!.customWordsOnly,
+              currentRound: _currentRound,
+              currentTurnIndex: _room!.currentTurnIndex,
+              activeDrawerEmployeeId: _activeDrawerId,
+              currentHint: _hintPattern,
+              remainingSeconds: _remainingSeconds,
+              players: _room!.players,
+              createdAt: _room!.createdAt,
+            );
+          }
         });
         _startLocalTimer();
         break;
@@ -303,13 +350,58 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         break;
 
       case 'GUESS_CORRECT':
+        final guesserEmpId = event['employeeId'] as int? ?? 0;
         _addChatMessage(
-          employeeId: event['employeeId'] as int? ?? 0,
+          employeeId: guesserEmpId,
           senderName: event['employeeName'] as String? ?? 'Player',
           message: event['message'] as String? ?? 'Guessed the word!',
           isCorrectGuess: true,
         );
-        _refreshPlayersScore();
+        // Mark player solved locally WITHOUT mutating cumulative score mid-round!
+        if (_room != null) {
+          final updatedPlayers = _room!.players.map((p) {
+            if (p.employeeId == guesserEmpId) {
+              return DrawGuessPlayer(
+                id: p.id,
+                roomCode: p.roomCode,
+                employeeId: p.employeeId,
+                employeeName: p.employeeName,
+                avatarUrl: p.avatarUrl,
+                score: p.score, // Remains frozen!
+                turnScore: event['pointsAwarded'] as int? ?? p.turnScore,
+                hasGuessedCorrectly: true,
+                isDrawer: p.isDrawer,
+                isHost: p.isHost,
+                isConnected: p.isConnected,
+                turnOrder: p.turnOrder,
+                rank: p.rank,
+              );
+            }
+            return p;
+          }).toList();
+          setState(() {
+            _room = DrawGuessRoom(
+              id: _room!.id,
+              roomCode: _room!.roomCode,
+              roomName: _room!.roomName,
+              hostEmployeeId: _room!.hostEmployeeId,
+              hostName: _room!.hostName,
+              state: _room!.state,
+              maxRounds: _room!.maxRounds,
+              drawTimeSeconds: _room!.drawTimeSeconds,
+              wordChoiceCount: _room!.wordChoiceCount,
+              category: _room!.category,
+              customWordsOnly: _room!.customWordsOnly,
+              currentRound: _room!.currentRound,
+              currentTurnIndex: _room!.currentTurnIndex,
+              activeDrawerEmployeeId: _room!.activeDrawerEmployeeId,
+              currentHint: _room!.currentHint,
+              remainingSeconds: _remainingSeconds,
+              players: updatedPlayers,
+              createdAt: _room!.createdAt,
+            );
+          });
+        }
         break;
 
       case 'CLOSE_GUESS':
@@ -342,7 +434,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           SnackBar(
             content: Text(event['message'] as String? ?? 'Drawer disconnected! Advancing turn...'),
             backgroundColor: const Color(0xFFF59E0B),
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
           ),
         );
         break;
@@ -378,11 +470,48 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
       case 'ROUND_ENDED':
         _localTicker?.cancel();
         final resultData = event['result'] as Map<String, dynamic>?;
+        RoundResult? roundResult;
         if (resultData != null) {
-          final result = RoundResult.fromJson(resultData);
-          _showRoundResultModal(result);
+          roundResult = RoundResult.fromJson(resultData);
+          _showRoundResultModal(roundResult);
         }
-        _refreshPlayersScore();
+
+        if (roundResult != null) {
+          final deltas = <int, int>{};
+          for (final d in roundResult.scoreDeltas) {
+            deltas[d.employeeId] = d.pointsEarned;
+          }
+          _lastRoundDeltas = deltas;
+        }
+
+        final rawPlayers = event['players'] as List<dynamic>?;
+        if (rawPlayers != null && _room != null) {
+          final updatedPlayers = rawPlayers
+              .map((p) => DrawGuessPlayer.fromJson(p as Map<String, dynamic>))
+              .toList();
+          setState(() {
+            _room = DrawGuessRoom(
+              id: _room!.id,
+              roomCode: _room!.roomCode,
+              roomName: _room!.roomName,
+              hostEmployeeId: _room!.hostEmployeeId,
+              hostName: _room!.hostName,
+              state: DrawGuessGameState.roundResult,
+              maxRounds: _room!.maxRounds,
+              drawTimeSeconds: _room!.drawTimeSeconds,
+              wordChoiceCount: _room!.wordChoiceCount,
+              category: _room!.category,
+              customWordsOnly: _room!.customWordsOnly,
+              currentRound: _room!.currentRound,
+              currentTurnIndex: _room!.currentTurnIndex,
+              activeDrawerEmployeeId: _room!.activeDrawerEmployeeId,
+              currentHint: _room!.currentHint,
+              remainingSeconds: _remainingSeconds,
+              players: updatedPlayers,
+              createdAt: _room!.createdAt,
+            );
+          });
+        }
         break;
 
       case 'FINAL_RESULTS':
@@ -429,17 +558,6 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
     });
   }
 
-  Future<void> _refreshPlayersScore() async {
-    try {
-      final room = await DrawGuessApiService.getRoomDetails(widget.roomCode);
-      if (mounted) {
-        setState(() {
-          _room = room;
-        });
-      }
-    } catch (_) {}
-  }
-
   void _showWordSelectionModal(List<WordOption> options) {
     if (_isWordSelectionOpen || !mounted) return;
     _isWordSelectionOpen = true;
@@ -484,6 +602,23 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         },
       ),
     ).then((_) => _isFinalResultOpen = false);
+  }
+
+  void _openFullLeaderboard() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (ctx) => DrawGuessLeaderboardScreen(
+          players: _room?.players ?? [],
+          activeDrawerId: _activeDrawerId,
+          roomCode: widget.roomCode,
+          currentRound: _currentRound,
+          maxRounds: _maxRounds,
+          currentTurnIndex: _room?.currentTurnIndex ?? 1,
+          lastRoundDeltas: _lastRoundDeltas,
+        ),
+      ),
+    );
   }
 
   void _handleStrokeCompleted(DrawStroke stroke) {
@@ -646,9 +781,75 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
       ),
       actions: [
         if (_room?.state != DrawGuessGameState.lobby) ...[
-          DrawGuessTimerWidget(
-            remainingSeconds: _remainingSeconds,
-            totalSeconds: _totalSeconds,
+          if (_room?.state == DrawGuessGameState.wordSelection)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFFF59E0B)),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Choosing (${_remainingSeconds}s)',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            DrawGuessTimerWidget(
+              remainingSeconds: _remainingSeconds,
+              totalSeconds: _totalSeconds,
+            ),
+          ],
+          const SizedBox(width: 8),
+          Builder(
+            builder: (context) {
+              final myEmpId = AuthStorage.employeeId;
+              final myPlayer = (_room?.players ?? []).cast<DrawGuessPlayer?>().firstWhere(
+                    (p) => p?.employeeId == myEmpId,
+                    orElse: () => null,
+                  );
+              final rankStr = (myPlayer != null && myPlayer.rank > 0)
+                  ? '#${myPlayer.rank}'
+                  : 'Scores';
+              return InkWell(
+                onTap: _openFullLeaderboard,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.leaderboard_rounded, size: 15, color: Color(0xFF6366F1)),
+                      const SizedBox(width: 4),
+                      Text(
+                        rankStr,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF6366F1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 12),
         ],
@@ -899,6 +1100,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                                   child: DrawGuessScoreboardWidget(
                                     players: _room?.players ?? [],
                                     activeDrawerId: _activeDrawerId,
+                                    onOpenFullLeaderboard: _openFullLeaderboard,
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -928,43 +1130,47 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                               itemBuilder: (context, idx) {
                                 final p = (_room?.players ?? [])[idx];
                                 final isPDrawing = p.employeeId == _activeDrawerId;
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: p.hasGuessedCorrectly
-                                        ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                        : (isPDrawing
-                                            ? const Color(0xFF6366F1).withValues(alpha: 0.15)
-                                            : (Theme.of(context).brightness == Brightness.dark
-                                                ? const Color(0xFF1E293B)
-                                                : Colors.white)),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
+                                return InkWell(
+                                  onTap: _openFullLeaderboard,
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
                                       color: p.hasGuessedCorrectly
-                                          ? const Color(0xFF10B981)
+                                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
                                           : (isPDrawing
-                                              ? const Color(0xFF6366F1)
+                                              ? const Color(0xFF6366F1).withValues(alpha: 0.15)
                                               : (Theme.of(context).brightness == Brightness.dark
-                                                  ? Colors.white10
-                                                  : const Color(0xFFE2E8F0))),
+                                                  ? const Color(0xFF1E293B)
+                                                  : Colors.white)),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: p.hasGuessedCorrectly
+                                            ? const Color(0xFF10B981)
+                                            : (isPDrawing
+                                                ? const Color(0xFF6366F1)
+                                                : (Theme.of(context).brightness == Brightness.dark
+                                                    ? Colors.white10
+                                                    : const Color(0xFFE2E8F0))),
+                                      ),
                                     ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isPDrawing) const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF6366F1)),
-                                      if (p.hasGuessedCorrectly) const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
-                                      if (isPDrawing || p.hasGuessedCorrectly) const SizedBox(width: 4),
-                                      Text(
-                                        p.employeeName,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${p.score}',
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6366F1)),
-                                      ),
-                                    ],
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isPDrawing) const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF6366F1)),
+                                        if (p.hasGuessedCorrectly) const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                                        if (isPDrawing || p.hasGuessedCorrectly) const SizedBox(width: 4),
+                                        Text(
+                                          p.employeeName,
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${p.score}',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6366F1)),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },

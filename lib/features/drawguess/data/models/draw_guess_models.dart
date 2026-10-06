@@ -235,6 +235,7 @@ class DrawGuessPlayer {
   final bool isHost;
   final bool isConnected;
   final int turnOrder;
+  final int rank;
 
   DrawGuessPlayer({
     required this.id,
@@ -249,6 +250,7 @@ class DrawGuessPlayer {
     this.isHost = false,
     this.isConnected = true,
     this.turnOrder = 0,
+    this.rank = 1,
   });
 
   factory DrawGuessPlayer.fromJson(Map<String, dynamic> json) {
@@ -265,6 +267,7 @@ class DrawGuessPlayer {
       isHost: json['isHost'] as bool? ?? false,
       isConnected: json['isConnected'] as bool? ?? true,
       turnOrder: json['turnOrder'] as int? ?? 0,
+      rank: json['rank'] as int? ?? 1,
     );
   }
 }
@@ -378,6 +381,7 @@ class PlayerScoreDelta {
   final String employeeName;
   final int pointsEarned;
   final int totalScore;
+  final int rank;
   final bool guessedCorrectly;
 
   PlayerScoreDelta({
@@ -385,6 +389,7 @@ class PlayerScoreDelta {
     required this.employeeName,
     required this.pointsEarned,
     required this.totalScore,
+    this.rank = 1,
     required this.guessedCorrectly,
   });
 
@@ -394,6 +399,7 @@ class PlayerScoreDelta {
       employeeName: json['employeeName'] as String? ?? 'Player',
       pointsEarned: json['pointsEarned'] as int? ?? 0,
       totalScore: json['totalScore'] as int? ?? 0,
+      rank: json['rank'] as int? ?? 1,
       guessedCorrectly: json['guessedCorrectly'] as bool? ?? false,
     );
   }

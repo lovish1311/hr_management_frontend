@@ -25,6 +25,8 @@ class DrawingCanvasWidget extends StatefulWidget {
 
 class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
   final List<DrawPoint> _currentPoints = [];
+  int _lastStreamTimestamp = 0;
+  int _streamStartIndex = 0;
 
   void _handlePanStart(DragStartDetails details, BoxConstraints constraints) {
     if (!widget.isDrawer) return;
@@ -34,6 +36,9 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
     // Normalize coordinates to 0.0 - 1.0 space for resolution independence
     final normX = (localPos.dx / renderBox.size.width).clamp(0.0, 1.0);
     final normY = (localPos.dy / renderBox.size.height).clamp(0.0, 1.0);
+
+    _lastStreamTimestamp = DateTime.now().millisecondsSinceEpoch;
+    _streamStartIndex = 0;
 
     setState(() {
       _currentPoints.clear();
@@ -52,27 +57,64 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
     setState(() {
       _currentPoints.add(DrawPoint(x: normX, y: normY));
     });
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Stream segments every 35ms (~28 fps) if at least 2 points exist
+    if (now - _lastStreamTimestamp >= 35 && _currentPoints.length - _streamStartIndex >= 2) {
+      _lastStreamTimestamp = now;
+      final segmentPoints = _currentPoints.sublist(_streamStartIndex);
+      final color = widget.selectedTool == StrokeType.erase
+          ? const Color(0xFFFFFFFF)
+          : widget.selectedColor;
+
+      final segmentStroke = DrawStroke(
+        roomCode: '',
+        strokeType: widget.selectedTool,
+        color: color,
+        brushSize: widget.selectedBrushSize,
+        points: List.from(segmentPoints),
+      );
+
+      widget.onStrokeCompleted?.call(segmentStroke);
+      _streamStartIndex = _currentPoints.length - 1; // overlap by 1 point for continuous curve
+    }
   }
 
   void _handlePanEnd(DragEndDetails details) {
     if (!widget.isDrawer || _currentPoints.isEmpty) return;
 
-    final color = widget.selectedTool == StrokeType.erase
-        ? const Color(0xFFFFFFFF)
-        : widget.selectedColor;
+    if (_streamStartIndex < _currentPoints.length - 1) {
+      final remaining = _currentPoints.sublist(_streamStartIndex);
+      final color = widget.selectedTool == StrokeType.erase
+          ? const Color(0xFFFFFFFF)
+          : widget.selectedColor;
 
-    final stroke = DrawStroke(
-      roomCode: '',
-      strokeType: widget.selectedTool,
-      color: color,
-      brushSize: widget.selectedBrushSize,
-      points: List.from(_currentPoints),
-    );
-
-    widget.onStrokeCompleted?.call(stroke);
+      final finalStroke = DrawStroke(
+        roomCode: '',
+        strokeType: widget.selectedTool,
+        color: color,
+        brushSize: widget.selectedBrushSize,
+        points: List.from(remaining),
+      );
+      widget.onStrokeCompleted?.call(finalStroke);
+    } else if (_currentPoints.length == 1 && _streamStartIndex == 0) {
+      // Single tap dot
+      final color = widget.selectedTool == StrokeType.erase
+          ? const Color(0xFFFFFFFF)
+          : widget.selectedColor;
+      final dotStroke = DrawStroke(
+        roomCode: '',
+        strokeType: widget.selectedTool,
+        color: color,
+        brushSize: widget.selectedBrushSize,
+        points: List.from(_currentPoints),
+      );
+      widget.onStrokeCompleted?.call(dotStroke);
+    }
 
     setState(() {
       _currentPoints.clear();
+      _streamStartIndex = 0;
     });
   }
 

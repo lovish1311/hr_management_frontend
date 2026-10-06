@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
+import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
+import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
 
-class PayslipDetailModal extends StatelessWidget {
+class PayslipDetailModal extends StatefulWidget {
   final PayrollRecordEntity record;
   final bool isDialog;
 
@@ -36,7 +38,59 @@ class PayslipDetailModal extends StatelessWidget {
   }
 
   @override
+  State<PayslipDetailModal> createState() => _PayslipDetailModalState();
+}
+
+class _PayslipDetailModalState extends State<PayslipDetailModal> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadPdf() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+
+    try {
+      final pdfBytes = await PayslipPdfGenerator.generatePayslipPdf(widget.record);
+      final empCode = widget.record.employeeCode.isNotEmpty ? widget.record.employeeCode : 'EMP${widget.record.employeeId}';
+      final fileName = 'Payslip_${empCode}_${widget.record.payrollMonth}_${widget.record.payrollYear}.pdf';
+
+      FileDownloader.downloadBytes(
+        bytes: pdfBytes,
+        fileName: fileName,
+        mimeType: 'application/pdf',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Payslip downloaded: $fileName')),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate PDF payslip: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final record = widget.record;
+    final isDialog = widget.isDialog;
     final t = context.appTheme;
     final theme = Theme.of(context);
     final borderRadius = isDialog
@@ -73,12 +127,12 @@ class PayslipDetailModal extends StatelessWidget {
             Container(
               width: 40,
               height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: t.textSecondary.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: t.textSecondary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
 
           // Header
           Padding(
@@ -242,8 +296,8 @@ class PayslipDetailModal extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildStatItem('Total Days', '${record.totalDaysInMonth}', t),
-                            _buildStatItem('Paid Days', '${record.paidDays}', t),
+                            _buildStatItem('Total Days', record.totalDaysInMonth.toString(), t),
+                            _buildStatItem('Paid Days', record.paidDays.toStringAsFixed(record.paidDays.truncateToDouble() == record.paidDays ? 0 : 1), t),
                             _buildStatItem('LOP Days', '${record.lopDays}', t, highlight: record.lopDays > 0),
                             _buildStatItem('OT Hours', '${record.overtimeHours}h', t),
                           ],
@@ -254,24 +308,27 @@ class PayslipDetailModal extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Download PDF simulation button
+                  // Functional Download PDF button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Downloading payslip PDF for ${record.payrollMonth} ${record.payrollYear}...'),
-                            backgroundColor: t.primary,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.download_rounded, size: 20),
-                      label: const Text('Download Official PDF Payslip'),
+                      onPressed: _isDownloading ? null : _downloadPdf,
+                      icon: _isDownloading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.download_rounded, size: 20),
+                      label: Text(
+                        _isDownloading ? 'Generating PDF...' : 'Download Official PDF Payslip',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: t.primary,
                         foregroundColor: Colors.white,
+                        elevation: 2,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -286,6 +343,7 @@ class PayslipDetailModal extends StatelessWidget {
   }
 
   Widget _buildEarningsCard(BuildContext context, dynamic t) {
+    final record = widget.record;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -320,6 +378,7 @@ class PayslipDetailModal extends StatelessWidget {
   }
 
   Widget _buildDeductionsCard(BuildContext context, dynamic t) {
+    final record = widget.record;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

@@ -73,6 +73,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           token: response['token'],
           email: response['email'],
           role: response['role'],
+          systemRole: response['systemRole'],
           employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
           authorities: authorities,
         );

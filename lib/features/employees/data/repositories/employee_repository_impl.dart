@@ -243,16 +243,25 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   }
 
   @override
-  Future<bool> elevateRoleAndAuthorities(String employeeId, {required String role, required List<String> authorities}) async {
+  Future<bool> elevateRoleAndAuthorities(
+    String employeeId, {
+    required String role,
+    String? systemRole,
+    required List<String> authorities,
+  }) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/$employeeId/elevate');
     try {
+      final payload = <String, dynamic>{
+        'role': role,
+        'authorities': authorities,
+      };
+      if (systemRole != null && systemRole.isNotEmpty) {
+        payload['systemRole'] = systemRole;
+      }
       final res = await http.put(
         url,
         headers: AuthStorage.authHeaders,
-        body: json.encode({
-          'role': role,
-          'authorities': authorities,
-        }),
+        body: json.encode(payload),
       );
       if (res.statusCode == 200) {
         final decoded = json.decode(res.body);

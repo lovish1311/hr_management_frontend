@@ -5,6 +5,7 @@ class Employee {
   final String firstName;
   final String lastName;
   final String role;
+  final String systemRole;
   final String department;
   final String designation;
   final String status; // ACTIVE, PROBATION, NOTICE_PERIOD, INACTIVE, TERMINATED
@@ -28,8 +29,14 @@ class Employee {
   final String todayAttendanceStatus;
   final List<String> authorities;
 
-  bool get isPayrollManager => authorities.contains('PAYROLL_MANAGE');
-  bool get isGlobalLeaveApprover => authorities.contains('LEAVE_APPROVE_ALL');
+  bool get isSuperAdmin =>
+      systemRole == 'SUPER_ADMIN' || role.toUpperCase().contains('SUPER_ADMIN');
+  bool get isAdmin =>
+      isSuperAdmin || systemRole == 'ADMIN' || authorities.contains('ROLE_ADMIN');
+  bool get isHr => isAdmin || role.toUpperCase() == 'HR';
+  bool get isManager => isAdmin || isHr || role.toUpperCase() == 'MANAGER';
+  bool get isPayrollManager => isAdmin || authorities.contains('PAYROLL_MANAGE');
+  bool get isGlobalLeaveApprover => isAdmin || authorities.contains('LEAVE_APPROVE_ALL');
 
   // Probation State
   final bool isProbation;
@@ -50,6 +57,7 @@ class Employee {
     this.firstName = '',
     this.lastName = '',
     required this.role,
+    this.systemRole = 'NONE',
     required this.department,
     this.designation = '',
     required this.status,
@@ -89,6 +97,7 @@ class Employee {
     String? firstName,
     String? lastName,
     String? role,
+    String? systemRole,
     String? department,
     String? designation,
     String? status,
@@ -127,6 +136,7 @@ class Employee {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       role: role ?? this.role,
+      systemRole: systemRole ?? this.systemRole,
       department: department ?? this.department,
       designation: designation ?? this.designation,
       status: status ?? this.status,
@@ -169,6 +179,13 @@ class Employee {
     final bool parsedProbation = json['isProbation'] ?? (rawStatus == 'PROBATION');
     final bool parsedNotice = json['isNoticePeriod'] ?? (rawStatus == 'NOTICE' || rawStatus == 'NOTICE_PERIOD');
 
+    final rawSystemRole = (json['systemRole'] ??
+            ((json['role'] ?? '').toString().toUpperCase() == 'SUPER_ADMIN'
+                ? 'SUPER_ADMIN'
+                : 'NONE'))
+        .toString()
+        .toUpperCase();
+
     return Employee(
       id: (json['id'] ?? '').toString(),
       employeeCode: json['employeeCode'] ?? 'EMP-${json['id'] ?? ''}',
@@ -176,6 +193,7 @@ class Employee {
       firstName: fn,
       lastName: ln,
       role: json['role'] ?? 'EMPLOYEE',
+      systemRole: rawSystemRole,
       department: json['department'] ?? 'General',
       designation: json['designation'] ?? json['role'] ?? 'Team Member',
       status: rawStatus,

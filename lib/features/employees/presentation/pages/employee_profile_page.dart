@@ -324,20 +324,62 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${emp.role} • ${emp.department}',
-                    style: const TextStyle(
-                      color: Color(0xFF0D9488),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${emp.designation.isNotEmpty ? emp.designation : emp.role} • ${emp.department}',
+                        style: const TextStyle(
+                          color: Color(0xFF0D9488),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    if (emp.isSuperAdmin) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.stars_rounded, size: 12, color: Color(0xFF8B5CF6)),
+                            SizedBox(width: 4),
+                            Text('SUPER ADMIN', style: TextStyle(color: Color(0xFF8B5CF6), fontSize: 10, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ] else if (emp.isAdmin) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.shield_rounded, size: 12, color: Color(0xFF6366F1)),
+                            SizedBox(width: 4),
+                            Text('ADMIN', style: TextStyle(color: Color(0xFF6366F1), fontSize: 10, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 8),
                 // Attendance tracking & Exemption Badges
@@ -538,7 +580,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                if (AuthStorage.isSuperAdmin) ...[
+                if (AuthStorage.isSuperAdmin || AuthStorage.isAdmin) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -550,7 +592,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.security_rounded, size: 16),
-                      label: const Text('Elevate Role & Permissions', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: const Text('Access Control & Permissions', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1320,6 +1362,16 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   }
 
   void _showElevateRoleDialog(Employee emp) {
+    final bool isActorSuperAdmin = AuthStorage.isSuperAdmin;
+    final bool isTargetSuperAdmin = emp.isSuperAdmin || emp.email.toLowerCase() == 'admin@company.com';
+    final bool isTargetAdmin = emp.isAdmin;
+
+    // Strict Permission Security Guard:
+    // Only Super Admin can modify Admins or Super Admins.
+    // The master Super Admin account (admin@company.com) cannot be modified or demoted.
+    final bool isLocked = (!isActorSuperAdmin && (isTargetAdmin || isTargetSuperAdmin)) ||
+        (isTargetSuperAdmin && emp.email.toLowerCase() == 'admin@company.com');
+
     String currentRole = emp.role.toUpperCase().replaceAll('ROLE_', '');
     String selectedRole = currentRole.contains('SUPER_ADMIN')
         ? 'SUPER_ADMIN'
@@ -1328,6 +1380,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             : currentRole.contains('MANAGER')
                 ? 'MANAGER'
                 : 'EMPLOYEE';
+
+    String selectedSystemRole = emp.systemRole.toUpperCase();
+    if (selectedSystemRole.isEmpty || selectedSystemRole == 'NONE') {
+      selectedSystemRole = isTargetSuperAdmin
+          ? 'SUPER_ADMIN'
+          : isTargetAdmin
+              ? 'ADMIN'
+              : 'NONE';
+    }
 
     bool hasPayrollManage = emp.authorities.contains('PAYROLL_MANAGE');
     bool hasLeaveApproveAll = emp.authorities.contains('LEAVE_APPROVE_ALL');
@@ -1339,6 +1400,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+          final bool effectiveAdmin = selectedSystemRole == 'ADMIN' || selectedRole == 'SUPER_ADMIN' || selectedSystemRole == 'SUPER_ADMIN';
 
           return Dialog(
             backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
@@ -1373,12 +1435,12 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Elevate Role & Permissions',
+                                  'Access Control & Permissions',
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  'Configure enterprise access control and delegated authorities for ${emp.name}.',
+                                  'Configure enterprise roles and administrative tier for ${emp.name}.',
                                   style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                                 ),
                               ],
@@ -1386,13 +1448,40 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           ),
                         ],
                       ),
+
+                      if (isLocked) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.lock_rounded, color: Color(0xFFEF4444), size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  isTargetSuperAdmin
+                                      ? 'Super Administrator account is root protected and cannot be modified.'
+                                      : 'Admins cannot modify or reassign roles for other Admins or Super Admins. Only Super Admin has this privilege.',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: 20),
                       const Divider(height: 1),
                       const SizedBox(height: 18),
 
-                      // System Role Dropdown
+                      // Section 1: Organizational Role (Workflow Hierarchy)
                       Text(
-                        'SYSTEM ROLE LEVEL',
+                        'ORGANIZATIONAL ROLE (REPORTING & HIERARCHY)',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -1411,28 +1500,29 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             isExpanded: true,
-                            value: selectedRole,
+                            value: selectedRole == 'SUPER_ADMIN' ? 'SUPER_ADMIN' : selectedRole,
                             dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'SUPER_ADMIN',
-                                child: Text('Super Admin (Master System Control)', style: TextStyle(fontWeight: FontWeight.w600)),
-                              ),
-                              DropdownMenuItem(
+                            items: [
+                              if (isTargetSuperAdmin)
+                                const DropdownMenuItem(
+                                  value: 'SUPER_ADMIN',
+                                  child: Text('Super Admin (Master Hierarchy)', style: TextStyle(fontWeight: FontWeight.w600)),
+                                ),
+                              const DropdownMenuItem(
                                 value: 'HR',
-                                child: Text('HR Admin (Human Resources & People)', style: TextStyle(fontWeight: FontWeight.w600)),
+                                child: Text('HR Specialist (Human Resources & People)', style: TextStyle(fontWeight: FontWeight.w600)),
                               ),
-                              DropdownMenuItem(
+                              const DropdownMenuItem(
                                 value: 'MANAGER',
-                                child: Text('Manager / Team Lead', style: TextStyle(fontWeight: FontWeight.w600)),
+                                child: Text('Manager / Team Lead (Approvals & Direct Reports)', style: TextStyle(fontWeight: FontWeight.w600)),
                               ),
-                              DropdownMenuItem(
+                              const DropdownMenuItem(
                                 value: 'EMPLOYEE',
-                                child: Text('Standard Employee', style: TextStyle(fontWeight: FontWeight.w600)),
+                                child: Text('Standard Employee (Regular Member)', style: TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ],
-                            onChanged: isSaving
+                            onChanged: (isSaving || isLocked)
                                 ? null
                                 : (val) {
                                     if (val != null) {
@@ -1443,24 +1533,120 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         ),
                       ),
 
-                      if (selectedRole == 'SUPER_ADMIN') ...[
-                        const SizedBox(height: 12),
+                      const SizedBox(height: 22),
+
+                      // Section 2: Administrative Tier
+                      Text(
+                        'SYSTEM ADMINISTRATIVE PRIVILEGE (TIER)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (isTargetSuperAdmin) ...[
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.35)),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.stars_rounded, color: Color(0xFF8B5CF6), size: 20),
-                              SizedBox(width: 10),
+                              Icon(Icons.workspace_premium_rounded, color: Color(0xFF8B5CF6), size: 24),
+                              SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  'Super Admins automatically hold master rights across all features, including payroll execution and company-wide leave approvals.',
-                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w500),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Super Administrator (Master Tier)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF8B5CF6))),
+                                    SizedBox(height: 2),
+                                    Text('Permanent root administrative authority. Can grant and revoke Admin privileges across the entire organization.', style: TextStyle(fontSize: 11.5, color: Color(0xFF6D28D9))),
+                                  ],
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selectedSystemRole == 'ADMIN'
+                                  ? const Color(0xFF8B5CF6)
+                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              width: selectedSystemRole == 'ADMIN' ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.shield_rounded, color: Color(0xFF8B5CF6), size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Full Admin Access',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'ADMIN',
+                                            style: TextStyle(color: Color(0xFF8B5CF6), fontSize: 9, fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Grants full administrative capabilities across Payroll, Leaves, Attendance, Holidays, Games, and non-admin employee management alongside their job title.',
+                                      style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                    ),
+                                    if (!isActorSuperAdmin) ...[
+                                      const SizedBox(height: 6),
+                                      const Row(
+                                        children: [
+                                          Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                          SizedBox(width: 4),
+                                          Text('Only Super Admin can grant or revoke Admin status', style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Switch(
+                                value: selectedSystemRole == 'ADMIN',
+                                activeThumbColor: const Color(0xFF8B5CF6),
+                                onChanged: (!isActorSuperAdmin || isSaving || isLocked)
+                                    ? null
+                                    : (val) {
+                                        setDialogState(() => selectedSystemRole = val ? 'ADMIN' : 'NONE');
+                                      },
                               ),
                             ],
                           ),
@@ -1469,7 +1655,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
                       const SizedBox(height: 24),
 
-                      // Granular Delegated Authorities Header
+                      // Section 3: Granular Delegated Authorities
                       Text(
                         'GRANULAR DELEGATED AUTHORITIES (RBAC)',
                         style: TextStyle(
@@ -1489,10 +1675,10 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: hasPayrollManage || selectedRole == 'SUPER_ADMIN'
+                            color: hasPayrollManage || effectiveAdmin
                                 ? const Color(0xFF0D9488)
                                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                            width: hasPayrollManage || selectedRole == 'SUPER_ADMIN' ? 1.5 : 1.0,
+                            width: hasPayrollManage || effectiveAdmin ? 1.5 : 1.0,
                           ),
                         ),
                         child: Row(
@@ -1533,17 +1719,21 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Grants authority to run monthly payroll, configure salary structures, lock/unlock LOP variable inputs, and generate bank payout files.',
+                                    'Grants authority to run monthly payroll, configure salary structures, lock/unlock LOP inputs, and export payout files.',
                                     style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                                   ),
+                                  if (effectiveAdmin) ...[
+                                    const SizedBox(height: 4),
+                                    const Text('Included automatically via Admin access tier', style: TextStyle(fontSize: 10.5, color: Color(0xFF0D9488), fontWeight: FontWeight.w600)),
+                                  ],
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
                             Switch(
-                              value: selectedRole == 'SUPER_ADMIN' ? true : hasPayrollManage,
+                              value: effectiveAdmin ? true : hasPayrollManage,
                               activeThumbColor: const Color(0xFF0D9488),
-                              onChanged: (selectedRole == 'SUPER_ADMIN' || isSaving)
+                              onChanged: (effectiveAdmin || isSaving || isLocked)
                                   ? null
                                   : (val) {
                                       setDialogState(() => hasPayrollManage = val);
@@ -1560,10 +1750,10 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN'
+                            color: hasLeaveApproveAll || effectiveAdmin
                                 ? const Color(0xFF3B82F6)
                                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                            width: hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN' ? 1.5 : 1.0,
+                            width: hasLeaveApproveAll || effectiveAdmin ? 1.5 : 1.0,
                           ),
                         ),
                         child: Row(
@@ -1604,17 +1794,21 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Authorizes approving or rejecting leave requests across all company departments. (Strict security rule: Self-approvals are strictly blocked).',
+                                    'Authorizes approving or rejecting leave requests across all departments. (Self-approvals are strictly blocked).',
                                     style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                                   ),
+                                  if (effectiveAdmin) ...[
+                                    const SizedBox(height: 4),
+                                    const Text('Included automatically via Admin access tier', style: TextStyle(fontSize: 10.5, color: Color(0xFF3B82F6), fontWeight: FontWeight.w600)),
+                                  ],
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
                             Switch(
-                              value: selectedRole == 'SUPER_ADMIN' ? true : hasLeaveApproveAll,
+                              value: effectiveAdmin ? true : hasLeaveApproveAll,
                               activeThumbColor: const Color(0xFF3B82F6),
-                              onChanged: (selectedRole == 'SUPER_ADMIN' || isSaving)
+                              onChanged: (effectiveAdmin || isSaving || isLocked)
                                   ? null
                                   : (val) {
                                       setDialogState(() => hasLeaveApproveAll = val);
@@ -1636,22 +1830,23 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           ),
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
-                            onPressed: isSaving
+                            onPressed: (isSaving || isLocked)
                                 ? null
                                 : () async {
                                     setDialogState(() => isSaving = true);
                                     final messenger = ScaffoldMessenger.of(context);
                                     final List<String> targetAuthorities = [];
-                                    if (hasPayrollManage || selectedRole == 'SUPER_ADMIN') {
+                                    if (hasPayrollManage || effectiveAdmin) {
                                       targetAuthorities.add('PAYROLL_MANAGE');
                                     }
-                                    if (hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN') {
+                                    if (hasLeaveApproveAll || effectiveAdmin) {
                                       targetAuthorities.add('LEAVE_APPROVE_ALL');
                                     }
 
                                     final success = await _repository.elevateRoleAndAuthorities(
                                       emp.id,
                                       role: selectedRole,
+                                      systemRole: selectedSystemRole,
                                       authorities: targetAuthorities,
                                     );
 
@@ -1676,6 +1871,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                           token: AuthStorage.token ?? '',
                                           email: AuthStorage.userEmail,
                                           role: selectedRole,
+                                          systemRole: selectedSystemRole,
                                           employeeId: AuthStorage.employeeId,
                                           authorities: targetAuthorities,
                                         );

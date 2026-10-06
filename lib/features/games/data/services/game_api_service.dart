@@ -21,6 +21,19 @@ class GameApiService {
       minPlayers: 2,
       maxPlayers: 100,
     ),
+    CompanyGame(
+      gameKey: 'DRAW_AND_GUESS',
+      title: 'Draw & Guess',
+      description: 'Real-time multiplayer drawing and guessing game. Compete with teammates, sketch words, and guess fast for high scores.',
+      category: 'Multiplayer Drawing',
+      iconName: 'brush_rounded',
+      gradientStart: '#0D9488',
+      gradientEnd: '#14B8A6',
+      isEnabled: true,
+      allowedRoles: 'ROLE_EMPLOYEE,ROLE_HR_ADMIN,ROLE_SUPER_ADMIN,ROLE_HR,ROLE_MANAGER',
+      minPlayers: 2,
+      maxPlayers: 20,
+    ),
   ];
 
   static Future<List<CompanyGame>> getAllGames() async {

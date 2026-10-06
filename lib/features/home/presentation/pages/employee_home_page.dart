@@ -7,8 +7,13 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/features/attendance/data/repositories/attendance_repository_impl.dart';
 import 'package:hr_management/features/attendance/domain/entities/attendance_calendar_day.dart';
+import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
+import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
+import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
+import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -26,6 +31,11 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   bool _isLoadingAttendance = true;
   List<dynamic> _teamPendingApprovals = [];
   bool _isLoadingTeamApprovals = true;
+
+  final PayrollRepository _payrollRepo = PayrollRepositoryImpl();
+  PayrollRecordEntity? _latestPayslip;
+  bool _isLoadingPayslip = true;
+  bool _isDownloadingDashboardPayslip = false;
 
   String get _baseUrl => ApiConfig.baseUrl;
 
@@ -66,6 +76,71 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     });
     _fetchEmployeeAttendanceData();
     _fetchTeamApprovals();
+    _fetchLatestPayslip();
+  }
+
+  Future<void> _fetchLatestPayslip() async {
+    final empId = AuthStorage.employeeId ?? 1;
+    final isPrivileged = AuthStorage.isSuperAdmin || AuthStorage.isHr;
+    try {
+      final list = await _payrollRepo.getPayslips(
+        employeeId: empId,
+        onlyPublished: !isPrivileged,
+      );
+      if (mounted) {
+        setState(() {
+          _latestPayslip = list.isNotEmpty ? list.first : null;
+          _isLoadingPayslip = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingPayslip = false);
+      }
+    }
+  }
+
+  Future<void> _downloadDashboardPayslip(PayrollRecordEntity record) async {
+    if (_isDownloadingDashboardPayslip) return;
+    setState(() => _isDownloadingDashboardPayslip = true);
+
+    try {
+      final pdfBytes = await PayslipPdfGenerator.generatePayslipPdf(record);
+      final empCode = record.employeeCode.isNotEmpty ? record.employeeCode : 'EMP${record.employeeId}';
+      final fileName = 'Payslip_${empCode}_${record.payrollMonth}_${record.payrollYear}.pdf';
+
+      FileDownloader.downloadBytes(
+        bytes: pdfBytes,
+        fileName: fileName,
+        mimeType: 'application/pdf',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Payslip downloaded: $fileName')),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download payslip: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDownloadingDashboardPayslip = false);
+    }
   }
 
   Future<void> _fetchTeamApprovals() async {
@@ -538,6 +613,25 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   }
 
   Widget _buildPayslipOverviewCard(bool isDark) {
+    if (_isLoadingPayslip) {
+      return Container(
+        height: 180,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      );
+    }
+
+    final p = _latestPayslip;
+
     return InkWell(
       onTap: () => Navigator.pushNamed(context, '/payslip'),
       borderRadius: BorderRadius.circular(20),
@@ -590,7 +684,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Jun 2026',
+                      p != null ? '${p.payrollMonth} ${p.payrollYear}' : 'No Cycle Active',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -599,7 +693,9 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '22 paid days',
+                      p != null
+                          ? '${p.paidDays.toStringAsFixed(p.paidDays.truncateToDouble() == p.paidDays ? 0 : 1)} paid days'
+                          : 'Pending publication',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white60 : const Color(0xFF64748B),
@@ -626,118 +722,149 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                       color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Flexible(
-                            child: Text(
-                              'Net Pay',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF15803D),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.download_rounded, size: 20, color: Color(0xFF3B82F6)),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Downloading Payslip Jun 2026...')),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _showSalary ? '₹20,000.00' : '₹*****',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF15803D),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          Column(
+                  child: p == null
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Gross Pay', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                              const SizedBox(height: 2),
                               Text(
-                                _showSalary ? '₹20,000.00' : '₹*****',
+                                'No Published Payslips Found',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Your official salary slips will appear here as soon as HR publishes payroll for the active cycle.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white38 : const Color(0xFF64748B),
                                 ),
                               ),
                             ],
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('Deductions', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                              const SizedBox(height: 2),
-                              Text(
-                                _showSalary ? '₹0.00' : '₹*****',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                            ],
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Show Salary',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                const Flexible(
+                                  child: Text(
+                                    'Net Pay',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF15803D),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                Switch.adaptive(
-                                  value: _showSalary,
-                                  activeThumbColor: const Color(0xFF10B981),
-                                  activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _showSalary = val;
-                                    });
-                                  },
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: _isDownloadingDashboardPayslip
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Color(0xFF3B82F6),
+                                          ),
+                                        )
+                                      : const Icon(Icons.download_rounded, size: 20, color: Color(0xFF3B82F6)),
+                                  tooltip: 'Download PDF',
+                                  onPressed: _isDownloadingDashboardPayslip ? null : () => _downloadDashboardPayslip(p),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _showSalary ? '₹${p.netPay.toStringAsFixed(2)}' : '₹*****',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Gross Pay', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _showSalary ? '₹${p.totalGrossPay.toStringAsFixed(2)}' : '₹*****',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Deductions', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _showSalary ? '₹${p.totalDeductions.toStringAsFixed(2)}' : '₹*****',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Show Salary',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Switch.adaptive(
+                                        value: _showSalary,
+                                        activeThumbColor: const Color(0xFF10B981),
+                                        activeTrackColor: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _showSalary = val;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                 ),
 
                 // Piggy Bank vector icon badge
