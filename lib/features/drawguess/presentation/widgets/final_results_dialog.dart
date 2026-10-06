@@ -76,6 +76,7 @@ class FinalResultsDialog extends StatelessWidget {
                         child: Text(
                           p.employeeName,
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(

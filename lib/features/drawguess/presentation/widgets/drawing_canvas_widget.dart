@@ -81,44 +81,49 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+    return Center(
+      child: AspectRatio(
+        aspectRatio: 16 / 10,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
+                  width: 1.5,
+                ),
               ),
-            ],
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
-              width: 1.5,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: GestureDetector(
-            onPanStart: (d) => _handlePanStart(d, constraints),
-            onPanUpdate: (d) => _handlePanUpdate(d, constraints),
-            onPanEnd: _handlePanEnd,
-            child: CustomPaint(
-              size: Size(constraints.maxWidth, constraints.maxHeight),
-              painter: _CanvasCustomPainter(
-                strokes: widget.strokes,
-                currentPoints: _currentPoints,
-                currentColor: widget.selectedTool == StrokeType.erase
-                    ? const Color(0xFFFFFFFF)
-                    : widget.selectedColor,
-                currentBrushSize: widget.selectedBrushSize,
-                currentTool: widget.selectedTool,
+              clipBehavior: Clip.antiAlias,
+              child: GestureDetector(
+                onPanStart: (d) => _handlePanStart(d, constraints),
+                onPanUpdate: (d) => _handlePanUpdate(d, constraints),
+                onPanEnd: _handlePanEnd,
+                child: CustomPaint(
+                  size: Size(constraints.maxWidth, constraints.maxHeight),
+                  painter: _CanvasCustomPainter(
+                    strokes: widget.strokes,
+                    currentPoints: _currentPoints,
+                    currentColor: widget.selectedTool == StrokeType.erase
+                        ? const Color(0xFFFFFFFF)
+                        : widget.selectedColor,
+                    currentBrushSize: widget.selectedBrushSize,
+                    currentTool: widget.selectedTool,
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }

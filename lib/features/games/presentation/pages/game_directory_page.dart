@@ -340,6 +340,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
 
   Widget _buildGameCard(CompanyGame game, bool isDark, bool isAdmin) {
     final isEnabled = game.isEnabled;
+    final isDrawGame = game.gameKey.toUpperCase().contains('DRAW') || game.gameKey.toUpperCase().contains('SCRIBBIL');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -385,8 +386,10 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                     height: 48,
                     decoration: BoxDecoration(
                       gradient: isEnabled
-                          ? const LinearGradient(
-                              colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                          ? LinearGradient(
+                              colors: isDrawGame
+                                  ? const [Color(0xFF6366F1), Color(0xFF4F46E5)]
+                                  : const [Color(0xFFF59E0B), Color(0xFFD97706)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             )
@@ -396,7 +399,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                       boxShadow: isEnabled
                           ? [
                               BoxShadow(
-                                color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                                color: (isDrawGame ? const Color(0xFF6366F1) : const Color(0xFFF59E0B)).withValues(alpha: 0.4),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
@@ -404,7 +407,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                           : null,
                     ),
                     alignment: Alignment.center,
-                    child: const Text('🎟️', style: TextStyle(fontSize: 24)),
+                    child: Text(isDrawGame ? '🎨' : '🎟️', style: const TextStyle(fontSize: 24)),
                   );
 
                   final titleCol = Column(
@@ -555,12 +558,19 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
-                    children: [
-                      _buildFeatureTag('🎯 90-Ball Calling', isDark),
-                      _buildFeatureTag('🎟️ Interactive Daubing', isDark),
-                      _buildFeatureTag('⚡ Real-time WebSocket', isDark),
-                      _buildFeatureTag('🏆 4 Winning Houses', isDark),
-                    ],
+                    children: isDrawGame
+                        ? [
+                            _buildFeatureTag('🎨 Real-time Canvas', isDark),
+                            _buildFeatureTag('💡 Live Word Guessing', isDark),
+                            _buildFeatureTag('⚡ Real-time WebSocket', isDark),
+                            _buildFeatureTag('🏆 Dynamic Leaderboard', isDark),
+                          ]
+                        : [
+                            _buildFeatureTag('🎯 90-Ball Calling', isDark),
+                            _buildFeatureTag('🎟️ Interactive Daubing', isDark),
+                            _buildFeatureTag('⚡ Real-time WebSocket', isDark),
+                            _buildFeatureTag('🏆 4 Winning Houses', isDark),
+                          ],
                   ),
                   const SizedBox(height: 18),
 
@@ -572,11 +582,13 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                         Expanded(
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.tune_rounded, size: 18),
-                            label: const FittedBox(
+                            label: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                'OPEN TAMBOLA HUB (HOST / MONITOR)',
-                                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                                isDrawGame
+                                    ? 'OPEN DRAW & GUESS HUB (HOST / MONITOR)'
+                                    : 'OPEN TAMBOLA HUB (HOST / MONITOR)',
+                                style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -598,16 +610,16 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                           child: isEnabled
                               ? ElevatedButton.icon(
                                   icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                                  label: const FittedBox(
+                                  label: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
-                                      'PLAY TAMBOLA NOW',
-                                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                                      isDrawGame ? 'PLAY DRAW & GUESS NOW' : 'PLAY TAMBOLA NOW',
+                                      style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8),
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF59E0B),
-                                    foregroundColor: const Color(0xFF0F172A),
+                                    backgroundColor: isDrawGame ? const Color(0xFF6366F1) : const Color(0xFFF59E0B),
+                                    foregroundColor: isDrawGame ? Colors.white : const Color(0xFF0F172A),
                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     elevation: 4,

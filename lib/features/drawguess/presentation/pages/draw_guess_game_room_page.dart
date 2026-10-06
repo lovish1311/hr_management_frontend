@@ -238,6 +238,44 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         );
         break;
 
+      case 'DRAWER_DISCONNECTED':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(event['message'] as String? ?? 'Drawer disconnected! Advancing turn...'),
+            backgroundColor: const Color(0xFFF59E0B),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        break;
+
+      case 'HOST_MIGRATED':
+        final newHostName = event['newHostName'] as String? ?? 'Another player';
+        final newHostId = event['newHostId'] as int?;
+        setState(() {
+          if (_room != null) {
+            _room = DrawGuessRoom(
+              id: _room!.id,
+              roomCode: _room!.roomCode,
+              roomName: _room!.roomName,
+              hostEmployeeId: newHostId ?? _room!.hostEmployeeId,
+              hostName: newHostName,
+              state: _room!.state,
+              maxRounds: _room!.maxRounds,
+              drawTimeSeconds: _room!.drawTimeSeconds,
+              category: _room!.category,
+              players: _room!.players,
+            );
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Host disconnected. $newHostName is now the host!'),
+            backgroundColor: const Color(0xFF6366F1),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        break;
+
       case 'ROUND_ENDED':
         _localTicker?.cancel();
         final resultData = event['result'] as Map<String, dynamic>?;
@@ -622,19 +660,50 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
 
               // Start Game Action
               if (isHost)
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: _handleStartGame,
-                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                    label: const Text('Start Game', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: players.length >= 2 ? _handleStartGame : null,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                        label: const Text('Start Game', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          disabledForegroundColor: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (players.length < 2) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'Minimum 2 players required to start the game',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 )
               else
                 Container(
@@ -749,6 +818,59 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                       )
                     : Column(
                         children: [
+                          // Mobile Mini Player Strip
+                          SizedBox(
+                            height: 38,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: (_room?.players ?? []).length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 8),
+                              itemBuilder: (context, idx) {
+                                final p = (_room?.players ?? [])[idx];
+                                final isPDrawing = p.employeeId == _activeDrawerId;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: p.hasGuessedCorrectly
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                        : (isPDrawing
+                                            ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                                            : (Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF1E293B)
+                                                : Colors.white)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: p.hasGuessedCorrectly
+                                          ? const Color(0xFF10B981)
+                                          : (isPDrawing
+                                              ? const Color(0xFF6366F1)
+                                              : (Theme.of(context).brightness == Brightness.dark
+                                                  ? Colors.white10
+                                                  : const Color(0xFFE2E8F0))),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isPDrawing) const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF6366F1)),
+                                      if (p.hasGuessedCorrectly) const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                                      if (isPDrawing || p.hasGuessedCorrectly) const SizedBox(width: 4),
+                                      Text(
+                                        p.employeeName,
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${p.score}',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6366F1)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           Expanded(
                             flex: 6,
                             child: DrawingCanvasWidget(
