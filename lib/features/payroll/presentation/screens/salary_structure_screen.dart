@@ -165,6 +165,8 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
       return;
     }
 
+    FocusScope.of(context).unfocus();
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -206,6 +208,12 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
         _isSaving = false;
         _isDirty = false;
         _currentStructure = saved;
+        final idx = _allStructures.indexWhere((s) => s.employeeId == saved.employeeId);
+        if (idx != -1) {
+          _allStructures[idx] = saved;
+        } else {
+          _allStructures.add(saved);
+        }
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -309,51 +317,80 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
         color: t.card,
         border: Border(bottom: BorderSide(color: t.border)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.account_balance_wallet_outlined, color: t.primary, size: 26),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final titleMaxWidth = constraints.maxWidth > 540 ? 460.0 : constraints.maxWidth;
+          return Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 14,
+            runSpacing: 10,
             children: [
-              Text(
-                'Salary Structure Master',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: t.text),
-              ),
-              Text('Configure master earnings & statutory deductions per employee', style: TextStyle(fontSize: 12, color: t.textSecondary)),
-            ],
-          ),
-          const Spacer(),
-          // Employee Dropdown
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: t.cardSoft,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: t.border),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _currentStructure?.employeeId,
-                dropdownColor: t.card,
-                items: _allStructures.map((s) {
-                  return DropdownMenuItem<int>(
-                    value: s.employeeId,
-                    child: Text(
-                      '${s.employeeName} (${s.employeeCode})',
-                      style: TextStyle(color: t.text, fontSize: 13),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: titleMaxWidth),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined, color: t.primary, size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Salary Structure Master',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: t.text),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Configure master earnings & statutory deductions per employee',
+                            style: TextStyle(fontSize: 12, color: t.textSecondary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                }).toList(),
-                onChanged: (id) {
-                  if (id == null) return;
-                  final selected = _allStructures.firstWhere((s) => s.employeeId == id);
-                  _populateFields(selected);
-                },
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
+              // Employee Dropdown
+              Container(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: t.cardSoft,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: t.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _currentStructure?.employeeId,
+                    dropdownColor: t.card,
+                    isDense: true,
+                    items: _allStructures.map((s) {
+                      return DropdownMenuItem<int>(
+                        value: s.employeeId,
+                        child: Text(
+                          '${s.employeeName} (${s.employeeCode})',
+                          style: TextStyle(color: t.text, fontSize: 13),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (id) async {
+                      if (id == null) return;
+                      if (_isDirty) {
+                        final canDiscard = await _handlePopScope();
+                        if (!canDiscard) return;
+                      }
+                      final selected = _allStructures.firstWhere((s) => s.employeeId == id);
+                      _populateFields(selected);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -495,28 +532,40 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
       child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 1080),
-          child: Row(
-            children: [
-              _buildSummaryPill('Total Fixed Gross', '₹${_computedGross.toStringAsFixed(2)}', t.success),
-              const SizedBox(width: 16),
-              _buildSummaryPill('Deductions', '₹${_computedDeductions.toStringAsFixed(2)}', t.danger),
-              const SizedBox(width: 16),
-              _buildSummaryPill('Calculated Net CTC', '₹${_computedNetCtc.toStringAsFixed(2)}', t.primary, isEmphasized: true),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: _isSaving ? null : _saveStructure,
-                icon: _isSaving
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.check_circle_outline, size: 18),
-                label: Text(_isSaving ? 'Saving...' : 'Save & Activate Structure'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: t.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                runSpacing: 12,
+                children: [
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _buildSummaryPill('Total Fixed Gross', '₹${_computedGross.toStringAsFixed(2)}', t.success),
+                      _buildSummaryPill('Deductions', '₹${_computedDeductions.toStringAsFixed(2)}', t.danger),
+                      _buildSummaryPill('Calculated Net CTC', '₹${_computedNetCtc.toStringAsFixed(2)}', t.primary, isEmphasized: true),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _saveStructure,
+                    icon: _isSaving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_circle_outline, size: 18),
+                    label: Text(_isSaving ? 'Saving...' : 'Save & Activate Structure'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: t.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
