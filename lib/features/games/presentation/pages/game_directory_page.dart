@@ -89,8 +89,11 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
   }
 
   void _navigateToGame(CompanyGame game) {
-    if (game.gameKey.toUpperCase() == 'TAMBOLA') {
+    final key = game.gameKey.toUpperCase();
+    if (key == 'TAMBOLA') {
       Navigator.pushNamed(context, '/tambola');
+    } else if (key == 'DRAW_AND_GUESS' || key == 'SCRIBBIL' || key == 'DRAW_GUESS') {
+      Navigator.pushNamed(context, '/draw-and-guess');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${game.title} is launching soon!')),
