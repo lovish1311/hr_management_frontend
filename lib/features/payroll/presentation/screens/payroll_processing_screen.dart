@@ -271,90 +271,110 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
         color: t.card,
         border: Border(bottom: BorderSide(color: t.border)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.precision_manufacturing_outlined, color: t.primary, size: 24),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 650;
+          return Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
             children: [
-              Text(
-                'Payroll Processing Wizard',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: t.text),
+              Row(
+                mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+                children: [
+                  Icon(Icons.precision_manufacturing_outlined, color: t.primary, size: 24),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payroll Processing Wizard',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: t.text),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '4-Step greytHR batch processing, pro-rata calculation, and ESS publishing',
+                          style: TextStyle(fontSize: 11, color: t.textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Text('4-Step greytHR batch processing, pro-rata calculation, and ESS publishing', style: TextStyle(fontSize: 11, color: t.textSecondary)),
-            ],
-          ),
-          const Spacer(),
-          // Month & Year Selector
-          Builder(builder: (context) {
-            final available = _availableMonths;
-            if (!available.contains(_selectedMonth)) {
-              _selectedMonth = available.last;
-            }
-            final years = _availableYears;
-            if (!years.contains(_selectedYear)) {
-              _selectedYear = years.last;
-            }
+              // Month & Year Selector
+              Builder(builder: (context) {
+                final available = _availableMonths;
+                if (!available.contains(_selectedMonth)) {
+                  _selectedMonth = available.last;
+                }
+                final years = _availableYears;
+                if (!years.contains(_selectedYear)) {
+                  _selectedYear = years.last;
+                }
 
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedMonth,
-                      dropdownColor: t.card,
-                      items: available.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setState(() => _selectedMonth = v);
-                          _loadCurrentMonthState();
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      value: _selectedYear,
-                      dropdownColor: t.card,
-                      items: years.map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setState(() {
-                            _selectedYear = v;
-                            final av = _availableMonths;
-                            if (!av.contains(_selectedMonth)) {
-                              _selectedMonth = av.last;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedMonth,
+                          dropdownColor: t.card,
+                          items: available.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() => _selectedMonth = v);
+                              _loadCurrentMonthState();
                             }
-                          });
-                          _loadCurrentMonthState();
-                        }
-                      },
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          }),
-        ],
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _selectedYear,
+                          dropdownColor: t.card,
+                          items: years.map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() {
+                                _selectedYear = v;
+                                final av = _availableMonths;
+                                if (!av.contains(_selectedMonth)) {
+                                  _selectedMonth = av.last;
+                                }
+                              });
+                              _loadCurrentMonthState();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildStepBar(BuildContext context, dynamic t) {
     final steps = [
-      '1. Verification',
-      '2. Calculation',
-      '3. Reconciliation',
-      '4. Publish & Disburse',
+      'Verification',
+      'Calculation',
+      'Reconciliation',
+      'Publish',
     ];
 
     return Container(
@@ -373,7 +393,8 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           if (isCompleted) badgeCol = t.success;
 
           return Expanded(
-            child: InkWell(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _currentStep = idx),
               child: Row(
                 children: [
@@ -469,15 +490,16 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           ),
 
           const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 14,
+            runSpacing: 10,
             children: [
               OutlinedButton.icon(
                 onPressed: () => Navigator.pushNamed(context, '/payroll_inputs'),
                 icon: const Icon(Icons.edit_note, size: 16),
                 label: const Text('Review Inputs Table'),
               ),
-              const SizedBox(width: 14),
               FilledButton.icon(
                 onPressed: () => setState(() => _currentStep = 1),
                 icon: const Icon(Icons.arrow_forward, size: 16),
@@ -562,63 +584,75 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Top 5 KPI Metric Cards
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                'Headcount',
-                '$headcount',
-                Icons.people,
-                t.primary,
-                t,
-                subtitle: '${headcountDelta >= 0 ? '+' : ''}$headcountDelta vs prior',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                'Gross Outflow',
-                '₹${grossTotal.toStringAsFixed(0)}',
-                Icons.arrow_upward,
-                t.success,
-                t,
-                subtitle: '${grossDeltaPct >= 0 ? '+' : ''}${grossDeltaPct.toStringAsFixed(1)}% vs prior',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                'Net Payout',
-                '₹${netTotal.toStringAsFixed(0)}',
-                Icons.account_balance_wallet,
-                t.primary,
-                t,
-                subtitle: '${netDeltaPct >= 0 ? '+' : ''}${netDeltaPct.toStringAsFixed(1)}% vs prior',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                'Income Tax (TDS)',
-                '₹${tdsTotal.toStringAsFixed(0)}',
-                Icons.receipt_long,
-                const Color(0xFFF59E0B),
-                t,
-                subtitle: 'Sec 115BAC + Old',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                'Arrears Payout',
-                '₹${arrearsTotal.toStringAsFixed(0)}',
-                Icons.history_edu,
-                const Color(0xFF8B5CF6),
-                t,
-                subtitle: 'Retroactive deltas',
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final double cardWidth = w >= 900
+                ? (w - 48) / 5
+                : (w >= 560 ? (w - 24) / 3 : (w - 12) / 2);
+
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildMetricCard(
+                    'Headcount',
+                    '$headcount',
+                    Icons.people,
+                    t.primary,
+                    t,
+                    subtitle: '${headcountDelta >= 0 ? '+' : ''}$headcountDelta vs prior',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildMetricCard(
+                    'Gross Outflow',
+                    '₹${grossTotal.toStringAsFixed(0)}',
+                    Icons.arrow_upward,
+                    t.success,
+                    t,
+                    subtitle: '${grossDeltaPct >= 0 ? '+' : ''}${grossDeltaPct.toStringAsFixed(1)}% vs prior',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildMetricCard(
+                    'Net Payout',
+                    '₹${netTotal.toStringAsFixed(0)}',
+                    Icons.account_balance_wallet,
+                    t.primary,
+                    t,
+                    subtitle: '${netDeltaPct >= 0 ? '+' : ''}${netDeltaPct.toStringAsFixed(1)}% vs prior',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildMetricCard(
+                    'Income Tax (TDS)',
+                    '₹${tdsTotal.toStringAsFixed(0)}',
+                    Icons.receipt_long,
+                    const Color(0xFFF59E0B),
+                    t,
+                    subtitle: 'Sec 115BAC + Old',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildMetricCard(
+                    'Arrears Payout',
+                    '₹${arrearsTotal.toStringAsFixed(0)}',
+                    Icons.history_edu,
+                    const Color(0xFF8B5CF6),
+                    t,
+                    subtitle: 'Retroactive deltas',
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 18),
 
@@ -634,7 +668,11 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 10,
                   children: [
                     // Sub-tab switcher
                     SegmentedButton<int>(
@@ -655,24 +693,28 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
                         setState(() => _reconciliationSubTab = set.first);
                       },
                     ),
-                    const Spacer(),
-                    OutlinedButton.icon(
-                      onPressed: _isExportingBankFile ? null : _exportBankPayoutFile,
-                      icon: _isExportingBankFile
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.file_download_outlined, size: 16),
-                      label: Text(_isExportingBankFile ? 'Exporting...' : 'Export Bank CSV'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: t.text,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: _verifyBatchPayroll,
-                      icon: const Icon(Icons.verified_outlined, size: 16),
-                      label: const Text('Verify & Proceed to Publish'),
-                      style: FilledButton.styleFrom(backgroundColor: t.primary),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _isExportingBankFile ? null : _exportBankPayoutFile,
+                          icon: _isExportingBankFile
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.file_download_outlined, size: 16),
+                          label: Text(_isExportingBankFile ? 'Exporting...' : 'Export Bank CSV'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: t.text,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _verifyBatchPayroll,
+                          icon: const Icon(Icons.verified_outlined, size: 16),
+                          label: const Text('Verify & Proceed to Publish'),
+                          style: FilledButton.styleFrom(backgroundColor: t.primary),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -814,11 +856,20 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
                     rows: _processedRecords.map((r) {
                       return DataRow(
                         cells: [
-                          DataCell(Text('${r.employeeName}\n${r.employeeCode}', style: TextStyle(fontSize: 12, color: t.text))),
+                          DataCell(
+                            InkWell(
+                              onTap: () => PayslipDetailModal.show(context, r),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                child: Text('${r.employeeName}\n${r.employeeCode}', style: TextStyle(fontSize: 12, color: t.text)),
+                              ),
+                            ),
+                          ),
                           DataCell(Text('${r.paidDays}/${r.totalDaysInMonth}', style: TextStyle(fontSize: 12, color: t.text))),
                           DataCell(Text('₹${r.masterFixedGross.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.text))),
                           DataCell(Text('₹${r.totalGrossPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.success))),
                           DataCell(Text('₹${r.totalDeductions.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.danger))),
+                          DataCell(Text('₹${r.netPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary))),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -841,9 +892,12 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
                             ),
                           ),
                           DataCell(
-                            IconButton(
-                              icon: const Icon(Icons.visibility_outlined, size: 18),
-                              onPressed: () => PayslipDetailModal.show(context, r),
+                            InkWell(
+                              onTap: () => PayslipDetailModal.show(context, r),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(Icons.visibility_outlined, size: 20, color: t.primary),
+                              ),
                             ),
                           ),
                         ],
@@ -905,8 +959,10 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           ),
           const SizedBox(height: 28),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
             children: [
               OutlinedButton.icon(
                 onPressed: _isExportingBankFile ? null : _exportBankPayoutFile,
@@ -919,7 +975,6 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
               ),
-              const SizedBox(width: 16),
               FilledButton.icon(
                 onPressed: _isPublishing ? null : _publishPayslips,
                 icon: _isPublishing
