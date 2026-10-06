@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
-import 'package:hr_management/core/widgets/hr_drawer.dart';
+import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/games/data/models/game_models.dart';
 import 'package:hr_management/features/games/data/services/game_api_service.dart';
 
@@ -107,40 +107,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
     final isDark = theme.brightness == Brightness.dark;
     final isAdmin = AuthStorage.isHr || AuthStorage.isSuperAdmin;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      drawer: const HrDrawer(),
-      appBar: AppBar(
-        title: const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.sports_esports_rounded, color: Color(0xFFF59E0B), size: 24),
-              SizedBox(width: 10),
-              Text(
-                'GAME ZONE',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => _loadGames(),
-            tooltip: 'Refresh Game Zone',
-          ),
-        ],
-      ),
+    return ResponsiveScaffold(
       body: RefreshIndicator(
         onRefresh: () => _loadGames(silent: true),
         color: const Color(0xFFF59E0B),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
-import 'package:hr_management/core/widgets/hr_drawer.dart';
+import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../data/services/draw_guess_api_service.dart';
 
 class DrawGuessLobbyPage extends StatefulWidget {
@@ -112,35 +112,7 @@ class _DrawGuessLobbyPageState extends State<DrawGuessLobbyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      drawer: const HrDrawer(),
-      appBar: AppBar(
-        title: const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.brush_rounded, color: Color(0xFF6366F1), size: 24),
-              SizedBox(width: 10),
-              Text(
-                'DRAW & GUESS LOBBY',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-      ),
+    return ResponsiveScaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(

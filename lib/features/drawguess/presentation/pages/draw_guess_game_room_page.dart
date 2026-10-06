@@ -60,12 +60,43 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
   bool _isFinalResultOpen = false;
 
   Timer? _localTicker;
+  Timer? _lobbyPollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadInitialState();
     _connectSocket();
+    _startLobbyPollTimer();
+  }
+
+  void _startLobbyPollTimer() {
+    _lobbyPollTimer?.cancel();
+    _lobbyPollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted && _room?.state == DrawGuessGameState.lobby) {
+        _refreshRoomQuietly();
+      }
+    });
+  }
+
+  Future<void> _refreshRoomQuietly() async {
+    try {
+      final room = await DrawGuessApiService.getRoomDetails(widget.roomCode);
+      if (mounted) {
+        setState(() {
+          _room = room;
+          _currentRound = room.currentRound;
+          _maxRounds = room.maxRounds;
+          _activeDrawerId = room.activeDrawerEmployeeId;
+          _category = room.category;
+          _totalSeconds = room.drawTimeSeconds;
+          _remainingSeconds = room.remainingSeconds;
+          _hintPattern = room.currentHint;
+        });
+      }
+    } catch (e) {
+      debugPrint('Quiet room refresh error: $e');
+    }
   }
 
   Future<void> _loadInitialState() async {
@@ -100,13 +131,81 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
     _socketSubscription = _socketService.onEvent.listen(_handleSocketEvent);
   }
 
+  void _handlePlayerListUpdate(Map<String, dynamic> event) {
+    if (!mounted) return;
+
+    final rawPlayers = event['players'] as List<dynamic>?;
+    if (rawPlayers != null && _room != null) {
+      final updatedList = rawPlayers
+          .map((p) => DrawGuessPlayer.fromJson(p as Map<String, dynamic>))
+          .toList();
+      setState(() {
+        _room = DrawGuessRoom(
+          id: _room!.id,
+          roomCode: _room!.roomCode,
+          roomName: _room!.roomName,
+          hostEmployeeId: _room!.hostEmployeeId,
+          hostName: _room!.hostName,
+          state: _room!.state,
+          maxRounds: _room!.maxRounds,
+          drawTimeSeconds: _room!.drawTimeSeconds,
+          wordChoiceCount: _room!.wordChoiceCount,
+          category: _room!.category,
+          customWordsOnly: _room!.customWordsOnly,
+          currentRound: _room!.currentRound,
+          currentTurnIndex: _room!.currentTurnIndex,
+          activeDrawerEmployeeId: _room!.activeDrawerEmployeeId,
+          currentHint: _room!.currentHint,
+          remainingSeconds: _room!.remainingSeconds,
+          players: updatedList,
+          createdAt: _room!.createdAt,
+        );
+      });
+    } else if (event['player'] != null && _room != null) {
+      final newPlayer = DrawGuessPlayer.fromJson(event['player'] as Map<String, dynamic>);
+      List<DrawGuessPlayer> updatedList = List.from(_room!.players);
+      final idx = updatedList.indexWhere((p) => p.employeeId == newPlayer.employeeId);
+      if (idx >= 0) {
+        updatedList[idx] = newPlayer;
+      } else {
+        updatedList.add(newPlayer);
+      }
+      setState(() {
+        _room = DrawGuessRoom(
+          id: _room!.id,
+          roomCode: _room!.roomCode,
+          roomName: _room!.roomName,
+          hostEmployeeId: _room!.hostEmployeeId,
+          hostName: _room!.hostName,
+          state: _room!.state,
+          maxRounds: _room!.maxRounds,
+          drawTimeSeconds: _room!.drawTimeSeconds,
+          wordChoiceCount: _room!.wordChoiceCount,
+          category: _room!.category,
+          customWordsOnly: _room!.customWordsOnly,
+          currentRound: _room!.currentRound,
+          currentTurnIndex: _room!.currentTurnIndex,
+          activeDrawerEmployeeId: _room!.activeDrawerEmployeeId,
+          currentHint: _room!.currentHint,
+          remainingSeconds: _room!.remainingSeconds,
+          players: updatedList,
+          createdAt: _room!.createdAt,
+        );
+      });
+    }
+
+    _refreshRoomQuietly();
+  }
+
   void _handleSocketEvent(Map<String, dynamic> event) {
     final type = event['type'] as String?;
     if (type == null) return;
 
     switch (type.toUpperCase()) {
       case 'PLAYER_JOINED':
-        _loadInitialState();
+      case 'PLAYER_RECONNECTED':
+      case 'PLAYER_DISCONNECTED':
+        _handlePlayerListUpdate(event);
         break;
 
       case 'GAME_STARTING':
@@ -420,6 +519,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
 
   @override
   void dispose() {
+    _lobbyPollTimer?.cancel();
     _localTicker?.cancel();
     _socketSubscription?.cancel();
     _socketService.dispose();
