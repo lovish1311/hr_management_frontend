@@ -7,6 +7,7 @@ import 'package:hr_management/features/payroll/domain/entities/salary_structure_
 import 'package:hr_management/features/payroll/domain/entities/monthly_payroll_input_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_summary_entity.dart';
+import 'package:hr_management/features/payroll/domain/entities/payroll_reconciliation_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 
 class PayrollRepositoryImpl implements PayrollRepository {
@@ -291,6 +292,46 @@ class PayrollRepositoryImpl implements PayrollRepository {
       throw Exception(_formatError(res));
     } catch (e) {
       debugPrint('Error fetching payroll summary: $e');
+      rethrow;
+    }
+  }
+
+  // =========================================================================
+  // PHASE 4: RECONCILIATION & BANKING EXPORT
+  // =========================================================================
+
+  @override
+  Future<PayrollReconciliationReportEntity> getReconciliationReport({
+    required String month,
+    required int year,
+  }) async {
+    final url = Uri.parse('$_baseUrl/api/payroll/reconciliation?month=$month&year=$year');
+    try {
+      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      if (res.statusCode == 200) {
+        return PayrollReconciliationReportEntity.fromJson(json.decode(res.body));
+      }
+      throw Exception(_formatError(res));
+    } catch (e) {
+      debugPrint('Error fetching reconciliation report: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Uint8List> exportBankPayoutCsv({
+    required String month,
+    required int year,
+  }) async {
+    final url = Uri.parse('$_baseUrl/api/payroll/export/bank-file?month=$month&year=$year');
+    try {
+      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      if (res.statusCode == 200) {
+        return res.bodyBytes;
+      }
+      throw Exception(_formatError(res));
+    } catch (e) {
+      debugPrint('Error exporting bank payout CSV: $e');
       rethrow;
     }
   }

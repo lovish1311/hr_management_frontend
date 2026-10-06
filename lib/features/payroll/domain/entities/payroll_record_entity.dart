@@ -27,6 +27,9 @@ class PayrollRecordEntity {
   final double calculatedPf;
   final double calculatedEsi;
   final double calculatedPt;
+  final double calculatedTds;
+  final String taxRegime;
+  final double arrearsAmount;
   final double lopDeductionAmount;
   final double adHocDeduction;
 
@@ -63,6 +66,9 @@ class PayrollRecordEntity {
     this.calculatedPf = 0.0,
     this.calculatedEsi = 0.0,
     this.calculatedPt = 200.0,
+    this.calculatedTds = 0.0,
+    this.taxRegime = 'NEW_REGIME',
+    this.arrearsAmount = 0.0,
     this.lopDeductionAmount = 0.0,
     this.adHocDeduction = 0.0,
     this.totalGrossPay = 0.0,
@@ -105,6 +111,9 @@ class PayrollRecordEntity {
       calculatedPf: parse(json['calculatedPf']),
       calculatedEsi: parse(json['calculatedEsi']),
       calculatedPt: parse(json['calculatedPt']),
+      calculatedTds: parse(json['calculatedTds']),
+      taxRegime: json['taxRegime']?.toString() ?? 'NEW_REGIME',
+      arrearsAmount: parse(json['arrearsAmount']),
       lopDeductionAmount: parse(json['lopDeductionAmount']),
       adHocDeduction: parse(json['adHocDeduction']),
       totalGrossPay: parse(json['totalGrossPay']),

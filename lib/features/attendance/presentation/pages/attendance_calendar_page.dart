@@ -410,7 +410,14 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     ).whenComplete(() => reasonController.dispose());
   }
 
+  bool get _canGoNextMonth {
+    final now = DateTime.now();
+    return _activeMonth.year < now.year ||
+        (_activeMonth.year == now.year && _activeMonth.month < now.month);
+  }
+
   void _changeMonth(int delta) {
+    if (delta > 0 && !_canGoNextMonth) return;
     setState(() {
       _activeMonth = DateTime(_activeMonth.year, _activeMonth.month + delta, 1);
     });
@@ -1066,8 +1073,12 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.chevron_right_rounded, size: 28),
-                              onPressed: () => _changeMonth(1),
+                              icon: Icon(
+                                Icons.chevron_right_rounded,
+                                size: 28,
+                                color: _canGoNextMonth ? t.text : t.textSecondary.withValues(alpha: 0.3),
+                              ),
+                              onPressed: _canGoNextMonth ? () => _changeMonth(1) : null,
                             ),
                           ],
                         ),

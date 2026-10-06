@@ -12,7 +12,12 @@ class MonthlyPayrollInputEntity {
   final double overtimeHours;
   final double adHocBonus;
   final double adHocDeduction;
+  final double arrearsAmount;
+  final String taxRegime;
+  final double declared80C;
+  final double declared80D;
   final bool isLocked;
+  final bool isExempt;
   final String? notes;
 
   const MonthlyPayrollInputEntity({
@@ -28,7 +33,12 @@ class MonthlyPayrollInputEntity {
     this.overtimeHours = 0.0,
     this.adHocBonus = 0.0,
     this.adHocDeduction = 0.0,
+    this.arrearsAmount = 0.0,
+    this.taxRegime = 'NEW_REGIME',
+    this.declared80C = 0.0,
+    this.declared80D = 0.0,
     this.isLocked = false,
+    this.isExempt = false,
     this.notes,
   });
 
@@ -52,7 +62,12 @@ class MonthlyPayrollInputEntity {
       overtimeHours: parse(json['overtimeHours']),
       adHocBonus: parse(json['adHocBonus']),
       adHocDeduction: parse(json['adHocDeduction']),
+      arrearsAmount: parse(json['arrearsAmount']),
+      taxRegime: json['taxRegime']?.toString() ?? 'NEW_REGIME',
+      declared80C: parse(json['declared80C']),
+      declared80D: parse(json['declared80D']),
       isLocked: json['isLocked'] == true,
+      isExempt: json['isExempt'] == true,
       notes: json['notes']?.toString(),
     );
   }
@@ -67,7 +82,12 @@ class MonthlyPayrollInputEntity {
       'overtimeHours': overtimeHours,
       'adHocBonus': adHocBonus,
       'adHocDeduction': adHocDeduction,
+      'arrearsAmount': arrearsAmount,
+      'taxRegime': taxRegime,
+      'declared80C': declared80C,
+      'declared80D': declared80D,
       'isLocked': isLocked,
+      'isExempt': isExempt,
       if (notes != null) 'notes': notes,
     };
   }
@@ -85,7 +105,12 @@ class MonthlyPayrollInputEntity {
     double? overtimeHours,
     double? adHocBonus,
     double? adHocDeduction,
+    double? arrearsAmount,
+    String? taxRegime,
+    double? declared80C,
+    double? declared80D,
     bool? isLocked,
+    bool? isExempt,
     String? notes,
   }) {
     return MonthlyPayrollInputEntity(
@@ -101,7 +126,12 @@ class MonthlyPayrollInputEntity {
       overtimeHours: overtimeHours ?? this.overtimeHours,
       adHocBonus: adHocBonus ?? this.adHocBonus,
       adHocDeduction: adHocDeduction ?? this.adHocDeduction,
+      arrearsAmount: arrearsAmount ?? this.arrearsAmount,
+      taxRegime: taxRegime ?? this.taxRegime,
+      declared80C: declared80C ?? this.declared80C,
+      declared80D: declared80D ?? this.declared80D,
       isLocked: isLocked ?? this.isLocked,
+      isExempt: isExempt ?? this.isExempt,
       notes: notes ?? this.notes,
     );
   }

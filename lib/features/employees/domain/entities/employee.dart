@@ -26,6 +26,10 @@ class Employee {
   final String? lateArrivalAllowedUntil;
   final String? earlyOutAllowedAfter;
   final String todayAttendanceStatus;
+  final List<String> authorities;
+
+  bool get isPayrollManager => authorities.contains('PAYROLL_MANAGE');
+  bool get isGlobalLeaveApprover => authorities.contains('LEAVE_APPROVE_ALL');
 
   // Probation State
   final bool isProbation;
@@ -75,6 +79,7 @@ class Employee {
     this.noticeStartDate,
     this.noticeDurationDays,
     this.noticeEndDate,
+    this.authorities = const [],
   });
 
   Employee copyWith({
@@ -113,6 +118,7 @@ class Employee {
     String? noticeStartDate,
     int? noticeDurationDays,
     String? noticeEndDate,
+    List<String>? authorities,
   }) {
     return Employee(
       id: id ?? this.id,
@@ -150,6 +156,7 @@ class Employee {
       noticeStartDate: noticeStartDate ?? this.noticeStartDate,
       noticeDurationDays: noticeDurationDays ?? this.noticeDurationDays,
       noticeEndDate: noticeEndDate ?? this.noticeEndDate,
+      authorities: authorities ?? this.authorities,
     );
   }
 
@@ -198,6 +205,10 @@ class Employee {
       noticeStartDate: json['noticeStartDate']?.toString(),
       noticeDurationDays: json['noticeDurationDays'] != null ? (json['noticeDurationDays'] as num).toInt() : null,
       noticeEndDate: json['noticeEndDate']?.toString(),
+      authorities: (json['authorities'] as List<dynamic>?)
+              ?.map((e) => e.toString().toUpperCase())
+              .toList() ??
+          const [],
     );
   }
 

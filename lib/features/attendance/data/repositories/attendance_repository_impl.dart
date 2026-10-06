@@ -26,14 +26,16 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
         final List<dynamic> list = json.decode(response.body);
         return list.map((item) => AttendanceCalendarDay.fromJson(item)).toList();
       } else {
-        debugPrint('Attendance calendar endpoint status ${response.statusCode}');
+        debugPrint('Attendance calendar endpoint status ${response.statusCode}: ${response.body}');
+        if (response.statusCode == 401 || response.statusCode == 403) {
+          throw Exception('Authentication session expired or unauthorized (${response.statusCode}). Please sign in again.');
+        }
+        throw Exception('Failed to load attendance calendar (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
       debugPrint('Failed to fetch attendance calendar summary from backend: $e');
-      throw Exception('Failed to load attendance data: $e');
+      rethrow;
     }
-
-    return [];
   }
 
   @override

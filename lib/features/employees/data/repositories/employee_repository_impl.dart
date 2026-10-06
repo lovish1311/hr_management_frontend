@@ -162,6 +162,24 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   }
 
   @override
+  Future<bool> elevateRoleAndAuthorities(String employeeId, {required String role, required List<String> authorities}) async {
+    final url = Uri.parse('$_baseUrl/api/v1/employees/$employeeId/elevate');
+    try {
+      final res = await http.put(
+        url,
+        headers: AuthStorage.authHeaders,
+        body: json.encode({
+          'role': role,
+          'authorities': authorities,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
   Future<List<Employee>> searchEmployeesPaginated({String? query, int page = 0, int size = 50}) async {
     final queryStr = query != null && query.isNotEmpty ? 'query=${Uri.encodeComponent(query)}&' : '';
     final url = Uri.parse('$_baseUrl/api/v1/employees/search?${queryStr}page=$page&size=$size');

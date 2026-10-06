@@ -135,6 +135,8 @@ class HrDrawer extends StatelessWidget {
                     _item(context, t, Icons.event_available_rounded, 'Holiday Calendar', '/holidays', activeRoute),
                     if (AuthStorage.isHr) ...[
                       _item(context, t, Icons.calendar_today_rounded, 'Holiday Management', '/holiday_management', activeRoute),
+                    ],
+                    if (AuthStorage.canManagePayroll) ...[
                       _item(context, t, Icons.payments_rounded, 'Run Payroll', '/payroll_process', activeRoute),
                       _item(context, t, Icons.edit_calendar_rounded, 'Payroll Inputs & LOP', '/payroll_inputs', activeRoute),
                       _item(context, t, Icons.account_balance_wallet_rounded, 'Salary Structures', '/salary_structure', activeRoute),

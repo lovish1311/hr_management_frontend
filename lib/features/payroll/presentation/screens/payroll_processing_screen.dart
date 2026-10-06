@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
+import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
+import 'package:hr_management/features/payroll/domain/entities/payroll_reconciliation_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_summary_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 import 'package:hr_management/features/payroll/presentation/widgets/payslip_detail_modal.dart';
@@ -18,25 +20,47 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
   final PayrollRepository _repository = PayrollRepositoryImpl();
 
   int _currentStep = 0; // 0: Verify, 1: Process, 2: Reconcile, 3: Publish
-  String _selectedMonth = 'OCTOBER';
-  int _selectedYear = 2026;
+  late String _selectedMonth;
+  late int _selectedYear;
 
   bool _isLoading = false;
   bool _isProcessing = false;
   bool _isPublishing = false;
+  bool _isLoadingReconciliation = false;
+  bool _isExportingBankFile = false;
+  int _reconciliationSubTab = 0; // 0: Variance Audit, 1: Processed Drafts
   String? _errorMessage;
 
   PayrollSummaryEntity? _summary;
+  PayrollReconciliationReportEntity? _reconciliationReport;
   List<PayrollRecordEntity> _processedRecords = [];
 
-  final List<String> _months = [
+  static const List<String> _allMonths = [
     'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
     'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
   ];
 
+  List<String> get _availableMonths {
+    final now = DateTime.now();
+    if (_selectedYear == now.year) {
+      return _allMonths.sublist(0, now.month);
+    } else if (_selectedYear < now.year) {
+      return _allMonths;
+    }
+    return [_allMonths.first];
+  }
+
+  List<int> get _availableYears {
+    final currentYear = DateTime.now().year;
+    return [currentYear - 2, currentYear - 1, currentYear];
+  }
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _selectedYear = now.year;
+    _selectedMonth = _allMonths[now.month - 1];
     _loadCurrentMonthState();
   }
 
@@ -63,9 +87,48 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           _currentStep = 0;
         }
       });
+      _loadReconciliationReport();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadReconciliationReport() async {
+    setState(() => _isLoadingReconciliation = true);
+    try {
+      final report = await _repository.getReconciliationReport(month: _selectedMonth, year: _selectedYear);
+      if (!mounted) return;
+      setState(() {
+        _reconciliationReport = report;
+        _isLoadingReconciliation = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingReconciliation = false);
+    }
+  }
+
+  Future<void> _exportBankPayoutFile() async {
+    setState(() => _isExportingBankFile = true);
+    try {
+      final csvBytes = await _repository.exportBankPayoutCsv(month: _selectedMonth, year: _selectedYear);
+      final fileName = 'bank_payout_${_selectedMonth}_$_selectedYear.csv';
+      FileDownloader.downloadBytes(bytes: csvBytes, fileName: fileName, mimeType: 'text/csv');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bank payout file ($fileName) downloaded successfully!'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export bank payout file: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isExportingBankFile = false);
     }
   }
 
@@ -86,6 +149,7 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
         _isProcessing = false;
         _currentStep = 2; // Move to Reconciliation
       });
+      _loadReconciliationReport();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -223,41 +287,63 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           ),
           const Spacer(),
           // Month & Year Selector
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedMonth,
-                dropdownColor: t.card,
-                items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() => _selectedMonth = v);
-                    _loadCurrentMonthState();
-                  }
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _selectedYear,
-                dropdownColor: t.card,
-                items: [2025, 2026, 2027].map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() => _selectedYear = v);
-                    _loadCurrentMonthState();
-                  }
-                },
-              ),
-            ),
-          ),
+          Builder(builder: (context) {
+            final available = _availableMonths;
+            if (!available.contains(_selectedMonth)) {
+              _selectedMonth = available.last;
+            }
+            final years = _availableYears;
+            if (!years.contains(_selectedYear)) {
+              _selectedYear = years.last;
+            }
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedMonth,
+                      dropdownColor: t.card,
+                      items: available.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => _selectedMonth = v);
+                          _loadCurrentMonthState();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _selectedYear,
+                      dropdownColor: t.card,
+                      items: years.map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _selectedYear = v;
+                            final av = _availableMonths;
+                            if (!av.contains(_selectedMonth)) {
+                              _selectedMonth = av.last;
+                            }
+                          });
+                          _loadCurrentMonthState();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -457,83 +543,86 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
   // STEP 3: RECONCILIATION & VARIANCE DASHBOARD
   Widget _buildStep3Reconciliation(BuildContext context, dynamic t) {
     final summary = _summary;
-    if (summary == null) {
+    final recon = _reconciliationReport;
+
+    if (summary == null && recon == null) {
       return Center(child: Text('No calculation data found. Run calculation first.', style: TextStyle(color: t.textSecondary)));
     }
+
+    final headcount = recon?.currentHeadcount ?? summary?.totalHeadcount ?? 0;
+    final headcountDelta = recon?.headcountDelta ?? 0;
+    final grossTotal = recon?.currentGrossTotal ?? summary?.totalGrossOutflow ?? 0.0;
+    final grossDeltaPct = recon?.grossPercentageDelta ?? 0.0;
+    final netTotal = recon?.currentNetTotal ?? summary?.totalNetPayout ?? 0.0;
+    final netDeltaPct = recon?.netPercentageDelta ?? summary?.variancePercentage ?? 0.0;
+    final tdsTotal = recon?.currentTdsTotal ?? 0.0;
+    final arrearsTotal = recon?.currentArrearsTotal ?? 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 4 KPI Metric Cards
+        // Top 5 KPI Metric Cards
         Row(
           children: [
-            Expanded(child: _buildMetricCard('Total Headcount', '${summary.totalHeadcount}', Icons.people, t.primary, t)),
-            const SizedBox(width: 14),
-            Expanded(child: _buildMetricCard('Total Gross Outflow', '₹${summary.totalGrossOutflow.toStringAsFixed(0)}', Icons.arrow_upward, t.success, t)),
-            const SizedBox(width: 14),
-            Expanded(child: _buildMetricCard('Total Deductions', '₹${summary.totalDeductionsOutflow.toStringAsFixed(0)}', Icons.arrow_downward, t.danger, t)),
-            const SizedBox(width: 14),
-            Expanded(child: _buildMetricCard('Net Payout', '₹${summary.totalNetPayout.toStringAsFixed(0)}', Icons.account_balance_wallet, t.primary, t)),
+            Expanded(
+              child: _buildMetricCard(
+                'Headcount',
+                '$headcount',
+                Icons.people,
+                t.primary,
+                t,
+                subtitle: '${headcountDelta >= 0 ? '+' : ''}$headcountDelta vs prior',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Gross Outflow',
+                '₹${grossTotal.toStringAsFixed(0)}',
+                Icons.arrow_upward,
+                t.success,
+                t,
+                subtitle: '${grossDeltaPct >= 0 ? '+' : ''}${grossDeltaPct.toStringAsFixed(1)}% vs prior',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Net Payout',
+                '₹${netTotal.toStringAsFixed(0)}',
+                Icons.account_balance_wallet,
+                t.primary,
+                t,
+                subtitle: '${netDeltaPct >= 0 ? '+' : ''}${netDeltaPct.toStringAsFixed(1)}% vs prior',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Income Tax (TDS)',
+                '₹${tdsTotal.toStringAsFixed(0)}',
+                Icons.receipt_long,
+                const Color(0xFFF59E0B),
+                t,
+                subtitle: 'Sec 115BAC + Old',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Arrears Payout',
+                '₹${arrearsTotal.toStringAsFixed(0)}',
+                Icons.history_edu,
+                const Color(0xFF8B5CF6),
+                t,
+                subtitle: 'Retroactive deltas',
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 18),
 
-        // Variance & Anomaly Alert Card
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: t.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: t.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.compare_arrows, size: 20, color: t.primary),
-                  const SizedBox(width: 8),
-                  Text('Variance vs Prior Month', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: t.text)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: summary.variancePercentage >= 0 ? t.success.withValues(alpha: 0.15) : t.danger.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '${summary.variancePercentage >= 0 ? '+' : ''}${summary.variancePercentage.toStringAsFixed(2)}% net payout change',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: summary.variancePercentage >= 0 ? t.success : t.danger,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (summary.anomalies.isNotEmpty) ...[
-                const Divider(height: 20),
-                Text('Audit Anomalies & Flagged Adjustments:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.warning)),
-                const SizedBox(height: 6),
-                ...summary.anomalies.map((a) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, size: 14, color: t.warning),
-                      const SizedBox(width: 6),
-                      Text(a, style: TextStyle(fontSize: 12, color: t.text)),
-                    ],
-                  ),
-                )),
-              ],
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // Processed Records Table Preview
+        // Variance & Reconciliation Table Header + Controls
         Container(
           decoration: BoxDecoration(
             color: t.card,
@@ -544,11 +633,41 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
-                    Text('Calculated Payroll Drafts (${_processedRecords.length})', style: TextStyle(fontWeight: FontWeight.bold, color: t.text)),
+                    // Sub-tab switcher
+                    SegmentedButton<int>(
+                      segments: [
+                        ButtonSegment(
+                          value: 0,
+                          label: Text('Variance Audit (${recon?.employeeVariances.length ?? 0})', style: const TextStyle(fontSize: 12)),
+                          icon: const Icon(Icons.compare_arrows, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: 1,
+                          label: Text('Calculated Drafts (${_processedRecords.length})', style: const TextStyle(fontSize: 12)),
+                          icon: const Icon(Icons.table_rows, size: 16),
+                        ),
+                      ],
+                      selected: {_reconciliationSubTab},
+                      onSelectionChanged: (set) {
+                        setState(() => _reconciliationSubTab = set.first);
+                      },
+                    ),
                     const Spacer(),
+                    OutlinedButton.icon(
+                      onPressed: _isExportingBankFile ? null : _exportBankPayoutFile,
+                      icon: _isExportingBankFile
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.file_download_outlined, size: 16),
+                      label: Text(_isExportingBankFile ? 'Exporting...' : 'Export Bank CSV'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: t.text,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: _verifyBatchPayroll,
                       icon: const Icon(Icons.verified_outlined, size: 16),
@@ -559,45 +678,203 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
                 ),
               ),
               const Divider(height: 1),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Employee')),
-                    DataColumn(label: Text('Paid/Total Days')),
-                    DataColumn(label: Text('Fixed Gross')),
-                    DataColumn(label: Text('Earned Gross')),
-                    DataColumn(label: Text('Total Deduct')),
-                    DataColumn(label: Text('Net Pay')),
-                    DataColumn(label: Text('Status')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: _processedRecords.map((r) {
-                    return DataRow(
-                      cells: [
-                        DataCell(Text('${r.employeeName}\n${r.employeeCode}', style: TextStyle(fontSize: 12, color: t.text))),
-                        DataCell(Text('${r.paidDays}/${r.totalDaysInMonth}', style: TextStyle(fontSize: 12, color: t.text))),
-                        DataCell(Text('₹${r.masterFixedGross.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.text))),
-                        DataCell(Text('₹${r.totalGrossPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.success))),
-                        DataCell(Text('₹${r.totalDeductions.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.danger))),
-                        DataCell(Text('₹${r.netPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary))),
-                        DataCell(Text(r.status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: r.isPublished ? t.success : t.warning))),
-                        DataCell(
-                          IconButton(
-                            icon: const Icon(Icons.visibility_outlined, size: 18),
-                            onPressed: () => PayslipDetailModal.show(context, r),
-                          ),
-                        ),
+
+              // View 0: Variance Audit Table (GreytHR standard)
+              if (_reconciliationSubTab == 0) ...[
+                if (_isLoadingReconciliation)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (recon == null || recon.employeeVariances.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Text('No variance items found between cycles.', style: TextStyle(color: t.textSecondary)),
+                    ),
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(t.cardSoft),
+                      horizontalMargin: 16,
+                      columnSpacing: 18,
+                      columns: const [
+                        DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Audit Tag', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Prior Net', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Current Net', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Variance (Net)', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('LOP Diff', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Arrears', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('TDS (Tax)', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Variance Reason', style: TextStyle(fontWeight: FontWeight.bold))),
                       ],
-                    );
-                  }).toList(),
+                      rows: recon.employeeVariances.map((v) {
+                        final tagColor = _getTagColor(v.varianceTag, t);
+                        final isPositive = v.netDifference > 0;
+                        final isNegative = v.netDifference < 0;
+
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(v.employeeName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
+                                  Text('${v.employeeCode} • ${v.department}', style: TextStyle(fontSize: 11, color: t.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            DataCell(
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: tagColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: tagColor.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  v.varianceTag.replaceAll('_', ' '),
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tagColor),
+                                ),
+                              ),
+                            ),
+                            DataCell(Text('₹${v.previousNetPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.textSecondary))),
+                            DataCell(Text('₹${v.currentNetPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text))),
+                            DataCell(
+                              Text(
+                                '${isPositive ? '+' : ''}₹${v.netDifference.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPositive ? t.success : (isNegative ? t.danger : t.textSecondary),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${v.previousLopDays.toStringAsFixed(1)}d -> ${v.currentLopDays.toStringAsFixed(1)}d',
+                                style: TextStyle(fontSize: 12, color: v.currentLopDays > v.previousLopDays ? t.danger : t.text),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                v.arrearsAmount > 0 ? '₹${v.arrearsAmount.toStringAsFixed(0)}' : '—',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: v.arrearsAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                                  color: v.arrearsAmount > 0 ? t.success : t.textSecondary,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                v.calculatedTds > 0 ? '₹${v.calculatedTds.toStringAsFixed(0)}' : '—',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: v.calculatedTds > 0 ? FontWeight.bold : FontWeight.normal,
+                                  color: v.calculatedTds > 0 ? const Color(0xFFF59E0B) : t.textSecondary,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Tooltip(
+                                message: v.varianceReason,
+                                child: Text(
+                                  v.varianceReason.isNotEmpty ? v.varianceReason : '—',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 11, color: t.textSecondary),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+              ] else ...[
+                // View 1: Processed Records Table Preview
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Employee')),
+                      DataColumn(label: Text('Paid/Total Days')),
+                      DataColumn(label: Text('Fixed Gross')),
+                      DataColumn(label: Text('Earned Gross')),
+                      DataColumn(label: Text('Total Deduct')),
+                      DataColumn(label: Text('Net Pay')),
+                      DataColumn(label: Text('Status')),
+                      DataColumn(label: Text('Actions')),
+                    ],
+                    rows: _processedRecords.map((r) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text('${r.employeeName}\n${r.employeeCode}', style: TextStyle(fontSize: 12, color: t.text))),
+                          DataCell(Text('${r.paidDays}/${r.totalDaysInMonth}', style: TextStyle(fontSize: 12, color: t.text))),
+                          DataCell(Text('₹${r.masterFixedGross.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.text))),
+                          DataCell(Text('₹${r.totalGrossPay.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.success))),
+                          DataCell(Text('₹${r.totalDeductions.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: t.danger))),
+                          DataCell(
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: r.status.toUpperCase() == 'EXEMPT'
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                    : (r.isPublished ? t.success.withValues(alpha: 0.12) : t.warning.withValues(alpha: 0.12)),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                r.status,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: r.status.toUpperCase() == 'EXEMPT'
+                                      ? const Color(0xFFEF4444)
+                                      : (r.isPublished ? t.success : t.warning),
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            IconButton(
+                              icon: const Icon(Icons.visibility_outlined, size: 18),
+                              onPressed: () => PayslipDetailModal.show(context, r),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
       ],
     );
+  }
+
+  Color _getTagColor(String tag, dynamic t) {
+    switch (tag.toUpperCase()) {
+      case 'NEW_JOINER':
+        return const Color(0xFF3B82F6);
+      case 'SALARY_INCREASE':
+        return const Color(0xFF10B981);
+      case 'SALARY_DECREASE_LOP':
+        return const Color(0xFFF59E0B);
+      case 'EXIT_EMPLOYEE':
+        return const Color(0xFF8B5CF6);
+      case 'STATUTORY_REVISION':
+        return const Color(0xFF06B6D4);
+      case 'UNCHANGED':
+      default:
+        return t.textSecondary;
+    }
   }
 
   // STEP 4: PUBLISH & DISBURSE
@@ -632,13 +909,11 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Exporting Bank Disbursement File (CSV/Excel)...')),
-                  );
-                },
-                icon: const Icon(Icons.file_download_outlined, size: 18),
-                label: const Text('Export Bank File (CSV)'),
+                onPressed: _isExportingBankFile ? null : _exportBankPayoutFile,
+                icon: _isExportingBankFile
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.file_download_outlined, size: 18),
+                label: Text(_isExportingBankFile ? 'Exporting Bank CSV...' : 'Export Bank File (CSV)'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: t.text,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -684,9 +959,9 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color, dynamic t) {
+  Widget _buildMetricCard(String title, String value, IconData icon, Color color, dynamic t, {String? subtitle}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: t.card,
         borderRadius: BorderRadius.circular(14),
@@ -699,11 +974,21 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
             children: [
               Icon(icon, size: 16, color: color),
               const SizedBox(width: 6),
-              Text(title, style: TextStyle(fontSize: 11, color: t.textSecondary)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: 11, color: t.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text)),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.text)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(subtitle, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+          ],
         ],
       ),
     );

@@ -5,6 +5,7 @@ abstract class EmployeeRepository {
   Future<Employee?> getEmployeeById(String id);
   Future<bool> assignManager(String employeeId, String managerId);
   Future<bool> updatePermissions(String employeeId, {bool? isAttendanceTracked, String? lateArrivalAllowedUntil, String? earlyOutAllowedAfter});
+  Future<bool> elevateRoleAndAuthorities(String employeeId, {required String role, required List<String> authorities});
   Future<List<Employee>> searchEmployeesPaginated({String? query, int page = 0, int size = 50});
   Future<Employee> createEmployee(Employee employee);
   Future<Employee> updateEmployee(Employee employee);

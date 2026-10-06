@@ -1,7 +1,9 @@
+import 'dart:typed_data';
 import 'package:hr_management/features/payroll/domain/entities/salary_structure_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/monthly_payroll_input_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_summary_entity.dart';
+import 'package:hr_management/features/payroll/domain/entities/payroll_reconciliation_entity.dart';
 
 abstract class PayrollRepository {
   // Phase 1: Structure & Inputs
@@ -25,4 +27,8 @@ abstract class PayrollRepository {
   Future<PayrollRecordEntity> getPayslipById(String recordId);
   Future<List<PayrollRecordEntity>> getPayrollRecordsForMonth({required String month, required int year});
   Future<PayrollSummaryEntity> getPayrollSummary({required String month, required int year});
+
+  // Phase 4: Reconciliation & Banking Exports
+  Future<PayrollReconciliationReportEntity> getReconciliationReport({required String month, required int year});
+  Future<Uint8List> exportBankPayoutCsv({required String month, required int year});
 }

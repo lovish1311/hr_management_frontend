@@ -67,11 +67,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
 
       if (response['token'] != null) {
+        final rawAuths = response['authorities'] as List<dynamic>?;
+        final authorities = rawAuths?.map((e) => e.toString()).toList();
         await AuthStorage.setAuth(
           token: response['token'],
           email: response['email'],
           role: response['role'],
           employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
+          authorities: authorities,
         );
       }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
@@ -15,8 +16,8 @@ class MonthlyPayrollInputsScreen extends StatefulWidget {
 class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen> {
   final PayrollRepository _repository = PayrollRepositoryImpl();
 
-  String _selectedMonth = 'OCTOBER';
-  int _selectedYear = 2026;
+  late String _selectedMonth;
+  late int _selectedYear;
 
   bool _isLoading = true;
   bool _isSyncing = false;
@@ -29,14 +30,32 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
   List<MonthlyPayrollInputEntity> _inputs = [];
   final Map<int, MonthlyPayrollInputEntity> _localEdits = {};
 
-  final List<String> _months = [
+  static const List<String> _allMonths = [
     'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
     'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
   ];
 
+  List<String> get _availableMonths {
+    final now = DateTime.now();
+    if (_selectedYear == now.year) {
+      return _allMonths.sublist(0, now.month);
+    } else if (_selectedYear < now.year) {
+      return _allMonths;
+    }
+    return [_allMonths.first];
+  }
+
+  List<int> get _availableYears {
+    final currentYear = DateTime.now().year;
+    return [currentYear - 2, currentYear - 1, currentYear];
+  }
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _selectedYear = now.year;
+    _selectedMonth = _allMonths[now.month - 1];
     _fetchInputs();
   }
 
@@ -105,7 +124,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Saved adjustments for ${item.employeeName}.'),
+          content: Text('Saved adjustments for ${item.employeeName.isNotEmpty ? item.employeeName : 'Employee #${item.employeeId}'}.'),
           backgroundColor: const Color(0xFF10B981),
           duration: const Duration(seconds: 1),
         ),
@@ -116,6 +135,240 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Future<void> _saveAllPendingEdits() async {
+    if (_localEdits.isEmpty) return;
+    final itemsToSave = List<MonthlyPayrollInputEntity>.from(_localEdits.values);
+    setState(() => _isLoading = true);
+    int count = 0;
+    try {
+      for (final item in itemsToSave) {
+        await _repository.saveMonthlyPayrollInput(item);
+        count++;
+      }
+      await _fetchInputs();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Saved variables for $count employees successfully.'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving batch edits: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showEditVariablesDialog(BuildContext context, MonthlyPayrollInputEntity input, dynamic t) {
+    final lopController = TextEditingController(text: input.lopDays.toString());
+    final otController = TextEditingController(text: input.overtimeHours.toString());
+    final bonusController = TextEditingController(text: input.adHocBonus.toStringAsFixed(0));
+    final deductController = TextEditingController(text: input.adHocDeduction.toStringAsFixed(0));
+    final arrearsController = TextEditingController(text: input.arrearsAmount.toStringAsFixed(0));
+    final declared80CController = TextEditingController(text: input.declared80C.toStringAsFixed(0));
+    final declared80DController = TextEditingController(text: input.declared80D.toStringAsFixed(0));
+    final notesController = TextEditingController(text: input.notes ?? '');
+    String selectedRegime = input.taxRegime;
+    bool isExempt = input.isExempt;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: t.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: t.border)),
+          title: Row(
+            children: [
+              Icon(Icons.tune_rounded, color: t.primary, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Edit Monthly Inputs: ${input.employeeName}',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: t.text),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${input.employeeCode} • ${input.department} • Gross Base: ₹${input.fixedGross.toStringAsFixed(0)}',
+                    style: TextStyle(fontSize: 12, color: t.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isExempt ? const Color(0xFFEF4444).withValues(alpha: 0.08) : t.cardSoft,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isExempt ? const Color(0xFFEF4444).withValues(alpha: 0.3) : t.border,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isExempt ? Icons.block_rounded : Icons.check_circle_outline_rounded,
+                          size: 20,
+                          color: isExempt ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Exempt from Payroll Processing',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: t.text),
+                              ),
+                              Text(
+                                isExempt
+                                    ? 'Zero payout generated. Excluded from bank export & payslips.'
+                                    : 'Employee will be processed normally in batch payroll.',
+                                style: TextStyle(fontSize: 11, color: t.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: isExempt,
+                          activeThumbColor: const Color(0xFFEF4444),
+                          onChanged: (val) {
+                            setDialogState(() => isExempt = val);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDialogField('Loss of Pay (LOP) Days', lopController, 'Days deducted from monthly pay', t),
+                  const SizedBox(height: 12),
+                  _buildDialogField('Overtime (OT) Hours', otController, 'Additional hours worked @ 1.5x hourly rate', t),
+                  const SizedBox(height: 12),
+                  _buildDialogField('Ad-Hoc Bonus (₹)', bonusController, 'One-time incentive or reimbursement', t),
+                  const SizedBox(height: 12),
+                  _buildDialogField('Ad-Hoc Deduction (₹)', deductController, 'One-time penalty, loan recovery, or advance', t),
+                  const SizedBox(height: 12),
+                  _buildDialogField('Arrears / Retroactive Revision (₹)', arrearsController, 'Differential retroactive pay for this cycle', t),
+                  const SizedBox(height: 16),
+                  Text('Income Tax (TDS) Regime', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: t.text)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: t.cardSoft,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedRegime,
+                        isExpanded: true,
+                        dropdownColor: t.card,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'NEW_REGIME',
+                            child: Text('New Regime (Sec 115BAC - Default ₹75k Std Ded)', style: TextStyle(fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: 'OLD_REGIME',
+                            child: Text('Old Regime (₹50k Std Ded + 80C/80D Exemptions)', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() => selectedRegime = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  if (selectedRegime == 'OLD_REGIME') ...[
+                    const SizedBox(height: 12),
+                    _buildDialogField('Declared Sec 80C (₹)', declared80CController, 'EPF, PPF, ELSS (max ₹1.5L)', t),
+                    const SizedBox(height: 12),
+                    _buildDialogField('Declared Sec 80D (₹)', declared80DController, 'Medical insurance premium (max ₹25k-₹50k)', t),
+                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: notesController,
+                    style: TextStyle(color: t.text, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Notes / Reason for adjustments',
+                      labelStyle: TextStyle(color: t.textSecondary, fontSize: 12),
+                      filled: true,
+                      fillColor: t.cardSoft,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: TextStyle(color: t.textSecondary)),
+            ),
+            FilledButton.icon(
+              onPressed: () async {
+                final updated = input.copyWith(
+                  isExempt: isExempt,
+                  lopDays: double.tryParse(lopController.text) ?? input.lopDays,
+                  overtimeHours: double.tryParse(otController.text) ?? input.overtimeHours,
+                  adHocBonus: double.tryParse(bonusController.text) ?? input.adHocBonus,
+                  adHocDeduction: double.tryParse(deductController.text) ?? input.adHocDeduction,
+                  arrearsAmount: double.tryParse(arrearsController.text) ?? input.arrearsAmount,
+                  taxRegime: selectedRegime,
+                  declared80C: double.tryParse(declared80CController.text) ?? input.declared80C,
+                  declared80D: double.tryParse(declared80DController.text) ?? input.declared80D,
+                  notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
+                );
+                Navigator.pop(ctx);
+                await _saveSingleInput(updated);
+              },
+              icon: const Icon(Icons.check_rounded, size: 16),
+              label: const Text('Save & Apply'),
+              style: FilledButton.styleFrom(backgroundColor: t.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogField(String label, TextEditingController controller, String hint, dynamic t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: t.text)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+          style: TextStyle(color: t.text, fontSize: 13, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: t.textSecondary.withValues(alpha: 0.6), fontSize: 11),
+            filled: true,
+            fillColor: t.cardSoft,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _toggleLockState(bool lock) async {
@@ -299,6 +552,19 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
               ),
+              if (_localEdits.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                FilledButton.icon(
+                  onPressed: _isLoading ? null : _saveAllPendingEdits,
+                  icon: const Icon(Icons.save_rounded, size: 16),
+                  label: Text('Save (${_localEdits.length})'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -353,6 +619,11 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
   }
 
   Widget _buildMonthDropdown(dynamic t) {
+    final available = _availableMonths;
+    if (!available.contains(_selectedMonth)) {
+      _selectedMonth = available.last;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
@@ -360,7 +631,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         child: DropdownButton<String>(
           value: _selectedMonth,
           dropdownColor: t.card,
-          items: _months.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+          items: available.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 12, color: t.text)))).toList(),
           onChanged: (v) {
             if (v != null) {
               setState(() => _selectedMonth = v);
@@ -373,6 +644,11 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
   }
 
   Widget _buildYearDropdown(dynamic t) {
+    final years = _availableYears;
+    if (!years.contains(_selectedYear)) {
+      _selectedYear = years.last;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(color: t.cardSoft, borderRadius: BorderRadius.circular(8)),
@@ -380,10 +656,16 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         child: DropdownButton<int>(
           value: _selectedYear,
           dropdownColor: t.card,
-          items: [2025, 2026, 2027].map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
+          items: years.map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(fontSize: 12, color: t.text)))).toList(),
           onChanged: (v) {
             if (v != null) {
-              setState(() => _selectedYear = v);
+              setState(() {
+                _selectedYear = v;
+                final available = _availableMonths;
+                if (!available.contains(_selectedMonth)) {
+                  _selectedMonth = available.last;
+                }
+              });
               _fetchInputs();
             }
           },
@@ -424,6 +706,8 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                 DataColumn(label: Text('OT Hours', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Ad-Hoc Bonus', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Ad-Hoc Deduct', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Arrears', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Tax Regime', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
               rows: list.map((item) {
@@ -438,7 +722,27 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(item.employeeName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(item.employeeName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
+                              if (item.isExempt) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+                                  ),
+                                  child: const Text(
+                                    'EXEMPT',
+                                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                           Text('${item.employeeCode} • ${item.department}', style: TextStyle(fontSize: 11, color: t.textSecondary)),
                         ],
                       ),
@@ -505,19 +809,51 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                         },
                       ),
                     ),
-                    // Save Action
+                    // Arrears
+                    DataCell(
+                      Text(
+                        edited.arrearsAmount > 0 ? '₹${edited.arrearsAmount.toStringAsFixed(0)}' : '—',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: edited.arrearsAmount > 0 ? FontWeight.bold : FontWeight.normal,
+                          color: edited.arrearsAmount > 0 ? t.success : t.textSecondary,
+                        ),
+                      ),
+                    ),
+                    // Tax Regime
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: edited.taxRegime.contains('NEW') ? t.primary.withValues(alpha: 0.12) : t.secondary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          edited.taxRegime.contains('NEW') ? 'NEW (115BAC)' : 'OLD',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: edited.taxRegime.contains('NEW') ? t.primary : t.secondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Actions
                     DataCell(
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: Icon(Icons.edit_note, size: 20, color: isLocked ? t.textSecondary : t.primary),
+                            tooltip: 'Adjust inputs, arrears & tax regime',
+                            onPressed: isLocked ? null : () => _showEditVariablesDialog(context, edited, t),
+                          ),
                           if (_localEdits.containsKey(item.employeeId))
                             IconButton(
                               icon: Icon(Icons.check_circle, size: 20, color: t.success),
                               tooltip: 'Save Edits',
                               onPressed: () => _saveSingleInput(_localEdits[item.employeeId]!),
-                            )
-                          else
-                            Icon(isLocked ? Icons.lock : Icons.edit_note, size: 18, color: t.textSecondary),
+                            ),
                         ],
                       ),
                     ),
@@ -552,6 +888,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
       child: TextFormField(
         initialValue: value,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
         onChanged: onChanged,
         style: TextStyle(fontSize: 12, color: t.text, fontWeight: FontWeight.bold),
         decoration: InputDecoration(

@@ -22,6 +22,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   final AttendanceRepository _attendanceRepository = AttendanceRepositoryImpl();
   Employee? _employee;
   bool _isLoading = true;
+  int _selectedTabIndex = 0;
 
   DateTime _attendanceActiveMonth = DateTime.now();
   List<AttendanceCalendarDay> _attendanceCalendarDays = [];
@@ -145,37 +146,54 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: primaryColor),
-        title: Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white12 : Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search',
-                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
-                    prefixIcon: Icon(Icons.search, color: primaryColor, size: 20),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 450;
+            return Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white12 : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: isNarrow ? 'Search...' : 'Search employees, records...',
+                        hintStyle: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                          fontSize: 13,
+                        ),
+                        prefixIcon: Icon(Icons.search, color: primaryColor, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Icon(Icons.notifications_outlined, color: primaryColor),
-            const SizedBox(width: 16),
-            const Text('Admin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: primaryColor.withValues(alpha: 0.2),
-              child: const Icon(Icons.person, size: 18),
-            ),
-          ],
+                if (!isNarrow) ...[
+                  const SizedBox(width: 12),
+                  Icon(Icons.notifications_outlined, color: primaryColor),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Admin',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: primaryColor.withValues(alpha: 0.2),
+                  child: const Icon(Icons.person, size: 18),
+                ),
+              ],
+            );
+          },
         ),
       ),
       body: SafeArea(
@@ -183,33 +201,39 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             ? const Center(child: CircularProgressIndicator())
             : _employee == null
                 ? const Center(child: Text('Employee not found.'))
-                : DefaultTabController(
-                    length: 3,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWideScreen = constraints.maxWidth > 850;
-                        if (isWideScreen) {
-                          return Row(
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWideScreen = constraints.maxWidth > 850;
+                      if (isWideScreen) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 340,
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(20, 20, 10, 20),
+                                child: _buildSummaryCard(context, _employee!, true),
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildDetailsArea(context, _employee!, isWideScreen: true),
+                            ),
+                          ],
+                        );
+                      } else {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildSummaryCard(context, _employee!, true),
-                              Expanded(
-                                child: _buildDetailsArea(context, _employee!),
-                              ),
+                              _buildSummaryCard(context, _employee!, false),
+                              const SizedBox(height: 16),
+                              _buildDetailsArea(context, _employee!, isWideScreen: false),
                             ],
-                          );
-                        } else {
-                          return SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                _buildSummaryCard(context, _employee!, false),
-                                _buildDetailsArea(context, _employee!),
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                    ),
+                          ),
+                        );
+                      }
+                    },
                   ),
       ),
     );
@@ -221,7 +245,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
     return Container(
       width: isWideScreen ? 320 : double.infinity,
-      margin: const EdgeInsets.all(20.0),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(24.0),
@@ -335,7 +359,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             Icon(Icons.timer_outlined, size: 12, color: Color(0xFFD97706)),
                             SizedBox(width: 4),
-                            Text('In Probation', style: TextStyle(color: Color(0xFFD97706), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('In Probation', overflow: TextOverflow.ellipsis, style: TextStyle(color: Color(0xFFD97706), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -352,7 +376,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             Icon(Icons.exit_to_app_rounded, size: 12, color: Color(0xFF7C3AED)),
                             SizedBox(width: 4),
-                            Text('On Notice', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('On Notice', overflow: TextOverflow.ellipsis, style: TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -369,7 +393,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             Icon(Icons.block_rounded, size: 12, color: Color(0xFFEF4444)),
                             SizedBox(width: 4),
-                            Text('Inactive / Deactivated', style: TextStyle(color: Color(0xFFEF4444), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('Inactive / Deactivated', overflow: TextOverflow.ellipsis, style: TextStyle(color: Color(0xFFEF4444), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -386,7 +410,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             Icon(Icons.event_busy_rounded, size: 12, color: Color(0xFFD97706)),
                             SizedBox(width: 4),
-                            Text('Untracked / Exempt', style: TextStyle(color: Color(0xFFD97706), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('Untracked / Exempt', overflow: TextOverflow.ellipsis, style: TextStyle(color: Color(0xFFD97706), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -403,7 +427,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF2563EB)),
                             const SizedBox(width: 4),
-                            Text('Late Upto ${emp.lateArrivalAllowedUntil}', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('Late Upto ${emp.lateArrivalAllowedUntil}', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -420,7 +444,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           children: [
                             const Icon(Icons.logout_rounded, size: 12, color: Color(0xFF7C3AED)),
                             const SizedBox(width: 4),
-                            Text('Early Out After ${emp.earlyOutAllowedAfter}', style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.bold)),
+                            Flexible(child: Text('Early Out After ${emp.earlyOutAllowedAfter}', overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 10, fontWeight: FontWeight.bold))),
                           ],
                         ),
                       ),
@@ -449,8 +473,18 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   ),
                   child: Row(
                     children: [
-                      Text(emp.managerName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A))),
-                      const Spacer(),
+                      Expanded(
+                        child: Text(
+                          emp.managerName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       CircleAvatar(
                         radius: 12,
                         backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.15),
@@ -504,7 +538,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                if (AuthStorage.isHr) ...[
+                if (AuthStorage.isSuperAdmin) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -516,7 +550,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.security_rounded, size: 16),
-                      label: const Text('Elevate / Change Role', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: const Text('Elevate Role & Permissions', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -637,7 +671,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               insetPadding: const EdgeInsets.all(20),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
+                constraints: BoxConstraints(maxWidth: 580, maxHeight: MediaQuery.sizeOf(context).height * 0.85),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
@@ -859,13 +893,17 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               insetPadding: const EdgeInsets.all(20),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
+                constraints: BoxConstraints(
+                  maxWidth: 540,
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                       Row(
                         children: [
                           Container(
@@ -1159,6 +1197,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                     ],
                   ),
                 ),
+                ),
               ),
             );
           },
@@ -1168,51 +1207,403 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   }
 
   void _showElevateRoleDialog(Employee emp) {
-    String selectedRole = emp.role;
+    String currentRole = emp.role.toUpperCase().replaceAll('ROLE_', '');
+    String selectedRole = currentRole.contains('SUPER_ADMIN')
+        ? 'SUPER_ADMIN'
+        : currentRole.contains('HR')
+            ? 'HR'
+            : currentRole.contains('MANAGER')
+                ? 'MANAGER'
+                : 'EMPLOYEE';
+
+    bool hasPayrollManage = emp.authorities.contains('PAYROLL_MANAGE');
+    bool hasLeaveApproveAll = emp.authorities.contains('LEAVE_APPROVE_ALL');
+    bool isSaving = false;
+
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Elevate User Role (Master Admin)'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Change system permissions for ${emp.name}:'),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: selectedRole.contains('SUPER_ADMIN')
-                    ? 'SUPER_ADMIN'
-                    : selectedRole.contains('HR')
-                        ? 'HR'
-                        : selectedRole.contains('MANAGER')
-                            ? 'MANAGER'
-                            : 'EMPLOYEE',
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'System Role'),
-                items: const [
-                  DropdownMenuItem(value: 'SUPER_ADMIN', child: Text('Super Admin (Master Access)')),
-                  DropdownMenuItem(value: 'HR', child: Text('HR Admin')),
-                  DropdownMenuItem(value: 'MANAGER', child: Text('Manager / Team Lead')),
-                  DropdownMenuItem(value: 'EMPLOYEE', child: Text('Standard Employee')),
-                ],
-                onChanged: (val) => setDialogState(() => selectedRole = val!),
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+
+          return Dialog(
+            backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 580,
+                maxHeight: MediaQuery.sizeOf(dialogCtx).height * 0.90,
               ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${emp.name} role updated to $selectedRole!'), backgroundColor: const Color(0xFF8B5CF6)),
-                );
-                _fetchEmployee(emp.id);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
-              child: const Text('Update Role', style: TextStyle(color: Colors.white)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF8B5CF6), size: 26),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Elevate Role & Permissions',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Configure enterprise access control and delegated authorities for ${emp.name}.',
+                                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(height: 1),
+                      const SizedBox(height: 18),
+
+                      // System Role Dropdown
+                      Text(
+                        'SYSTEM ROLE LEVEL',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedRole,
+                            dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'SUPER_ADMIN',
+                                child: Text('Super Admin (Master System Control)', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              DropdownMenuItem(
+                                value: 'HR',
+                                child: Text('HR Admin (Human Resources & People)', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              DropdownMenuItem(
+                                value: 'MANAGER',
+                                child: Text('Manager / Team Lead', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              DropdownMenuItem(
+                                value: 'EMPLOYEE',
+                                child: Text('Standard Employee', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                            onChanged: isSaving
+                                ? null
+                                : (val) {
+                                    if (val != null) {
+                                      setDialogState(() => selectedRole = val);
+                                    }
+                                  },
+                          ),
+                        ),
+                      ),
+
+                      if (selectedRole == 'SUPER_ADMIN') ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.stars_rounded, color: Color(0xFF8B5CF6), size: 20),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Super Admins automatically hold master rights across all features, including payroll execution and company-wide leave approvals.',
+                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+
+                      // Granular Delegated Authorities Header
+                      Text(
+                        'GRANULAR DELEGATED AUTHORITIES (RBAC)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Authority 1: PAYROLL_MANAGE
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: hasPayrollManage || selectedRole == 'SUPER_ADMIN'
+                                ? const Color(0xFF0D9488)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: hasPayrollManage || selectedRole == 'SUPER_ADMIN' ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.payments_rounded, color: Color(0xFF0D9488), size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Payroll Manager Access',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'PAYROLL_MANAGE',
+                                          style: TextStyle(color: Color(0xFF0D9488), fontSize: 9, fontWeight: FontWeight.w800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Grants authority to run monthly payroll, configure salary structures, lock/unlock LOP variable inputs, and generate bank payout files.',
+                                    style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: selectedRole == 'SUPER_ADMIN' ? true : hasPayrollManage,
+                              activeThumbColor: const Color(0xFF0D9488),
+                              onChanged: (selectedRole == 'SUPER_ADMIN' || isSaving)
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() => hasPayrollManage = val);
+                                    },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Authority 2: LEAVE_APPROVE_ALL
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN'
+                                ? const Color(0xFF3B82F6)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN' ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.verified_user_rounded, color: Color(0xFF3B82F6), size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Global Leave Approver',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'LEAVE_APPROVE_ALL',
+                                          style: TextStyle(color: Color(0xFF3B82F6), fontSize: 9, fontWeight: FontWeight.w800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Authorizes approving or rejecting leave requests across all company departments. (Strict security rule: Self-approvals are strictly blocked).',
+                                    style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: selectedRole == 'SUPER_ADMIN' ? true : hasLeaveApproveAll,
+                              activeThumbColor: const Color(0xFF3B82F6),
+                              onChanged: (selectedRole == 'SUPER_ADMIN' || isSaving)
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() => hasLeaveApproveAll = val);
+                                    },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    setDialogState(() => isSaving = true);
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final List<String> targetAuthorities = [];
+                                    if (hasPayrollManage || selectedRole == 'SUPER_ADMIN') {
+                                      targetAuthorities.add('PAYROLL_MANAGE');
+                                    }
+                                    if (hasLeaveApproveAll || selectedRole == 'SUPER_ADMIN') {
+                                      targetAuthorities.add('LEAVE_APPROVE_ALL');
+                                    }
+
+                                    final success = await _repository.elevateRoleAndAuthorities(
+                                      emp.id,
+                                      role: selectedRole,
+                                      authorities: targetAuthorities,
+                                    );
+
+                                    if (dialogCtx.mounted) {
+                                      Navigator.pop(dialogCtx);
+                                    }
+                                    if (!mounted) return;
+                                    if (success) {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Successfully updated role and permissions for ${emp.name}!',
+                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                          backgroundColor: const Color(0xFF0D9488),
+                                        ),
+                                      );
+                                      // If the elevated user is the currently logged in user, refresh AuthStorage
+                                      if (AuthStorage.employeeId != null &&
+                                          AuthStorage.employeeId.toString() == emp.id) {
+                                        await AuthStorage.setAuth(
+                                          token: AuthStorage.token ?? '',
+                                          email: AuthStorage.userEmail,
+                                          role: selectedRole,
+                                          employeeId: AuthStorage.employeeId,
+                                          authorities: targetAuthorities,
+                                        );
+                                      }
+                                      _fetchEmployee(emp.id);
+                                    } else {
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Failed to update employee role and permissions. Please try again.'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            icon: isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.check_circle_outline_rounded, size: 18),
+                            label: Text(
+                              isSaving ? 'Saving...' : 'Save Permissions',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8B5CF6),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1251,133 +1642,222 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     );
   }
 
-  Widget _buildDetailsArea(BuildContext context, Employee emp) {
+  Widget _buildDetailsArea(BuildContext context, Employee emp, {required bool isWideScreen}) {
     final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(top: 24.0, right: 24.0, bottom: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (emp.status == 'PROBATION' || emp.isProbation) ...[
-            _buildProbationAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
-            const SizedBox(height: 16),
-          ],
-          if (emp.status == 'NOTICE_PERIOD' || emp.isNoticePeriod) ...[
-            _buildNoticeAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
-            const SizedBox(height: 16),
-          ],
-          if (emp.status == 'INACTIVE') ...[
-            _buildInactiveAlertBanner(emp, Theme.of(context).brightness == Brightness.dark),
-            const SizedBox(height: 16),
-          ],
-          TabBar(
-            isScrollable: true,
-            labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: theme.textTheme.bodyMedium?.color,
-            indicatorColor: theme.colorScheme.primary,
-            indicatorWeight: 3.5,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-            tabs: const [
-              Tab(text: 'Profile Details'),
-              Tab(text: 'Attendance'),
-              Tab(text: 'Leaves'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildProfileDetailsTab(context, emp),
-                _buildAttendanceTab(context),
-                _buildLeavesTab(context),
-              ],
-            ),
-          ),
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = theme.colorScheme.primary;
+
+    final tabContent = _selectedTabIndex == 0
+        ? _buildProfileDetailsTab(context, emp)
+        : (_selectedTabIndex == 1
+            ? _buildAttendanceTab(context)
+            : _buildLeavesTab(context));
+
+    final contentColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (emp.status == 'PROBATION' || emp.isProbation) ...[
+          _buildProbationAlertBanner(emp, isDark),
+          const SizedBox(height: 16),
         ],
+        if (emp.status == 'NOTICE_PERIOD' || emp.isNoticePeriod) ...[
+          _buildNoticeAlertBanner(emp, isDark),
+          const SizedBox(height: 16),
+        ],
+        if (emp.status == 'INACTIVE') ...[
+          _buildInactiveAlertBanner(emp, isDark),
+          const SizedBox(height: 16),
+        ],
+        _buildCustomTabBar(context, isDark, primaryColor),
+        const SizedBox(height: 24),
+        tabContent,
+      ],
+    );
+
+    if (isWideScreen) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(10, 20, 20, 24),
+        child: contentColumn,
+      );
+    } else {
+      return contentColumn;
+    }
+  }
+
+  Widget _buildCustomTabBar(BuildContext context, bool isDark, Color primaryColor) {
+    final tabs = [
+      {'label': 'Profile Details', 'icon': Icons.badge_outlined},
+      {'label': 'Attendance', 'icon': Icons.calendar_month_outlined},
+      {'label': 'Leaves', 'icon': Icons.beach_access_outlined},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: List.generate(tabs.length, (idx) {
+          final isSelected = _selectedTabIndex == idx;
+          return InkWell(
+            onTap: () => setState(() => _selectedTabIndex = idx),
+            borderRadius: BorderRadius.circular(10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? primaryColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    tabs[idx]['icon'] as IconData,
+                    size: 16,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      tabs[idx]['label'] as String,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
 
   Widget _buildProfileDetailsTab(BuildContext context, Employee emp) {
-    return SingleChildScrollView(
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 700),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 500;
+        final isNarrowStat = constraints.maxWidth < 460;
+
+        Widget buildFieldGroup(String label1, String value1, String label2, String value2) {
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildReadOnlyField(context, label1, value1),
+                const SizedBox(height: 14),
+                _buildReadOnlyField(context, label2, value2),
+              ],
+            );
+          }
+          return Row(
             children: [
-              const Text('Personal Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildReadOnlyField(context, 'Employee ID', emp.id)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildReadOnlyField(context, 'Department', emp.department)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildReadOnlyField(context, 'Role', emp.role)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildReadOnlyField(context, 'Status', emp.status)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildReadOnlyField(context, 'Date of Birth', emp.dateOfBirth)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildReadOnlyField(context, 'Location', emp.location)),
-                ],
-              ),
-              const SizedBox(height: 32),
-              const Text('Emergency Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildReadOnlyField(context, 'Contact Name', emp.emergencyContactName)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildReadOnlyField(context, 'Contact Phone', emp.emergencyContactPhone)),
-                ],
-              ),
-              const SizedBox(height: 32),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        title: 'Attendance Rate',
-                        value: '${emp.attendanceRate}%',
-                        color: Colors.green.shade100,
-                        textColor: Colors.green.shade900,
-                        icon: Icons.bar_chart,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        title: 'Leave Balance',
-                        value: '${emp.leaveBalance} Days',
-                        color: Colors.blue.shade100,
-                        textColor: Colors.blue.shade900,
-                        icon: Icons.pie_chart,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
+              Expanded(child: _buildReadOnlyField(context, label1, value1)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildReadOnlyField(context, label2, value2)),
             ],
+          );
+        }
+
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Personal Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                buildFieldGroup('Employee ID', emp.id, 'Department', emp.department),
+                const SizedBox(height: 16),
+                buildFieldGroup('Role', emp.role, 'Status', emp.status),
+                const SizedBox(height: 16),
+                buildFieldGroup('Date of Birth', emp.dateOfBirth, 'Location', emp.location),
+                const SizedBox(height: 32),
+                const Text('Emergency Contact', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                buildFieldGroup('Contact Name', emp.emergencyContactName, 'Contact Phone', emp.emergencyContactPhone),
+                const SizedBox(height: 32),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: isNarrowStat
+                      ? Column(
+                          children: [
+                            _buildStatCard(
+                              context,
+                              title: 'Attendance Rate',
+                              value: '${emp.attendanceRate}%',
+                              color: Colors.green.shade100,
+                              textColor: Colors.green.shade900,
+                              icon: Icons.bar_chart,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildStatCard(
+                              context,
+                              title: 'Leave Balance',
+                              value: '${emp.leaveBalance} Days',
+                              color: Colors.blue.shade100,
+                              textColor: Colors.blue.shade900,
+                              icon: Icons.pie_chart,
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'Attendance Rate',
+                                value: '${emp.attendanceRate}%',
+                                color: Colors.green.shade100,
+                                textColor: Colors.green.shade900,
+                                icon: Icons.bar_chart,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'Leave Balance',
+                                value: '${emp.leaveBalance} Days',
+                                color: Colors.blue.shade100,
+                                textColor: Colors.blue.shade900,
+                                icon: Icons.pie_chart,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1400,126 +1880,150 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       if (d.status == 'LOP_LEAVE' || d.status == 'UNEXCUSED_ABSENT') lopDays++;
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Month Selector & Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF0D9488), size: 20),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Month Selector & Header (responsive)
+        LayoutBuilder(
+          builder: (context, headerConstraints) {
+            final isNarrow = headerConstraints.maxWidth < 540;
+            final titleWidget = Row(
+              mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
+                  child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF0D9488), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: isNarrow ? 1 : 0,
+                  child: Text(
                     'Monthly Attendance Calendar',
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
                   ),
+                ),
+              ],
+            );
+
+            final monthStepper = Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _attendanceActiveMonth = DateTime(_attendanceActiveMonth.year, _attendanceActiveMonth.month - 1, 1);
+                      });
+                      _fetchAttendanceCalendar();
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      monthLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _attendanceActiveMonth = DateTime(_attendanceActiveMonth.year, _attendanceActiveMonth.month + 1, 1);
+                      });
+                      _fetchAttendanceCalendar();
+                    },
+                  ),
                 ],
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left_rounded, size: 20),
-                      onPressed: () {
-                        setState(() {
-                          _attendanceActiveMonth = DateTime(_attendanceActiveMonth.year, _attendanceActiveMonth.month - 1, 1);
-                        });
-                        _fetchAttendanceCalendar();
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        monthLabel,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                      onPressed: () {
-                        setState(() {
-                          _attendanceActiveMonth = DateTime(_attendanceActiveMonth.year, _attendanceActiveMonth.month + 1, 1);
-                        });
-                        _fetchAttendanceCalendar();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+            );
 
-          // Summary Cards
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 700;
-              final cards = [
-                _buildSummaryCardMetric(context, 'Present Days', '$presentDays Days', Icons.check_circle_outline, const Color(0xFF10B981)),
-                _buildSummaryCardMetric(context, 'Paid Leaves', '$paidLeaves Days', Icons.event_available_rounded, const Color(0xFF6366F1)),
-                _buildSummaryCardMetric(context, 'LOP / Absent', '$lopDays Days', Icons.cancel_outlined, const Color(0xFFEF4444)),
-                _buildSummaryCardMetric(context, 'Avg Work Hours', '8.4 hrs', Icons.access_time_rounded, const Color(0xFF0D9488)),
-              ];
-              if (isDesktop) {
-                return Row(
-                  children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 12.0), child: c))).toList(),
-                );
-              } else {
-                return Column(
-                  children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12.0), child: c)).toList(),
-                );
-              }
-            },
-          ),
-          const SizedBox(height: 24),
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  titleWidget,
+                  const SizedBox(height: 12),
+                  monthStepper,
+                ],
+              );
+            }
 
-          // Full Month Attendance Calendar Grid
-          if (_isAttendanceCalendarLoading)
-            const SizedBox(
-              height: 320,
-              child: Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))),
-            )
-          else
-            AttendanceCalendarGrid(
-              activeMonth: _attendanceActiveMonth,
-              days: _attendanceCalendarDays,
-              showReminderOption: (AuthStorage.userEmail ?? '').toLowerCase() == (_employee?.email ?? '').toLowerCase() || (AuthStorage.employeeId != null && AuthStorage.employeeId.toString() == _employee?.id),
-              onDayTap: (day) {},
-              onApplyLeaveForDate: (day) {},
-              onSetReminderForDate: (day) {},
-            ),
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                titleWidget,
+                monthStepper,
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 20),
 
-          const SizedBox(height: 32),
-          Text(
-            'Daily Attendance Records',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF0F172A),
-            ),
+        // Summary Cards
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth > 700;
+            final cards = [
+              _buildSummaryCardMetric(context, 'Present Days', '$presentDays Days', Icons.check_circle_outline, const Color(0xFF10B981)),
+              _buildSummaryCardMetric(context, 'Paid Leaves', '$paidLeaves Days', Icons.event_available_rounded, const Color(0xFF6366F1)),
+              _buildSummaryCardMetric(context, 'LOP / Absent', '$lopDays Days', Icons.cancel_outlined, const Color(0xFFEF4444)),
+              _buildSummaryCardMetric(context, 'Avg Work Hours', '8.4 hrs', Icons.access_time_rounded, const Color(0xFF0D9488)),
+            ];
+            if (isDesktop) {
+              return Row(
+                children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 12.0), child: c))).toList(),
+              );
+            } else {
+              return Column(
+                children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12.0), child: c)).toList(),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Full Month Attendance Calendar Grid
+        if (_isAttendanceCalendarLoading)
+          const SizedBox(
+            height: 320,
+            child: Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))),
+          )
+        else
+          AttendanceCalendarGrid(
+            activeMonth: _attendanceActiveMonth,
+            days: _attendanceCalendarDays,
+            showReminderOption: (AuthStorage.userEmail ?? '').toLowerCase() == (_employee?.email ?? '').toLowerCase() || (AuthStorage.employeeId != null && AuthStorage.employeeId.toString() == _employee?.id),
+            onDayTap: (day) {},
+            onApplyLeaveForDate: (day) {},
+            onSetReminderForDate: (day) {},
           ),
-          const SizedBox(height: 12),
-          _buildAttendanceTable(context, _attendanceRecords),
-        ],
-      ),
+
+        const SizedBox(height: 32),
+        Text(
+          'Daily Attendance Records',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildAttendanceTable(context, _attendanceRecords),
+      ],
     );
   }
 
@@ -1553,13 +2057,26 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-              const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1676,64 +2193,70 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 700;
-              final cards = _leaveBalances.map((b) => Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100, width: 1.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth > 700;
+            final cards = _leaveBalances.map((b) => Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade100, width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.type,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${b.taken} / ${b.total} Days',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4.0),
+                    child: LinearProgressIndicator(
+                      value: b.total > 0 ? b.taken / b.total : 0,
+                      backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                      minHeight: 6,
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(b.type, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text('${b.taken} / ${b.total} Days', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4.0),
-                      child: LinearProgressIndicator(
-                        value: b.total > 0 ? b.taken / b.total : 0,
-                        backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-                        minHeight: 6,
-                      ),
-                    ),
-                  ],
-                ),
-              )).toList();
-              
-              if (isDesktop) {
-                return Row(
-                  children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 12.0), child: c))).toList(),
-                );
-              } else {
-                return Column(
-                  children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12.0), child: c)).toList(),
-                );
-              }
-            },
-          ),
-          const SizedBox(height: 32),
-          const Text('Leave Request History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          _buildLeavesHistoryTable(context, _leaveRequests),
-        ],
-      ),
+                  ),
+                ],
+              ),
+            )).toList();
+            
+            if (isDesktop) {
+              return Row(
+                children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 12.0), child: c))).toList(),
+              );
+            } else {
+              return Column(
+                children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12.0), child: c)).toList(),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 32),
+        const Text('Leave Request History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildLeavesHistoryTable(context, _leaveRequests),
+      ],
     );
   }
 
@@ -1887,15 +2410,27 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-              const SizedBox(height: 4),
-              Text(value, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 24)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 22),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          Icon(icon, color: textColor.withValues(alpha: 0.5), size: 36),
+          const SizedBox(width: 8),
+          Icon(icon, color: textColor.withValues(alpha: 0.5), size: 32),
         ],
       ),
     );

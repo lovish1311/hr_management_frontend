@@ -4,50 +4,75 @@ import 'package:hr_management/features/payroll/domain/entities/payroll_record_en
 
 class PayslipDetailModal extends StatelessWidget {
   final PayrollRecordEntity record;
+  final bool isDialog;
 
-  const PayslipDetailModal({super.key, required this.record});
+  const PayslipDetailModal({super.key, required this.record, this.isDialog = false});
 
   static void show(BuildContext context, PayrollRecordEntity record) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => PayslipDetailModal(record: record),
-    );
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.6),
+        builder: (_) => Center(
+          child: Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720, maxHeight: 850),
+              child: PayslipDetailModal(record: record, isDialog: true),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => PayslipDetailModal(record: record, isDialog: false),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = context.appTheme;
     final theme = Theme.of(context);
+    final borderRadius = isDialog
+        ? BorderRadius.circular(24)
+        : const BorderRadius.vertical(top: Radius.circular(24));
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.88,
         maxWidth: 720,
       ),
-      margin: EdgeInsets.only(
-        left: MediaQuery.of(context).size.width > 760 ? (MediaQuery.of(context).size.width - 720) / 2 : 0,
-        right: MediaQuery.of(context).size.width > 760 ? (MediaQuery.of(context).size.width - 720) / 2 : 0,
-      ),
+      margin: isDialog
+          ? const EdgeInsets.symmetric(horizontal: 20, vertical: 24)
+          : EdgeInsets.only(
+              left: MediaQuery.of(context).size.width > 760 ? (MediaQuery.of(context).size.width - 720) / 2 : 0,
+              right: MediaQuery.of(context).size.width > 760 ? (MediaQuery.of(context).size.width - 720) / 2 : 0,
+            ),
       decoration: BoxDecoration(
         color: t.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: borderRadius,
         border: Border.all(color: t.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 24,
-            offset: const Offset(0, -4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
+          // Drag handle for mobile bottom sheet
+          if (!isDialog)
+            Container(
+              width: 40,
+              height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
               color: t.textSecondary.withValues(alpha: 0.4),
@@ -126,20 +151,42 @@ class PayslipDetailModal extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: record.isPublished ? t.success.withValues(alpha: 0.15) : t.warning.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            record.isPublished ? 'PUBLISHED & DISBURSED' : 'STATUS: ${record.status}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: record.isPublished ? t.success : t.warning,
+                        Wrap(
+                          spacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: record.isPublished ? t.success.withValues(alpha: 0.15) : t.warning.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                record.isPublished ? 'PUBLISHED & DISBURSED' : 'STATUS: ${record.status}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: record.isPublished ? t.success : t.warning,
+                                ),
+                              ),
                             ),
-                          ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: t.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: t.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                record.taxRegime.replaceAll('_', ' '),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: t.primary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -265,6 +312,8 @@ class PayslipDetailModal extends StatelessWidget {
             _buildLineItem('Overtime Pay', record.overtimeAmount, t, isGreen: true),
           if (record.adHocBonus > 0)
             _buildLineItem('Ad-Hoc Bonus', record.adHocBonus, t, isGreen: true),
+          if (record.arrearsAmount > 0)
+            _buildLineItem('Arrears / Revision Payout', record.arrearsAmount, t, isGreen: true),
         ],
       ),
     );
@@ -292,6 +341,8 @@ class PayslipDetailModal extends StatelessWidget {
           if (record.calculatedEsi > 0)
             _buildLineItem('ESI Contribution', record.calculatedEsi, t),
           _buildLineItem('Professional Tax (PT)', record.calculatedPt, t),
+          if (record.calculatedTds > 0)
+            _buildLineItem('Income Tax (TDS)', record.calculatedTds, t, isRed: true),
           if (record.lopDeductionAmount > 0)
             _buildLineItem('LOP Deduction', record.lopDeductionAmount, t, isRed: true),
           if (record.adHocDeduction > 0)

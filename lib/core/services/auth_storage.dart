@@ -1,15 +1,17 @@
-﻿import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthStorage {
   static String? _token;
   static String? _userEmail;
   static String? _userRole;
   static int? _employeeId;
+  static List<String> _authorities = [];
 
   static const String _kToken = 'auth_token';
   static const String _kEmail = 'auth_email';
   static const String _kRole = 'auth_role';
   static const String _kEmpId = 'auth_employee_id';
+  static const String _kAuthorities = 'auth_authorities';
 
   /// Initialize and hydrate auth state from persistent storage on startup
   static Future<void> init() async {
@@ -18,6 +20,7 @@ class AuthStorage {
     _userEmail = prefs.getString(_kEmail);
     _userRole = prefs.getString(_kRole);
     _employeeId = prefs.getInt(_kEmpId);
+    _authorities = prefs.getStringList(_kAuthorities) ?? [];
   }
 
   static Future<void> setAuth({
@@ -25,23 +28,40 @@ class AuthStorage {
     String? email,
     String? role,
     int? employeeId,
+    List<String>? authorities,
   }) async {
     _token = token;
     _userEmail = email;
     _userRole = role;
     _employeeId = employeeId;
+    if (authorities != null) {
+      _authorities = authorities.map((a) => a.toUpperCase()).toList();
+    }
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kToken, token);
     if (email != null) await prefs.setString(_kEmail, email);
     if (role != null) await prefs.setString(_kRole, role);
     if (employeeId != null) await prefs.setInt(_kEmpId, employeeId);
+    if (authorities != null) {
+      await prefs.setStringList(_kAuthorities, _authorities);
+    }
   }
 
   static String? get token => _token;
   static String? get userEmail => _userEmail;
   static String? get userRole => _userRole;
   static int? get employeeId => _employeeId;
+  static List<String> get authorities => List.unmodifiable(_authorities);
+
+  static bool hasAuthority(String authority) =>
+      _authorities.contains(authority.toUpperCase());
+
+  static bool get canManagePayroll =>
+      isSuperAdmin || isHr || hasAuthority('PAYROLL_MANAGE');
+
+  static bool get canApproveAllLeaves =>
+      isSuperAdmin || isHr || hasAuthority('LEAVE_APPROVE_ALL');
 
   static bool get isAuthenticated => _token != null && _token!.isNotEmpty;
 
@@ -76,12 +96,14 @@ class AuthStorage {
     _userEmail = null;
     _userRole = null;
     _employeeId = null;
+    _authorities = [];
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kToken);
     await prefs.remove(_kEmail);
     await prefs.remove(_kRole);
     await prefs.remove(_kEmpId);
+    await prefs.remove(_kAuthorities);
   }
 }
 
