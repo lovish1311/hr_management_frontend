@@ -87,12 +87,14 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
 
   Future<void> _syncFromAttendance() async {
     setState(() => _isSyncing = true);
+    debugPrint('[PAYROLL] Triggering sync attendance for $_selectedMonth $_selectedYear...');
     try {
       final synced = await _repository.syncInputsFromAttendance(
         month: _selectedMonth,
         year: _selectedYear,
       );
       if (!mounted) return;
+      debugPrint('[PAYROLL] Sync succeeded with ${synced.length} records.');
       setState(() {
         _inputs = synced;
         _localEdits.clear();
@@ -102,10 +104,12 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         const SnackBar(
           content: Text('Auto-synced LOP days and attendance records. All fields remain editable.'),
           backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 3),
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      debugPrint('[PAYROLL] Error syncing inputs from attendance: $e');
       setState(() => _isSyncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error syncing: $e'), backgroundColor: Colors.red),
@@ -478,7 +482,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
 
   Widget _buildFilterHeader(BuildContext context, dynamic t) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: t.card,
         border: Border(bottom: BorderSide(color: t.border)),
@@ -486,94 +490,144 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.table_chart_outlined, color: t.primary, size: 24),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 1050;
+              final titleSection = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Monthly Payroll Inputs',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: t.text),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: t.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.table_chart_outlined, color: t.primary, size: 22),
                   ),
-                  Text('Review and adjust LOP days, overtime hours, and bonuses before batch processing', style: TextStyle(fontSize: 11, color: t.textSecondary)),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Monthly Payroll Inputs',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: t.text,
+                                letterSpacing: -0.2,
+                              ),
+                        ),
+                        Text(
+                          'Review and adjust LOP days, overtime hours, and bonuses before batch processing',
+                          style: TextStyle(fontSize: 11, color: t.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
-              const Spacer(),
-              // Month & Year Selector
-              _buildMonthDropdown(t),
-              const SizedBox(width: 10),
-              _buildYearDropdown(t),
-              const SizedBox(width: 14),
-              // Status Pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isMonthLocked ? t.warning.withValues(alpha: 0.15) : t.success.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _isMonthLocked ? t.warning.withValues(alpha: 0.4) : t.success.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(_isMonthLocked ? Icons.lock : Icons.lock_open, size: 14, color: _isMonthLocked ? t.warning : t.success),
-                    const SizedBox(width: 4),
-                    Text(
-                      _isMonthLocked ? 'LOCKED' : 'UNLOCKED',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _isMonthLocked ? t.warning : t.success),
+              );
+
+              final actionControls = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.start,
+                children: [
+                  _buildMonthDropdown(t),
+                  _buildYearDropdown(t),
+                  // Status Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _isMonthLocked ? t.warning.withValues(alpha: 0.15) : t.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _isMonthLocked ? t.warning.withValues(alpha: 0.4) : t.success.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_isMonthLocked ? Icons.lock : Icons.lock_open, size: 14, color: _isMonthLocked ? t.warning : t.success),
+                        const SizedBox(width: 4),
+                        Text(
+                          _isMonthLocked ? 'LOCKED' : 'UNLOCKED',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _isMonthLocked ? t.warning : t.success),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Sync Attendance Button
+                  OutlinedButton.icon(
+                    onPressed: (_isMonthLocked || _isSyncing) ? null : _syncFromAttendance,
+                    icon: _isSyncing
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.sync_rounded, size: 18),
+                    label: const Text('Sync Attendance'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: t.primary,
+                      side: BorderSide(color: t.primary.withValues(alpha: 0.6)),
+                      backgroundColor: t.primary.withValues(alpha: 0.08),
+                      minimumSize: const Size(140, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  // Lock / Unlock Button
+                  FilledButton.icon(
+                    onPressed: _isLocking ? null : () => _toggleLockState(!_isMonthLocked),
+                    icon: Icon(_isMonthLocked ? Icons.lock_open : Icons.lock_outline, size: 18),
+                    label: Text(_isMonthLocked ? 'Unlock Inputs' : 'Lock Inputs'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _isMonthLocked ? t.cardSoft : t.primary,
+                      foregroundColor: _isMonthLocked ? t.text : Colors.white,
+                      minimumSize: const Size(120, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  if (_localEdits.isNotEmpty) ...[
+                    FilledButton.icon(
+                      onPressed: _isLoading ? null : _saveAllPendingEdits,
+                      icon: const Icon(Icons.save_rounded, size: 16),
+                      label: Text('Save (${_localEdits.length})'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Sync Attendance Button
-              OutlinedButton.icon(
-                onPressed: (_isMonthLocked || _isSyncing) ? null : _syncFromAttendance,
-                icon: _isSyncing
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.sync_rounded, size: 16),
-                label: const Text('Sync Attendance'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: t.primary,
-                  side: BorderSide(color: t.primary.withValues(alpha: 0.5)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Lock / Unlock Button
-              FilledButton.icon(
-                onPressed: _isLocking ? null : () => _toggleLockState(!_isMonthLocked),
-                icon: Icon(_isMonthLocked ? Icons.lock_open : Icons.lock_outline, size: 16),
-                label: Text(_isMonthLocked ? 'Unlock Inputs' : 'Lock Inputs'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _isMonthLocked ? t.cardSoft : t.primary,
-                  foregroundColor: _isMonthLocked ? t.text : Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                ),
-              ),
-              if (_localEdits.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                FilledButton.icon(
-                  onPressed: _isLoading ? null : _saveAllPendingEdits,
-                  icon: const Icon(Icons.save_rounded, size: 16),
-                  label: Text('Save (${_localEdits.length})'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                ),
-              ],
-            ],
+                ],
+              );
+
+              if (isWide) {
+                return Row(
+                  children: [
+                    Expanded(child: titleSection),
+                    const SizedBox(width: 16),
+                    actionControls,
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleSection,
+                    const SizedBox(height: 12),
+                    actionControls,
+                  ],
+                );
+              }
+            },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           // Search & Department Filter row
-          Row(
-            children: [
-              SizedBox(
-                width: 260,
-                height: 36,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 620;
+              final searchWidget = SizedBox(
+                width: isNarrow ? double.infinity : 260,
+                height: 38,
                 child: TextField(
                   onChanged: (v) => setState(() => _searchQuery = v),
                   style: TextStyle(color: t.text, fontSize: 13),
@@ -587,31 +641,47 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Department Chips
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _allDepartments.map((dept) {
-                      final isSel = _selectedDepartment == dept;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          selected: isSel,
-                          label: Text(dept, style: TextStyle(fontSize: 11, color: isSel ? Colors.white : t.textSecondary)),
-                          backgroundColor: t.cardSoft,
-                          selectedColor: t.primary,
-                          checkmarkColor: Colors.white,
-                          onSelected: (_) => setState(() => _selectedDepartment = dept),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+              );
+
+              final deptChips = SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _allDepartments.map((dept) {
+                    final isSel = _selectedDepartment == dept;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        selected: isSel,
+                        label: Text(dept, style: TextStyle(fontSize: 11, color: isSel ? Colors.white : t.textSecondary)),
+                        backgroundColor: t.cardSoft,
+                        selectedColor: t.primary,
+                        checkmarkColor: Colors.white,
+                        onSelected: (_) => setState(() => _selectedDepartment = dept),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              ),
-            ],
+              );
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    searchWidget,
+                    const SizedBox(height: 10),
+                    deptChips,
+                  ],
+                );
+              } else {
+                return Row(
+                  children: [
+                    searchWidget,
+                    const SizedBox(width: 16),
+                    Expanded(child: deptChips),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
@@ -686,185 +756,302 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
       builder: (context, constraints) {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: t.card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: t.border),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(t.cardSoft),
-              horizontalMargin: 16,
-              columnSpacing: 18,
-              columns: const [
-                DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Fixed Base Gross', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('LOP Days', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('OT Hours', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Ad-Hoc Bonus', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Ad-Hoc Deduct', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Arrears', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Tax Regime', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-              rows: list.map((item) {
-                final isLocked = item.isLocked;
-                final edited = _localEdits[item.employeeId] ?? item;
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTaxRegimePolicyBanner(context, t),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: t.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: t.border),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(t.cardSoft),
+                    horizontalMargin: 16,
+                    columnSpacing: 18,
+                    columns: const [
+                      DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Fixed Base Gross', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('LOP Days', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('OT Hours', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Ad-Hoc Bonus', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Ad-Hoc Deduct', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Arrears', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                    ],
+                    rows: list.map((item) {
+                      final isLocked = item.isLocked;
+                      final edited = _localEdits[item.employeeId] ?? item;
 
-                return DataRow(
-                  cells: [
-                    // Employee Info
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(item.employeeName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
-                              if (item.isExempt) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
-                                  ),
-                                  child: const Text(
-                                    'EXEMPT',
-                                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 9, fontWeight: FontWeight.bold),
+                      return DataRow(
+                        cells: [
+                          // Employee Info
+                          DataCell(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(item.employeeName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: t.text)),
+                                    if (item.isExempt) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+                                        ),
+                                        child: const Text(
+                                          'EXEMPT',
+                                          style: TextStyle(color: Color(0xFFEF4444), fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                Text('${item.employeeCode} • ${item.department}', style: TextStyle(fontSize: 11, color: t.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          // Fixed Gross
+                          DataCell(
+                            Text('₹${item.fixedGross.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.w600, color: t.text)),
+                          ),
+                          // LOP Days (Editable)
+                          DataCell(
+                            _buildInlineNumberCell(
+                              value: edited.lopDays.toString(),
+                              isLocked: isLocked,
+                              t: t,
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val) ?? 0.0;
+                                setState(() {
+                                  _localEdits[item.employeeId] = edited.copyWith(lopDays: parsed);
+                                });
+                              },
+                            ),
+                          ),
+                          // Overtime Hours (Editable)
+                          DataCell(
+                            _buildInlineNumberCell(
+                              value: edited.overtimeHours.toString(),
+                              isLocked: isLocked,
+                              t: t,
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val) ?? 0.0;
+                                setState(() {
+                                  _localEdits[item.employeeId] = edited.copyWith(overtimeHours: parsed);
+                                });
+                              },
+                            ),
+                          ),
+                          // Ad-Hoc Bonus (Editable)
+                          DataCell(
+                            _buildInlineNumberCell(
+                              value: edited.adHocBonus.toStringAsFixed(0),
+                              isLocked: isLocked,
+                              prefix: '₹',
+                              t: t,
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val) ?? 0.0;
+                                setState(() {
+                                  _localEdits[item.employeeId] = edited.copyWith(adHocBonus: parsed);
+                                });
+                              },
+                            ),
+                          ),
+                          // Ad-Hoc Deduction (Editable)
+                          DataCell(
+                            _buildInlineNumberCell(
+                              value: edited.adHocDeduction.toStringAsFixed(0),
+                              isLocked: isLocked,
+                              prefix: '₹',
+                              t: t,
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val) ?? 0.0;
+                                setState(() {
+                                  _localEdits[item.employeeId] = edited.copyWith(adHocDeduction: parsed);
+                                });
+                              },
+                            ),
+                          ),
+                          // Arrears (Editable)
+                          DataCell(
+                            _buildInlineNumberCell(
+                              value: edited.arrearsAmount.toStringAsFixed(0),
+                              isLocked: isLocked,
+                              prefix: '₹',
+                              t: t,
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val) ?? 0.0;
+                                setState(() {
+                                  _localEdits[item.employeeId] = edited.copyWith(arrearsAmount: parsed);
+                                });
+                              },
+                            ),
+                          ),
+                          // Actions
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: isLocked ? null : () => _showEditVariablesDialog(context, edited, t),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: isLocked ? t.cardSoft : t.primary.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: isLocked ? t.border : t.primary.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.tune_rounded, size: 16, color: isLocked ? t.textSecondary : t.primary),
+                                          const SizedBox(width: 4),
+                                          Text('Edit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isLocked ? t.textSecondary : t.primary)),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
+                                if (_localEdits.containsKey(item.employeeId)) ...[
+                                  const SizedBox(width: 8),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(8),
+                                      onTap: () => _saveSingleInput(_localEdits[item.employeeId]!),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.check_rounded, size: 16, color: Color(0xFF10B981)),
+                                            SizedBox(width: 4),
+                                            Text('Save', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                          Text('${item.employeeCode} • ${item.department}', style: TextStyle(fontSize: 11, color: t.textSecondary)),
-                        ],
-                      ),
-                    ),
-                    // Fixed Gross
-                    DataCell(
-                      Text('₹${item.fixedGross.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.w600, color: t.text)),
-                    ),
-                    // LOP Days (Editable)
-                    DataCell(
-                      _buildInlineNumberCell(
-                        value: edited.lopDays.toString(),
-                        isLocked: isLocked,
-                        t: t,
-                        onChanged: (val) {
-                          final parsed = double.tryParse(val) ?? 0.0;
-                          setState(() {
-                            _localEdits[item.employeeId] = edited.copyWith(lopDays: parsed);
-                          });
-                        },
-                      ),
-                    ),
-                    // Overtime Hours (Editable)
-                    DataCell(
-                      _buildInlineNumberCell(
-                        value: edited.overtimeHours.toString(),
-                        isLocked: isLocked,
-                        t: t,
-                        onChanged: (val) {
-                          final parsed = double.tryParse(val) ?? 0.0;
-                          setState(() {
-                            _localEdits[item.employeeId] = edited.copyWith(overtimeHours: parsed);
-                          });
-                        },
-                      ),
-                    ),
-                    // Ad-Hoc Bonus (Editable)
-                    DataCell(
-                      _buildInlineNumberCell(
-                        value: edited.adHocBonus.toStringAsFixed(0),
-                        isLocked: isLocked,
-                        prefix: '₹',
-                        t: t,
-                        onChanged: (val) {
-                          final parsed = double.tryParse(val) ?? 0.0;
-                          setState(() {
-                            _localEdits[item.employeeId] = edited.copyWith(adHocBonus: parsed);
-                          });
-                        },
-                      ),
-                    ),
-                    // Ad-Hoc Deduction (Editable)
-                    DataCell(
-                      _buildInlineNumberCell(
-                        value: edited.adHocDeduction.toStringAsFixed(0),
-                        isLocked: isLocked,
-                        prefix: '₹',
-                        t: t,
-                        onChanged: (val) {
-                          final parsed = double.tryParse(val) ?? 0.0;
-                          setState(() {
-                            _localEdits[item.employeeId] = edited.copyWith(adHocDeduction: parsed);
-                          });
-                        },
-                      ),
-                    ),
-                    // Arrears
-                    DataCell(
-                      Text(
-                        edited.arrearsAmount > 0 ? '₹${edited.arrearsAmount.toStringAsFixed(0)}' : '—',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: edited.arrearsAmount > 0 ? FontWeight.bold : FontWeight.normal,
-                          color: edited.arrearsAmount > 0 ? t.success : t.textSecondary,
-                        ),
-                      ),
-                    ),
-                    // Tax Regime
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: edited.taxRegime.contains('NEW') ? t.primary.withValues(alpha: 0.12) : t.secondary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          edited.taxRegime.contains('NEW') ? 'NEW (115BAC)' : 'OLD',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: edited.taxRegime.contains('NEW') ? t.primary : t.secondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Actions
-                    DataCell(
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit_note, size: 20, color: isLocked ? t.textSecondary : t.primary),
-                            tooltip: 'Adjust inputs, arrears & tax regime',
-                            onPressed: isLocked ? null : () => _showEditVariablesDialog(context, edited, t),
-                          ),
-                          if (_localEdits.containsKey(item.employeeId))
-                            IconButton(
-                              icon: Icon(Icons.check_circle, size: 20, color: t.success),
-                              tooltip: 'Save Edits',
-                              onPressed: () => _saveSingleInput(_localEdits[item.employeeId]!),
                             ),
+                          ),
                         ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      );
-    },
+        );
+      },
+    );
+  }
+
+  Widget _buildTaxRegimePolicyBanner(BuildContext context, dynamic t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: t.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 650;
+          final infoDetails = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.account_balance_outlined, size: 18, color: t.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Company Tax Policy: New Regime (Section 115BAC)',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Default statutory regime applied company-wide with ₹75,000 standard deduction. Opt-out for individual declaration (Old Regime 80C/80D) can be configured via employee action dialog.',
+                style: TextStyle(fontSize: 11, color: t.textSecondary, height: 1.3),
+              ),
+            ],
+          );
+
+          final badges = Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: t.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('Default: 115BAC', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.primary)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: t.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('Std Ded: ₹75,000', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.success)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: t.cardSoft,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('Rebate: <₹7L Nil', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.textSecondary)),
+              ),
+            ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                infoDetails,
+                const SizedBox(height: 10),
+                badges,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: infoDetails),
+              const SizedBox(width: 16),
+              badges,
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -905,27 +1092,98 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
   }
 
   Widget _buildFooter(BuildContext context, dynamic t) {
-    final totalHeadcount = _inputs.length;
-    final totalLop = _inputs.fold<double>(0.0, (acc, i) => acc + i.lopDays);
-    final totalOt = _inputs.fold<double>(0.0, (acc, i) => acc + i.overtimeHours);
-    final totalBonus = _inputs.fold<double>(0.0, (acc, i) => acc + i.adHocBonus);
+    final currentInputs = _inputs.map((i) => _localEdits[i.employeeId] ?? i).toList();
+    final totalHeadcount = currentInputs.length;
+    final totalLop = currentInputs.fold<double>(0.0, (acc, i) => acc + i.lopDays);
+    final totalOt = currentInputs.fold<double>(0.0, (acc, i) => acc + i.overtimeHours);
+    final totalBonus = currentInputs.fold<double>(0.0, (acc, i) => acc + i.adHocBonus);
+    final totalDeduct = currentInputs.fold<double>(0.0, (acc, i) => acc + i.adHocDeduction);
+    final totalArrears = currentInputs.fold<double>(0.0, (acc, i) => acc + i.arrearsAmount);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         color: t.card,
         border: Border(top: BorderSide(color: t.border)),
       ),
-      child: Row(
-        children: [
-          Text('Total Headcount: $totalHeadcount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.text)),
-          const SizedBox(width: 24),
-          Text('Total LOP Days: ${totalLop.toStringAsFixed(1)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.danger)),
-          const SizedBox(width: 24),
-          Text('Total OT Hours: ${totalOt.toStringAsFixed(1)}h', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.primary)),
-          const SizedBox(width: 24),
-          Text('Total Bonuses: ₹${totalBonus.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.success)),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: t.cardSoft,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total Headcount: $totalHeadcount',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.text),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: t.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total LOP Days: ${totalLop.toStringAsFixed(1)}',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.danger),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: t.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total OT Hours: ${totalOt.toStringAsFixed(1)}h',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.primary),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: t.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total Bonuses: ₹${totalBonus.toStringAsFixed(0)}',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.success),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: t.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total Deductions: ₹${totalDeduct.toStringAsFixed(0)}',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.danger),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Total Arrears: ₹${totalArrears.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFF59E0B)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

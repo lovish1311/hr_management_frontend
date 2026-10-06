@@ -10,12 +10,20 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
   String get _baseUrl => ApiConfig.baseUrl;
 
-  // In-memory cache for Phase 1 UI state & mock reactivity
+  // In-memory cache for UI state reactivity
   static List<Employee>? _cachedEmployees;
 
-  List<Employee> _getEffectiveCache() {
-    _cachedEmployees ??= _getMockEmployeeList();
-    return _cachedEmployees!;
+  void _updateLocalCache(Employee employee) {
+    if (_cachedEmployees == null) {
+      _cachedEmployees = [employee];
+      return;
+    }
+    final index = _cachedEmployees!.indexWhere((e) => e.id == employee.id);
+    if (index != -1) {
+      _cachedEmployees![index] = employee;
+    } else {
+      _cachedEmployees!.insert(0, employee);
+    }
   }
 
   @override
@@ -31,22 +39,21 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
-        if (decoded is List && decoded.isNotEmpty) {
-          final fromApi = decoded.map((jsonItem) => Employee.fromJson(jsonItem as Map<String, dynamic>)).toList();
-          // Merge with locally created/edited employees if any
-          final currentCache = _getEffectiveCache();
-          final localCreated = currentCache.where((cached) => !fromApi.any((api) => api.id == cached.id)).toList();
-          _cachedEmployees = [...localCreated, ...fromApi];
-          list = _cachedEmployees!;
+        if (decoded is List) {
+          final fromApi = decoded
+              .map((jsonItem) => Employee.fromJson(jsonItem as Map<String, dynamic>))
+              .toList();
+          _cachedEmployees = fromApi;
+          list = fromApi;
         } else {
-          list = _getEffectiveCache();
+          list = _cachedEmployees ?? [];
         }
       } else {
-        list = _getEffectiveCache();
+        list = _cachedEmployees ?? [];
       }
     } catch (e) {
-      debugPrint('Employees API connect error, using fallback: $e');
-      list = _getEffectiveCache();
+      debugPrint('Employees API connect error, using cache/fallback: $e');
+      list = _cachedEmployees ?? _getMockEmployeeList();
     }
 
     if (departmentFilter == null || departmentFilter == 'All') {
@@ -57,12 +64,6 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
   @override
   Future<Employee?> getEmployeeById(String id) async {
-    final cache = _getEffectiveCache();
-    final matchInCache = cache.where((e) => e.id == id);
-    if (matchInCache.isNotEmpty) {
-      return matchInCache.first;
-    }
-
     final url = Uri.parse('$_baseUrl/api/v1/employees/$id');
     try {
       final response = await http.get(
@@ -73,58 +74,128 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded is Map<String, dynamic>) {
-          return Employee.fromJson(decoded);
+          final emp = Employee.fromJson(decoded);
+          _updateLocalCache(emp);
+          return emp;
         }
+      } else if (response.statusCode == 404) {
+        return null;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error fetching employee by id ($id): $e');
+    }
 
-    return cache.isNotEmpty ? cache.first : null;
+    // Fallback to cache ONLY if network fails
+    if (_cachedEmployees != null) {
+      final match = _cachedEmployees!.where((e) => e.id == id);
+      if (match.isNotEmpty) return match.first;
+    }
+    return null;
   }
 
   @override
   Future<Employee> createEmployee(Employee employee) async {
-    final cache = _getEffectiveCache();
-    final newId = (DateTime.now().millisecondsSinceEpoch % 100000).toString();
+    final url = Uri.parse('$_baseUrl/api/v1/employees');
+    try {
+      final res = await http.post(
+        url,
+        headers: AuthStorage.authHeaders,
+        body: json.encode({
+          'firstName': employee.firstName,
+          'lastName': employee.lastName,
+          'email': employee.email,
+          'phoneNumber': employee.phone,
+          'department': employee.department,
+          'designation': employee.designation,
+          'role': employee.role,
+          'status': employee.status,
+          'address': employee.address,
+          'emergencyContactName': employee.emergencyContactName,
+          'emergencyContactPhone': employee.emergencyContactPhone,
+          'employmentType': employee.employmentType,
+          if (employee.dateOfBirth.isNotEmpty) 'dateOfBirth': employee.dateOfBirth,
+          if (employee.joiningDate.isNotEmpty) 'joiningDate': employee.joiningDate,
+          'isAttendanceTracked': employee.isAttendanceTracked,
+          'departmentCategory': employee.departmentCategory,
+        }),
+      );
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final decoded = json.decode(res.body);
+        final created = Employee.fromJson(decoded as Map<String, dynamic>);
+        _updateLocalCache(created);
+        return created;
+      }
+    } catch (e) {
+      debugPrint('Create employee API error: $e');
+    }
+
+    final newId = employee.id.isNotEmpty ? employee.id : (DateTime.now().millisecondsSinceEpoch % 100000).toString();
     final assignedCode = employee.employeeCode.isNotEmpty ? employee.employeeCode : 'EMP-$newId';
-    
     final created = employee.copyWith(
-      id: employee.id.isNotEmpty ? employee.id : newId,
+      id: newId,
       employeeCode: assignedCode,
     );
-    
-    cache.insert(0, created);
+    _updateLocalCache(created);
     return created;
   }
 
   @override
   Future<Employee> updateEmployee(Employee employee) async {
-    final cache = _getEffectiveCache();
-    final index = cache.indexWhere((e) => e.id == employee.id);
-    if (index != -1) {
-      cache[index] = employee;
-      return employee;
-    } else {
-      cache.insert(0, employee);
-      return employee;
+    final url = Uri.parse('$_baseUrl/api/v1/employees/${employee.id}');
+    try {
+      final res = await http.put(
+        url,
+        headers: AuthStorage.authHeaders,
+        body: json.encode({
+          'firstName': employee.firstName,
+          'lastName': employee.lastName,
+          'email': employee.email,
+          'phoneNumber': employee.phone,
+          'department': employee.department,
+          'designation': employee.designation,
+          'role': employee.role,
+          'status': employee.status,
+          'address': employee.address,
+          'emergencyContactName': employee.emergencyContactName,
+          'emergencyContactPhone': employee.emergencyContactPhone,
+          'employmentType': employee.employmentType,
+          if (employee.dateOfBirth.isNotEmpty) 'dateOfBirth': employee.dateOfBirth,
+          if (employee.joiningDate.isNotEmpty) 'joiningDate': employee.joiningDate,
+          'isAttendanceTracked': employee.isAttendanceTracked,
+          'departmentCategory': employee.departmentCategory,
+          if (employee.lateArrivalAllowedUntil != null) 'lateArrivalAllowedUntil': employee.lateArrivalAllowedUntil,
+          if (employee.earlyOutAllowedAfter != null) 'earlyOutAllowedAfter': employee.earlyOutAllowedAfter,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final decoded = json.decode(res.body);
+        final updated = Employee.fromJson(decoded as Map<String, dynamic>);
+        _updateLocalCache(updated);
+        return updated;
+      }
+    } catch (e) {
+      debugPrint('Update employee API error: $e');
     }
+
+    _updateLocalCache(employee);
+    return employee;
   }
 
   @override
   Future<bool> toggleEmployeeStatus(String id, String newStatus) async {
-    final cache = _getEffectiveCache();
-    final index = cache.indexWhere((e) => e.id == id);
-    if (index != -1) {
-      final emp = cache[index];
-      final isProbation = (newStatus.toUpperCase() == 'PROBATION');
-      final isNotice = (newStatus.toUpperCase() == 'NOTICE' || newStatus.toUpperCase() == 'NOTICE_PERIOD');
-      cache[index] = emp.copyWith(
-        status: newStatus.toUpperCase(),
-        isProbation: isProbation ? true : emp.isProbation,
-        isNoticePeriod: isNotice ? true : (newStatus.toUpperCase() == 'ACTIVE' ? false : emp.isNoticePeriod),
-      );
-      return true;
-    }
-    return false;
+    final emp = await getEmployeeById(id);
+    if (emp == null) return false;
+    final isProbation = (newStatus.toUpperCase() == 'PROBATION');
+    final isNotice = (newStatus.toUpperCase() == 'NOTICE' || newStatus.toUpperCase() == 'NOTICE_PERIOD');
+    final updated = emp.copyWith(
+      status: newStatus.toUpperCase(),
+      isProbation: isProbation ? true : emp.isProbation,
+      isNoticePeriod: isNotice ? true : (newStatus.toUpperCase() == 'ACTIVE' ? false : emp.isNoticePeriod),
+    );
+    await updateEmployee(updated);
+    return true;
   }
 
   @override
@@ -136,9 +207,14 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
         headers: AuthStorage.authHeaders,
         body: json.encode({'managerId': int.tryParse(managerId)}),
       );
-      return res.statusCode == 200;
-    } catch (_) {
-      return true;
+      if (res.statusCode == 200) {
+        await getEmployeeById(employeeId);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Assign manager API error: $e');
+      return false;
     }
   }
 
@@ -155,9 +231,14 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
           if (earlyOutAllowedAfter != null) 'earlyOutAllowedAfter': earlyOutAllowedAfter,
         }),
       );
-      return res.statusCode == 200;
-    } catch (_) {
-      return true;
+      if (res.statusCode == 200) {
+        await getEmployeeById(employeeId);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Update permissions API error: $e');
+      return false;
     }
   }
 
@@ -173,8 +254,18 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
           'authorities': authorities,
         }),
       );
-      return res.statusCode == 200;
-    } catch (_) {
+      if (res.statusCode == 200) {
+        final decoded = json.decode(res.body);
+        if (decoded is Map<String, dynamic>) {
+          _updateLocalCache(Employee.fromJson(decoded));
+        } else {
+          await getEmployeeById(employeeId);
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Elevate role and authorities API error: $e');
       return false;
     }
   }
@@ -201,7 +292,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
     }
 
     // Local fallback/mock pagination
-    final mockList = _getEffectiveCache();
+    final mockList = _cachedEmployees ?? _getMockEmployeeList();
     if (query != null && query.isNotEmpty) {
       final lower = query.toLowerCase();
       final filtered = mockList.where((e) =>

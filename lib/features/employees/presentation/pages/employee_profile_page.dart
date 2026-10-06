@@ -628,10 +628,12 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   }
 
   void _showAssignManagerDialog(Employee emp) {
-    Employee? selectedPrimaryManager;
-    final List<Employee> selectedSecondaryApprovers = [];
+    Employee? selectedManager;
     List<Employee> availableEmployees = [];
     bool isLoadingList = true;
+    bool isSaving = false;
+    String searchQuery = '';
+    final searchController = TextEditingController();
 
     showDialog(
       context: context,
@@ -651,11 +653,12 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
                     if (availableEmployees.isNotEmpty) {
                       try {
-                        selectedPrimaryManager = availableEmployees.firstWhere(
-                          (e) => e.name.toLowerCase() == emp.managerName.toLowerCase() || (emp.managerId != null && e.id == emp.managerId)
+                        selectedManager = availableEmployees.firstWhere(
+                          (e) => (emp.managerId != null && emp.managerId!.isNotEmpty && e.id == emp.managerId) ||
+                                 (emp.managerName.isNotEmpty && e.name.toLowerCase() == emp.managerName.toLowerCase()),
                         );
                       } catch (_) {
-                        selectedPrimaryManager = availableEmployees.first;
+                        selectedManager = null;
                       }
                     }
                     isLoadingList = false;
@@ -665,6 +668,14 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             }
 
             final isDark = Theme.of(context).brightness == Brightness.dark;
+            final filteredEmployees = availableEmployees.where((e) {
+              if (searchQuery.trim().isEmpty) return true;
+              final q = searchQuery.toLowerCase();
+              return e.name.toLowerCase().contains(q) ||
+                     e.email.toLowerCase().contains(q) ||
+                     e.role.toLowerCase().contains(q) ||
+                     e.department.toLowerCase().contains(q);
+            }).toList();
 
             return Dialog(
               backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
@@ -692,114 +703,232 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Assign Manager & Leave Approvers', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                                const Text('Assign Manager & Leave Approver', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                                 const SizedBox(height: 2),
-                                Text('Set reporting lead and optional secondary approvers for ${emp.name}.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                Text('Select reporting lead and primary leave approver for ${emp.name}.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      const Divider(height: 1),
                       const SizedBox(height: 16),
+                      TextField(
+                        controller: searchController,
+                        onChanged: (val) {
+                          setDialogState(() {
+                            searchQuery = val;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search by name, role, department...',
+                          hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF0D9488)),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setDialogState(() {
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
 
                       if (isLoadingList)
                         const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))))
-                      else ...[
-                        Text('1. Primary Reporting Manager*', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<Employee>(
-                              value: selectedPrimaryManager,
-                              isExpanded: true,
-                              icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF0D9488)),
-                              dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              items: availableEmployees.map((mgr) {
-                                return DropdownMenuItem<Employee>(
-                                  value: mgr,
+                      else
+                        Expanded(
+                          child: ListView.separated(
+                            itemCount: filteredEmployees.length + 1,
+                            separatorBuilder: (context, index) => const SizedBox(height: 6),
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                final isSelected = selectedManager == null;
+                                return InkWell(
+                                  onTap: () {
+                                    setDialogState(() {
+                                      selectedManager = null;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF0D9488).withValues(alpha: 0.1)
+                                          : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected ? const Color(0xFF0D9488) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                                        width: isSelected ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                                          child: const Icon(Icons.person_off_rounded, size: 16, color: Colors.grey),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('No Direct Manager', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                              Text('Reports directly to Super Admin / HR', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 22,
+                                          height: 22,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: isSelected ? const Color(0xFF0D9488) : Colors.transparent,
+                                            border: Border.all(
+                                              color: isSelected ? const Color(0xFF0D9488) : (isDark ? Colors.white38 : Colors.black26),
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: isSelected
+                                              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final candidate = filteredEmployees[index - 1];
+                              final isSelected = selectedManager?.id == candidate.id;
+                              final isCurrentManager = (emp.managerId != null && candidate.id == emp.managerId) ||
+                                                       (emp.managerName.isNotEmpty && candidate.name.toLowerCase() == emp.managerName.toLowerCase());
+
+                              return InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedManager = candidate;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFF0D9488).withValues(alpha: 0.1)
+                                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF0D9488) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
                                   child: Row(
                                     children: [
                                       CircleAvatar(
-                                        radius: 12,
+                                        radius: 16,
                                         backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                                        child: Text(mgr.name.isNotEmpty ? mgr.name[0] : 'E', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
                                         child: Text(
-                                          '${mgr.name} (${mgr.role} • ${mgr.department})',
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                          overflow: TextOverflow.ellipsis,
+                                          candidate.name.isNotEmpty ? candidate.name[0].toUpperCase() : 'E',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                                         ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    candidate.name,
+                                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isCurrentManager) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.amber.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: const Text('Current', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${candidate.email} • ${candidate.role} • ${candidate.department}',
+                                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 22,
+                                        height: 22,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isSelected ? const Color(0xFF0D9488) : Colors.transparent,
+                                          border: Border.all(
+                                            color: isSelected ? const Color(0xFF0D9488) : (isDark ? Colors.white38 : Colors.black26),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: isSelected
+                                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                                            : null,
                                       ),
                                     ],
                                   ),
-                                );
-                              }).toList(),
-                              onChanged: (newVal) {
-                                setDialogState(() {
-                                  selectedPrimaryManager = newVal;
-                                });
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(height: 20),
 
-                        Text('2. Secondary Co-Approvers (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                            ),
-                            child: ListView.separated(
-                              itemCount: availableEmployees.length,
-                              separatorBuilder: (context, index) => const Divider(height: 1),
-                              itemBuilder: (context, index) {
-                                final candidate = availableEmployees[index];
-                                if (candidate.id == selectedPrimaryManager?.id) {
-                                  return const SizedBox.shrink();
-                                }
-                                final isChecked = selectedSecondaryApprovers.contains(candidate);
-                                return CheckboxListTile(
-                                  dense: true,
-                                  value: isChecked,
-                                  activeColor: const Color(0xFF0D9488),
-                                  title: Text(candidate.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${candidate.email} • ${candidate.role}', style: const TextStyle(fontSize: 11)),
-                                  secondary: CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                                    child: Text(candidate.name[0], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
-                                  ),
-                                  onChanged: (checked) {
-                                    setDialogState(() {
-                                      if (checked == true) {
-                                        selectedSecondaryApprovers.add(candidate);
-                                      } else {
-                                        selectedSecondaryApprovers.remove(candidate);
-                                      }
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF0D9488)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                selectedManager != null
+                                    ? 'Assigned Approver: ${selectedManager!.name} (${selectedManager!.role} • ${selectedManager!.department})'
+                                    : 'Assigned Approver: None (Reports to HR)',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                      const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -809,52 +938,36 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           ),
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
-                            onPressed: () async {
-                              if (selectedPrimaryManager != null) {
-                                await _repository.assignManager(emp.id, selectedPrimaryManager!.id);
-                                if (mounted) {
-                                  setState(() {
-                                    _employee = Employee(
-                                      id: emp.id,
-                                      employeeCode: emp.employeeCode,
-                                      name: emp.name,
-                                      firstName: emp.firstName,
-                                      lastName: emp.lastName,
-                                      role: emp.role,
-                                      department: emp.department,
-                                      designation: emp.designation,
-                                      status: emp.status,
-                                      email: emp.email,
-                                      phone: emp.phone,
-                                      managerName: selectedPrimaryManager!.name,
-                                      managerId: selectedPrimaryManager!.id,
-                                      dateOfBirth: emp.dateOfBirth,
-                                      joiningDate: emp.joiningDate,
-                                      employmentType: emp.employmentType,
-                                      address: emp.address,
-                                      location: emp.location,
-                                      emergencyContactName: emp.emergencyContactName,
-                                      emergencyContactPhone: emp.emergencyContactPhone,
-                                      leaveBalance: emp.leaveBalance,
-                                      attendanceRate: emp.attendanceRate,
-                                      isAttendanceTracked: emp.isAttendanceTracked,
-                                      departmentCategory: emp.departmentCategory,
-                                    );
-                                  });
-                                }
+                            onPressed: isSaving ? null : () async {
+                              setDialogState(() => isSaving = true);
+                              final targetManagerId = selectedManager?.id ?? '';
+                              final success = await _repository.assignManager(emp.id, targetManagerId);
+                              if (mounted && success) {
+                                setState(() {
+                                  _employee = emp.copyWith(
+                                    managerName: selectedManager?.name ?? 'Not Assigned',
+                                    managerId: selectedManager?.id,
+                                  );
+                                });
                               }
                               if (context.mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Assigned ${selectedPrimaryManager?.name ?? "Manager"} as Leave Approver for ${emp.name}!'),
+                                    content: Text(
+                                      selectedManager != null
+                                          ? 'Assigned ${selectedManager!.name} as Leave Approver for ${emp.name}!'
+                                          : 'Removed manager for ${emp.name}!',
+                                    ),
                                     backgroundColor: const Color(0xFF0D9488),
                                   ),
                                 );
                                 _fetchEmployee(emp.id);
                               }
                             },
-                            icon: const Icon(Icons.check_rounded, size: 18),
+                            icon: isSaving
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.check_rounded, size: 18),
                             label: const Text('Save Assignment', style: TextStyle(fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D9488),
