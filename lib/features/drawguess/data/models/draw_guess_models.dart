@@ -95,6 +95,7 @@ class DrawPoint {
 }
 
 class DrawStroke {
+  final String? strokeId;
   final String roomCode;
   final StrokeType strokeType;
   final Color color;
@@ -103,6 +104,7 @@ class DrawStroke {
   final int timestamp;
 
   DrawStroke({
+    this.strokeId,
     required this.roomCode,
     this.strokeType = StrokeType.draw,
     this.color = const Color(0xFF000000),
@@ -112,6 +114,7 @@ class DrawStroke {
   }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
 
   Map<String, dynamic> toJson() => {
+        if (strokeId != null) 'strokeId': strokeId,
         'roomCode': roomCode,
         'strokeType': strokeType.name.toUpperCase(),
         'color': '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}',
@@ -140,6 +143,7 @@ class DrawStroke {
         [];
 
     return DrawStroke(
+      strokeId: json['strokeId'] as String?,
       roomCode: json['roomCode'] as String? ?? '',
       strokeType: StrokeType.fromString(json['strokeType'] as String?),
       color: parsedColor,

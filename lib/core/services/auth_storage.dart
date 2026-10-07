@@ -67,6 +67,9 @@ class AuthStorage {
   static bool get canManagePayroll =>
       isAdmin || isHr || hasAuthority('PAYROLL_MANAGE');
 
+  static bool get canManageSalaryStructure =>
+      isAdmin || hasAuthority('SALARY_STRUCTURE_MANAGE');
+
   static bool get canApproveAllLeaves =>
       isAdmin || isHr || hasAuthority('LEAVE_APPROVE_ALL');
 

@@ -1392,6 +1392,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
     bool hasPayrollManage = emp.authorities.contains('PAYROLL_MANAGE');
     bool hasLeaveApproveAll = emp.authorities.contains('LEAVE_APPROVE_ALL');
+    bool hasSalaryStructureManage = emp.authorities.contains('SALARY_STRUCTURE_MANAGE');
     bool isSaving = false;
 
     showDialog(
@@ -1466,7 +1467,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                 child: Text(
                                   isTargetSuperAdmin
                                       ? 'Super Administrator account is root protected and cannot be modified.'
-                                      : 'Admins cannot modify or reassign roles for other Admins or Super Admins. Only Super Admin has this privilege.',
+                                      : 'Admins cannot modify, demote, or reassign roles for existing Admins or Super Admins. Only Super Admin has demotion privileges.',
                                   style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -1603,7 +1604,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                     Row(
                                       children: [
                                         const Text(
-                                          'Full Admin Access',
+                                          'Full Admin Access (Co-Leader)',
                                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                         ),
                                         const SizedBox(width: 8),
@@ -1625,16 +1626,13 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                       'Grants full administrative capabilities across Payroll, Leaves, Attendance, Holidays, Games, and non-admin employee management alongside their job title.',
                                       style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                                     ),
-                                    if (!isActorSuperAdmin) ...[
-                                      const SizedBox(height: 6),
-                                      const Row(
-                                        children: [
-                                          Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF94A3B8)),
-                                          SizedBox(width: 4),
-                                          Text('Only Super Admin can grant or revoke Admin status', style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
-                                        ],
-                                      ),
-                                    ],
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      isActorSuperAdmin
+                                          ? 'Super Admin holds root control: can grant or revoke Admin status.'
+                                          : 'Co-leader model: Admins can promote employees to Admin. Note: Demoting an Admin requires Super Admin login.',
+                                      style: const TextStyle(fontSize: 10.5, color: Color(0xFF6366F1), fontWeight: FontWeight.w600),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1642,7 +1640,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               Switch(
                                 value: selectedSystemRole == 'ADMIN',
                                 activeThumbColor: const Color(0xFF8B5CF6),
-                                onChanged: (!isActorSuperAdmin || isSaving || isLocked)
+                                onChanged: (isSaving || isLocked)
                                     ? null
                                     : (val) {
                                         setDialogState(() => selectedSystemRole = val ? 'ADMIN' : 'NONE');
@@ -1700,7 +1698,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                   Row(
                                     children: [
                                       const Text(
-                                        'Payroll Manager Access',
+                                        'Payroll Operations Access',
                                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                       ),
                                       const SizedBox(width: 8),
@@ -1719,7 +1717,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Grants authority to run monthly payroll, configure salary structures, lock/unlock LOP inputs, and export payout files.',
+                                    'Grants authority to run monthly payroll, calculate taxes, lock/unlock LOP inputs, and export payout files.',
                                     style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                                   ),
                                   if (effectiveAdmin) ...[
@@ -1743,7 +1741,83 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         ),
                       ),
 
-                      // Authority 2: LEAVE_APPROVE_ALL
+                      // Authority 2: SALARY_STRUCTURE_MANAGE
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: hasSalaryStructureManage || effectiveAdmin
+                                ? const Color(0xFF10B981)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: hasSalaryStructureManage || effectiveAdmin ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF10B981), size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Salary Structure & Compensation',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'SALARY_STRUCTURE_MANAGE',
+                                          style: TextStyle(color: Color(0xFF10B981), fontSize: 9, fontWeight: FontWeight.w800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Grants authority to create, alter, and revise base salaries, allowances, and compensation master structures for any employee.',
+                                    style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  ),
+                                  if (effectiveAdmin) ...[
+                                    const SizedBox(height: 4),
+                                    const Text('Included automatically via Admin access tier', style: TextStyle(fontSize: 10.5, color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: effectiveAdmin ? true : hasSalaryStructureManage,
+                              activeThumbColor: const Color(0xFF10B981),
+                              onChanged: (effectiveAdmin || isSaving || isLocked)
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() => hasSalaryStructureManage = val);
+                                    },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Authority 3: LEAVE_APPROVE_ALL
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -1838,6 +1912,9 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                     final List<String> targetAuthorities = [];
                                     if (hasPayrollManage || effectiveAdmin) {
                                       targetAuthorities.add('PAYROLL_MANAGE');
+                                    }
+                                    if (hasSalaryStructureManage || effectiveAdmin) {
+                                      targetAuthorities.add('SALARY_STRUCTURE_MANAGE');
                                     }
                                     if (hasLeaveApproveAll || effectiveAdmin) {
                                       targetAuthorities.add('LEAVE_APPROVE_ALL');

@@ -27,16 +27,16 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
   final List<DrawPoint> _currentPoints = [];
   int _lastStreamTimestamp = 0;
   int _streamStartIndex = 0;
+  String? _currentStrokeId;
 
   void _handlePanStart(DragStartDetails details, BoxConstraints constraints) {
     if (!widget.isDrawer) return;
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final localPos = renderBox.globalToLocal(details.globalPosition);
 
-    // Normalize coordinates to 0.0 - 1.0 space for resolution independence
-    final normX = (localPos.dx / renderBox.size.width).clamp(0.0, 1.0);
-    final normY = (localPos.dy / renderBox.size.height).clamp(0.0, 1.0);
+    // Use details.localPosition directly within the AspectRatio canvas bounds
+    final normX = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+    final normY = (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0);
 
+    _currentStrokeId = DateTime.now().microsecondsSinceEpoch.toString();
     _lastStreamTimestamp = DateTime.now().millisecondsSinceEpoch;
     _streamStartIndex = 0;
 
@@ -48,11 +48,9 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
 
   void _handlePanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
     if (!widget.isDrawer) return;
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final localPos = renderBox.globalToLocal(details.globalPosition);
 
-    final normX = (localPos.dx / renderBox.size.width).clamp(0.0, 1.0);
-    final normY = (localPos.dy / renderBox.size.height).clamp(0.0, 1.0);
+    final normX = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
+    final normY = (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0);
 
     setState(() {
       _currentPoints.add(DrawPoint(x: normX, y: normY));
@@ -68,6 +66,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
           : widget.selectedColor;
 
       final segmentStroke = DrawStroke(
+        strokeId: _currentStrokeId,
         roomCode: '',
         strokeType: widget.selectedTool,
         color: color,
@@ -90,6 +89,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
           : widget.selectedColor;
 
       final finalStroke = DrawStroke(
+        strokeId: _currentStrokeId,
         roomCode: '',
         strokeType: widget.selectedTool,
         color: color,
@@ -103,6 +103,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
           ? const Color(0xFFFFFFFF)
           : widget.selectedColor;
       final dotStroke = DrawStroke(
+        strokeId: _currentStrokeId,
         roomCode: '',
         strokeType: widget.selectedTool,
         color: color,
@@ -115,6 +116,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
     setState(() {
       _currentPoints.clear();
       _streamStartIndex = 0;
+      _currentStrokeId = null;
     });
   }
 

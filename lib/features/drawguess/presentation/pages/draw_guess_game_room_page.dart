@@ -60,6 +60,12 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
   bool _isWordSelectionOpen = false;
   bool _isRoundResultOpen = false;
   bool _isFinalResultOpen = false;
+  bool _isStartingGame = false;
+
+  bool get _isDrawer {
+    final currentEmpId = AuthStorage.employeeId;
+    return currentEmpId != null && currentEmpId == _activeDrawerId;
+  }
 
   Timer? _localTicker;
   Timer? _lobbyPollTimer;
@@ -212,6 +218,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
 
       case 'GAME_STARTING':
         setState(() {
+          _isStartingGame = false;
           _room = _room != null
               ? DrawGuessRoom(
                   id: _room!.id,
@@ -231,6 +238,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
 
       case 'DRAWER_CHOOSING_WORD':
         setState(() {
+          _isStartingGame = false;
           _activeDrawerId = event['drawerId'] as int?;
           _secretWord = null;
           _hintPattern = null;
@@ -322,6 +330,10 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
       case 'STROKE':
         final strokeData = event['stroke'] as Map<String, dynamic>?;
         if (strokeData != null) {
+          if (_isDrawer) {
+            // Already painted and stored locally on drawer side; ignore echoed broadcast
+            break;
+          }
           final stroke = DrawStroke.fromJson(strokeData);
           setState(() {
             _strokes.add(stroke);
@@ -336,11 +348,19 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         break;
 
       case 'UNDO_STROKE':
-        if (_strokes.isNotEmpty) {
-          setState(() {
-            _strokes.removeLast();
-          });
-        }
+        final undoneStrokeId = event['strokeId'] as String?;
+        setState(() {
+          if (undoneStrokeId != null && undoneStrokeId.isNotEmpty) {
+            _strokes.removeWhere((s) => s.strokeId == undoneStrokeId);
+          } else if (_strokes.isNotEmpty) {
+            final lastId = _strokes.last.strokeId;
+            if (lastId != null && lastId.isNotEmpty) {
+              _strokes.removeWhere((s) => s.strokeId == lastId);
+            } else {
+              _strokes.removeLast();
+            }
+          }
+        });
         break;
 
       case 'HINT_REVEALED':
@@ -534,6 +554,18 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           _remainingSeconds--;
         } else {
           _localTicker?.cancel();
+          // Watchdog: If state is drawing or wordSelection and timer reached 0,
+          // refresh room state after 2s if ROUND_ENDED hasn't arrived
+          if (_room?.state == DrawGuessGameState.drawing ||
+              _room?.state == DrawGuessGameState.wordSelection) {
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted &&
+                  (_room?.state == DrawGuessGameState.drawing ||
+                   _room?.state == DrawGuessGameState.wordSelection)) {
+                _refreshRoomQuietly();
+              }
+            });
+          }
         }
       });
     });
@@ -637,8 +669,13 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
 
   void _handleUndoStroke() {
     if (_strokes.isNotEmpty) {
+      final lastId = _strokes.last.strokeId;
       setState(() {
-        _strokes.removeLast();
+        if (lastId != null && lastId.isNotEmpty) {
+          _strokes.removeWhere((s) => s.strokeId == lastId);
+        } else {
+          _strokes.removeLast();
+        }
       });
       _socketService.sendUndo();
     }
@@ -649,6 +686,10 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
   }
 
   void _handleStartGame() {
+    if (_isStartingGame) return;
+    setState(() {
+      _isStartingGame = true;
+    });
     _socketService.sendStartGame();
   }
 
@@ -967,9 +1008,18 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton.icon(
-                        onPressed: players.length >= 2 ? _handleStartGame : null,
-                        icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                        label: const Text('Start Game', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        onPressed: (players.length >= 2 && !_isStartingGame) ? _handleStartGame : null,
+                        icon: _isStartingGame
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                              )
+                            : const Icon(Icons.play_arrow_rounded, size: 22),
+                        label: Text(
+                          _isStartingGame ? 'Starting Game...' : 'Start Game',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
@@ -1038,7 +1088,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         final isDesktop = constraints.maxWidth > 850;
 
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Column(
             children: [
               // Hint Bar
@@ -1049,7 +1099,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                 isDrawer: isDrawer,
                 secretWord: _secretWord,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Main Workspace (Canvas + Sidebar)
               Expanded(
@@ -1057,9 +1107,20 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Left 70%: Canvas & Toolbar
+                          // Left: Small Side Ranking Board (skribbl style)
+                          SizedBox(
+                            width: 155,
+                            child: DrawGuessScoreboardWidget(
+                              players: _room?.players ?? [],
+                              activeDrawerId: _activeDrawerId,
+                              onOpenFullLeaderboard: _openFullLeaderboard,
+                              isCompact: false,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Center: Canvas & Toolbar
                           Expanded(
-                            flex: 7,
                             child: Column(
                               children: [
                                 Expanded(
@@ -1073,7 +1134,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                                   ),
                                 ),
                                 if (isDrawer) ...[
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 8),
                                   DrawingToolbarWidget(
                                     selectedColor: _selectedColor,
                                     selectedBrushSize: _selectedBrushSize,
@@ -1088,127 +1149,87 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 14),
+                          const SizedBox(width: 10),
 
-                          // Right 30%: Scoreboard + Guess Feed
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  flex: 4,
-                                  child: DrawGuessScoreboardWidget(
-                                    players: _room?.players ?? [],
-                                    activeDrawerId: _activeDrawerId,
-                                    onOpenFullLeaderboard: _openFullLeaderboard,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Expanded(
-                                  flex: 6,
-                                  child: DrawGuessChatPanel(
-                                    messages: _messages,
-                                    isDrawer: isDrawer,
-                                    hasGuessedCorrectly: hasGuessedCorrectly,
-                                    onSendGuess: _handleSendGuess,
-                                  ),
-                                ),
-                              ],
+                          // Right: Squeezed Chat & Guess Feed
+                          SizedBox(
+                            width: 270,
+                            child: DrawGuessChatPanel(
+                              messages: _messages,
+                              isDrawer: isDrawer,
+                              hasGuessedCorrectly: hasGuessedCorrectly,
+                              onSendGuess: _handleSendGuess,
+                              isCompact: false,
                             ),
                           ),
                         ],
                       )
                     : Column(
                         children: [
-                          // Mobile Mini Player Strip
-                          SizedBox(
-                            height: 38,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: (_room?.players ?? []).length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 8),
-                              itemBuilder: (context, idx) {
-                                final p = (_room?.players ?? [])[idx];
-                                final isPDrawing = p.employeeId == _activeDrawerId;
-                                return InkWell(
-                                  onTap: _openFullLeaderboard,
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: p.hasGuessedCorrectly
-                                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                          : (isPDrawing
-                                              ? const Color(0xFF6366F1).withValues(alpha: 0.15)
-                                              : (Theme.of(context).brightness == Brightness.dark
-                                                  ? const Color(0xFF1E293B)
-                                                  : Colors.white)),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: p.hasGuessedCorrectly
-                                            ? const Color(0xFF10B981)
-                                            : (isPDrawing
-                                                ? const Color(0xFF6366F1)
-                                                : (Theme.of(context).brightness == Brightness.dark
-                                                    ? Colors.white10
-                                                    : const Color(0xFFE2E8F0))),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (isPDrawing) const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF6366F1)),
-                                        if (p.hasGuessedCorrectly) const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
-                                        if (isPDrawing || p.hasGuessedCorrectly) const SizedBox(width: 4),
-                                        Text(
-                                          p.employeeName,
-                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '${p.score}',
-                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6366F1)),
-                                        ),
-                                      ],
+                          // Main Canvas & Side Ranking Board Row
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Small Side Ranking Board (skribbl style) - responsive, slightly broader & vertically centered
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: SizedBox(
+                                    width: constraints.maxWidth > 600 ? 140 : (constraints.maxWidth > 400 ? 125 : 108),
+                                    child: DrawGuessScoreboardWidget(
+                                      players: _room?.players ?? [],
+                                      activeDrawerId: _activeDrawerId,
+                                      onOpenFullLeaderboard: _openFullLeaderboard,
+                                      isCompact: true,
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(width: 8),
+
+                                // Canvas + Toolbar
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        child: DrawingCanvasWidget(
+                                          isDrawer: isDrawer,
+                                          selectedColor: _selectedColor,
+                                          selectedBrushSize: _selectedBrushSize,
+                                          selectedTool: _selectedTool,
+                                          strokes: _strokes,
+                                          onStrokeCompleted: _handleStrokeCompleted,
+                                        ),
+                                      ),
+                                      if (isDrawer) ...[
+                                        const SizedBox(height: 6),
+                                        DrawingToolbarWidget(
+                                          selectedColor: _selectedColor,
+                                          selectedBrushSize: _selectedBrushSize,
+                                          selectedTool: _selectedTool,
+                                          onColorChanged: (c) => setState(() => _selectedColor = c),
+                                          onBrushSizeChanged: (s) => setState(() => _selectedBrushSize = s),
+                                          onToolChanged: (t) => setState(() => _selectedTool = t),
+                                          onUndo: _handleUndoStroke,
+                                          onClear: _handleClearCanvas,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Expanded(
-                            flex: 6,
-                            child: DrawingCanvasWidget(
-                              isDrawer: isDrawer,
-                              selectedColor: _selectedColor,
-                              selectedBrushSize: _selectedBrushSize,
-                              selectedTool: _selectedTool,
-                              strokes: _strokes,
-                              onStrokeCompleted: _handleStrokeCompleted,
-                            ),
-                          ),
-                          if (isDrawer) ...[
-                            const SizedBox(height: 8),
-                            DrawingToolbarWidget(
-                              selectedColor: _selectedColor,
-                              selectedBrushSize: _selectedBrushSize,
-                              selectedTool: _selectedTool,
-                              onColorChanged: (c) => setState(() => _selectedColor = c),
-                              onBrushSizeChanged: (s) => setState(() => _selectedBrushSize = s),
-                              onToolChanged: (t) => setState(() => _selectedTool = t),
-                              onUndo: _handleUndoStroke,
-                              onClear: _handleClearCanvas,
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          Expanded(
-                            flex: 4,
+
+                          // Squeezed Chat & Guess Feed
+                          SizedBox(
+                            height: 145,
                             child: DrawGuessChatPanel(
                               messages: _messages,
                               isDrawer: isDrawer,
                               hasGuessedCorrectly: hasGuessedCorrectly,
                               onSendGuess: _handleSendGuess,
+                              isCompact: true,
                             ),
                           ),
                         ],

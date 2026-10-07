@@ -6,6 +6,7 @@ class DrawGuessChatPanel extends StatefulWidget {
   final bool isDrawer;
   final bool hasGuessedCorrectly;
   final ValueChanged<String> onSendGuess;
+  final bool isCompact;
 
   const DrawGuessChatPanel({
     super.key,
@@ -13,6 +14,7 @@ class DrawGuessChatPanel extends StatefulWidget {
     required this.isDrawer,
     required this.hasGuessedCorrectly,
     required this.onSendGuess,
+    this.isCompact = false,
   });
 
   @override
@@ -59,6 +61,7 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final compact = widget.isCompact;
 
     return Container(
       decoration: BoxDecoration(
@@ -67,12 +70,22 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
         border: Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 16,
+              vertical: compact ? 6 : 10,
+            ),
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
@@ -82,22 +95,34 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF6366F1)),
-                const SizedBox(width: 8),
-                const Text(
-                  'GUESS & CHAT FEED',
+                Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: compact ? 14 : 18,
+                  color: const Color(0xFF6366F1),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  compact ? 'GUESS & CHAT FEED' : 'GUESS & CHAT FEED',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: compact ? 10 : 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${widget.messages.length} messages',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${widget.messages.length}',
+                    style: TextStyle(
+                      fontSize: compact ? 9 : 11,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                    ),
                   ),
                 ),
               ],
@@ -111,25 +136,28 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
                     child: Text(
                       'Type guesses below...',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: compact ? 11 : 13,
                         color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                       ),
                     ),
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 8 : 12,
+                      vertical: compact ? 4 : 8,
+                    ),
                     itemCount: widget.messages.length,
                     itemBuilder: (context, index) {
                       final msg = widget.messages[index];
-                      return _buildMessageItem(context, msg);
+                      return _buildMessageItem(context, msg, compact);
                     },
                   ),
           ),
 
           // Input Box
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(compact ? 6 : 10),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
@@ -145,45 +173,54 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
                     enabled: !widget.isDrawer,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _submit(),
+                    style: TextStyle(fontSize: compact ? 12 : 13),
                     decoration: InputDecoration(
+                      isDense: compact,
                       hintText: widget.isDrawer
                           ? 'You are drawing! No guessing.'
                           : (widget.hasGuessedCorrectly
                               ? 'You guessed correctly! Chat here...'
                               : 'Type your guess here...'),
                       hintStyle: TextStyle(
-                        fontSize: 13,
+                        fontSize: compact ? 11 : 13,
                         color: isDark ? Colors.white30 : const Color(0xFF94A3B8),
                       ),
                       filled: true,
                       fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: compact ? 10 : 14,
+                        vertical: compact ? 6 : 10,
+                      ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
                           color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
                           color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
+                SizedBox(width: compact ? 4 : 8),
+                IconButton(
                   onPressed: widget.isDrawer ? null : _submit,
-                  icon: const Icon(Icons.send_rounded, size: 18),
+                  icon: Icon(Icons.send_rounded, size: compact ? 15 : 18),
                   style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFF6366F1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
+                    padding: EdgeInsets.all(compact ? 6 : 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
@@ -194,29 +231,32 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
     );
   }
 
-  Widget _buildMessageItem(BuildContext context, ChatMessageItem msg) {
+  Widget _buildMessageItem(BuildContext context, ChatMessageItem msg, bool compact) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (msg.isCorrectGuess) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        margin: EdgeInsets.symmetric(vertical: compact ? 1.5 : 3),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 3 : 6,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF10B981).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
-            const SizedBox(width: 6),
+            Icon(Icons.check_circle_rounded, color: const Color(0xFF10B981), size: compact ? 13 : 16),
+            SizedBox(width: compact ? 4 : 6),
             Expanded(
               child: Text(
                 '${msg.senderName} guessed the word!',
-                style: const TextStyle(
-                  color: Color(0xFF10B981),
+                style: TextStyle(
+                  color: const Color(0xFF10B981),
                   fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                  fontSize: compact ? 11 : 13,
                 ),
               ),
             ),
@@ -227,24 +267,27 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
 
     if (msg.isCloseGuess) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        margin: EdgeInsets.symmetric(vertical: compact ? 1.5 : 3),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 3 : 6,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.lightbulb_rounded, color: Color(0xFFF59E0B), size: 16),
-            const SizedBox(width: 6),
+            Icon(Icons.lightbulb_rounded, color: const Color(0xFFF59E0B), size: compact ? 13 : 16),
+            SizedBox(width: compact ? 4 : 6),
             Expanded(
               child: Text(
                 msg.message,
-                style: const TextStyle(
-                  color: Color(0xFFF59E0B),
+                style: TextStyle(
+                  color: const Color(0xFFF59E0B),
                   fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                  fontSize: compact ? 11 : 13,
                 ),
               ),
             ),
@@ -254,10 +297,13 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: EdgeInsets.symmetric(vertical: compact ? 1.5 : 2.5),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : const Color(0xFF334155)),
+          style: TextStyle(
+            fontSize: compact ? 11 : 13,
+            color: isDark ? Colors.white70 : const Color(0xFF334155),
+          ),
           children: [
             TextSpan(
               text: '${msg.senderName}: ',
