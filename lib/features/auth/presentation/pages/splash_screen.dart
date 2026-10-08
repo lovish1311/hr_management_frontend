@@ -1,6 +1,7 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -85,6 +86,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (!mounted) return;
 
     final token = AuthStorage.token;
+    if (token != null && token.isNotEmpty) {
+      PermissionSocketService.instance.init();
+    }
     final targetRoute = (token != null && token.isNotEmpty)
         ? '/'
         : '/login';

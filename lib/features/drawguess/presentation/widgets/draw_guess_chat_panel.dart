@@ -24,6 +24,7 @@ class DrawGuessChatPanel extends StatefulWidget {
 class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void didUpdateWidget(covariant DrawGuessChatPanel oldWidget) {
@@ -48,12 +49,15 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
     if (text.isEmpty) return;
     widget.onSendGuess(text);
     _controller.clear();
+    // Keep focus so the player can continue typing rapid guesses
+    _focusNode.requestFocus();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -83,8 +87,8 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
           // Header
           Container(
             padding: EdgeInsets.symmetric(
-              horizontal: compact ? 10 : 16,
-              vertical: compact ? 6 : 10,
+              horizontal: compact ? 8 : 12,
+              vertical: compact ? 6 : 8,
             ),
             decoration: BoxDecoration(
               border: Border(
@@ -97,19 +101,23 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
               children: [
                 Icon(
                   Icons.chat_bubble_outline_rounded,
-                  size: compact ? 14 : 18,
+                  size: compact ? 13 : 15,
                   color: const Color(0xFF6366F1),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  compact ? 'GUESS & CHAT FEED' : 'GUESS & CHAT FEED',
-                  style: TextStyle(
-                    fontSize: compact ? 10 : 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
+                Expanded(
+                  child: Text(
+                    'GUESSES & CHAT',
+                    style: TextStyle(
+                      fontSize: compact ? 10 : 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
@@ -119,7 +127,7 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
                   child: Text(
                     '${widget.messages.length}',
                     style: TextStyle(
-                      fontSize: compact ? 9 : 11,
+                      fontSize: compact ? 9 : 10,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                     ),
@@ -133,19 +141,23 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
           Expanded(
             child: widget.messages.isEmpty
                 ? Center(
-                    child: Text(
-                      'Type guesses below...',
-                      style: TextStyle(
-                        fontSize: compact ? 11 : 13,
-                        color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        widget.isDrawer ? 'Waiting for guesses...' : 'Type guesses below...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: compact ? 11 : 12,
+                          color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                        ),
                       ),
                     ),
                   )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 8 : 12,
-                      vertical: compact ? 4 : 8,
+                      horizontal: compact ? 6 : 10,
+                      vertical: compact ? 4 : 6,
                     ),
                     itemCount: widget.messages.length,
                     itemBuilder: (context, index) {
@@ -157,7 +169,7 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
 
           // Input Box
           Container(
-            padding: EdgeInsets.all(compact ? 6 : 10),
+            padding: EdgeInsets.all(compact ? 6 : 8),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
@@ -170,26 +182,28 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    focusNode: _focusNode,
                     enabled: !widget.isDrawer,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _submit(),
-                    style: TextStyle(fontSize: compact ? 12 : 13),
+                    style: TextStyle(fontSize: compact ? 11 : 12),
                     decoration: InputDecoration(
-                      isDense: compact,
+                      isDense: true,
                       hintText: widget.isDrawer
-                          ? 'You are drawing! No guessing.'
+                          ? 'Drawing! No guessing.'
                           : (widget.hasGuessedCorrectly
-                              ? 'You guessed correctly! Chat here...'
-                              : 'Type your guess here...'),
+                              ? 'Chat here...'
+                              : 'Type your guess...'),
                       hintStyle: TextStyle(
-                        fontSize: compact ? 11 : 13,
+                        fontSize: compact ? 10 : 11,
                         color: isDark ? Colors.white30 : const Color(0xFF94A3B8),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       filled: true,
                       fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: compact ? 10 : 14,
-                        vertical: compact ? 6 : 10,
+                        horizontal: compact ? 8 : 10,
+                        vertical: compact ? 6 : 8,
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -210,16 +224,16 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
                     ),
                   ),
                 ),
-                SizedBox(width: compact ? 4 : 8),
+                SizedBox(width: compact ? 4 : 6),
                 IconButton(
                   onPressed: widget.isDrawer ? null : _submit,
-                  icon: Icon(Icons.send_rounded, size: compact ? 15 : 18),
+                  icon: Icon(Icons.send_rounded, size: compact ? 14 : 16),
                   style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFF6366F1),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                     disabledForegroundColor: isDark ? Colors.white24 : const Color(0xFF94A3B8),
-                    padding: EdgeInsets.all(compact ? 6 : 8),
+                    padding: EdgeInsets.all(compact ? 6 : 7),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
@@ -236,28 +250,28 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
 
     if (msg.isCorrectGuess) {
       return Container(
-        margin: EdgeInsets.symmetric(vertical: compact ? 1.5 : 3),
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 10,
-          vertical: compact ? 3 : 6,
-        ),
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: const Color(0xFF10B981).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.28)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle_rounded, color: const Color(0xFF10B981), size: compact ? 13 : 16),
-            SizedBox(width: compact ? 4 : 6),
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 14),
+            const SizedBox(width: 5),
             Expanded(
               child: Text(
                 '${msg.senderName} guessed the word!',
                 style: TextStyle(
                   color: const Color(0xFF10B981),
                   fontWeight: FontWeight.w700,
-                  fontSize: compact ? 11 : 13,
+                  fontSize: compact ? 10 : 11,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -267,28 +281,28 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
 
     if (msg.isCloseGuess) {
       return Container(
-        margin: EdgeInsets.symmetric(vertical: compact ? 1.5 : 3),
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 10,
-          vertical: compact ? 3 : 6,
-        ),
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.28)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.lightbulb_rounded, color: const Color(0xFFF59E0B), size: compact ? 13 : 16),
-            SizedBox(width: compact ? 4 : 6),
+            const Icon(Icons.lightbulb_rounded, color: Color(0xFFF59E0B), size: 14),
+            const SizedBox(width: 5),
             Expanded(
               child: Text(
                 msg.message,
                 style: TextStyle(
                   color: const Color(0xFFF59E0B),
                   fontWeight: FontWeight.w700,
-                  fontSize: compact ? 11 : 13,
+                  fontSize: compact ? 10 : 11,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -297,24 +311,31 @@ class _DrawGuessChatPanelState extends State<DrawGuessChatPanel> {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: compact ? 1.5 : 2.5),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(
-            fontSize: compact ? 11 : 13,
-            color: isDark ? Colors.white70 : const Color(0xFF334155),
-          ),
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text.rich(
+        TextSpan(
           children: [
             TextSpan(
               text: '${msg.senderName}: ',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
+                fontSize: compact ? 11 : 12,
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
             ),
-            TextSpan(text: msg.message),
+            TextSpan(
+              text: msg.message,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: compact ? 11 : 12,
+                color: isDark ? Colors.white70 : const Color(0xFF334155),
+              ),
+            ),
           ],
         ),
+        softWrap: true,
+        maxLines: 5,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

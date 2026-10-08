@@ -57,3 +57,9 @@ app.*.map.json
 # Documentation (Stored centrally in workspace docs/)
 /docs/
 /assets/avatars/backup/
+
+# Screenshots & Screen captures
+tablet_screen.png
+*.png
+!assets/**/*.png
+

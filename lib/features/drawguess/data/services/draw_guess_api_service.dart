@@ -99,6 +99,33 @@ class DrawGuessApiService {
     }
   }
 
+  static Future<void> restartGame(
+    String roomCode, {
+    int? maxRounds,
+    int? drawTimeSeconds,
+    int? wordChoiceCount,
+    String? category,
+    bool? customWordsOnly,
+  }) async {
+    final cleanCode = roomCode.trim().toUpperCase();
+    final url = Uri.parse('$_baseUrl/rooms/$cleanCode/restart');
+    final response = await http.post(
+      url,
+      headers: AuthStorage.authHeaders,
+      body: jsonEncode({
+        if (maxRounds != null) 'maxRounds': maxRounds,
+        if (drawTimeSeconds != null) 'drawTimeSeconds': drawTimeSeconds,
+        if (wordChoiceCount != null) 'wordChoiceCount': wordChoiceCount,
+        if (category != null && category.isNotEmpty) 'category': category,
+        if (customWordsOnly != null) 'customWordsOnly': customWordsOnly,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      _handleError(response);
+    }
+  }
+
   static Future<void> selectWord(String roomCode, String word) async {
     final cleanCode = roomCode.trim().toUpperCase();
     final url = Uri.parse('$_baseUrl/rooms/$cleanCode/select-word');

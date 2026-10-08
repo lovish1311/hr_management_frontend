@@ -4,11 +4,15 @@ import '../../data/models/draw_guess_models.dart';
 class FinalResultsDialog extends StatelessWidget {
   final FinalGameResult result;
   final VoidCallback onLeave;
+  final bool isHost;
+  final VoidCallback? onRestart;
 
   const FinalResultsDialog({
     super.key,
     required this.result,
     required this.onLeave,
+    this.isHost = false,
+    this.onRestart,
   });
 
   @override
@@ -92,22 +96,60 @@ class FinalResultsDialog extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
-            // Action Button
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: onLeave,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            // Action Buttons: Back to Game Zone & Restart Game
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Back to Game Zone', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
+                        side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: onLeave,
+                    ),
+                  ),
                 ),
-                child: const Text('Back to Game Zone', style: TextStyle(fontWeight: FontWeight.w700)),
-              ),
+                if (isHost && onRestart != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.replay_rounded, size: 18),
+                        label: const Text('Restart Game', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                        ),
+                        onPressed: onRestart,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
+            if (!isHost)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Waiting for host to restart game with new settings...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
           ],
         ),
       ),

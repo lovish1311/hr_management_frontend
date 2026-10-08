@@ -53,8 +53,8 @@ class DrawGuessScoreboardWidget extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: isCompact ? 8 : 14,
-                vertical: isCompact ? 8 : 10,
+                horizontal: isCompact ? 8 : 12,
+                vertical: isCompact ? 7 : 8,
               ),
               decoration: BoxDecoration(
                 border: Border(
@@ -67,23 +67,26 @@ class DrawGuessScoreboardWidget extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.leaderboard_rounded,
-                    size: isCompact ? 15 : 18,
+                    size: isCompact ? 14 : 16,
                     color: const Color(0xFFF59E0B),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isCompact ? 'RANKS' : 'PLAYERS',
-                    style: TextStyle(
-                      fontSize: isCompact ? 11 : 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      isCompact ? 'RANKS' : 'PLAYERS',
+                      style: TextStyle(
+                        fontSize: isCompact ? 11 : 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (onOpenFullLeaderboard != null && !isCompact) ...[
                     const SizedBox(width: 4),
                     const Icon(Icons.open_in_new_rounded, size: 12, color: Color(0xFF6366F1)),
                   ],
-                  const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
@@ -105,12 +108,15 @@ class DrawGuessScoreboardWidget extends StatelessWidget {
           ),
 
           // Player List
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.all(isCompact ? 6 : 8),
-            itemCount: sortedPlayers.length,
-            separatorBuilder: (context, index) => SizedBox(height: isCompact ? 4 : 4),
+          Expanded(
+            child: ListView.separated(
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 6 : 8,
+                vertical: isCompact ? 4 : 6,
+              ),
+              itemCount: sortedPlayers.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 3),
             itemBuilder: (context, index) {
               final player = sortedPlayers[index];
               final isDrawer = player.employeeId == activeDrawerId;
@@ -284,8 +290,9 @@ class DrawGuessScoreboardWidget extends StatelessWidget {
                 );
               },
             ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
+  }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthStorage {
@@ -7,6 +8,9 @@ class AuthStorage {
   static String? _userSystemRole;
   static int? _employeeId;
   static List<String> _authorities = [];
+
+  /// Global reactive revision notifier to trigger instant UI rebuilds across the app
+  static final ValueNotifier<int> permissionRevision = ValueNotifier<int>(0);
 
   static const String _kToken = 'auth_token';
   static const String _kEmail = 'auth_email';
@@ -52,6 +56,27 @@ class AuthStorage {
     if (authorities != null) {
       await prefs.setStringList(_kAuthorities, _authorities);
     }
+    permissionRevision.value++;
+  }
+
+  static Future<void> updatePermissionsDirect({
+    String? role,
+    String? systemRole,
+    List<String>? authorities,
+  }) async {
+    if (role != null) _userRole = role;
+    if (systemRole != null) _userSystemRole = systemRole;
+    if (authorities != null) {
+      _authorities = authorities.map((a) => a.toUpperCase()).toList();
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (role != null) await prefs.setString(_kRole, role);
+    if (systemRole != null) await prefs.setString(_kSystemRole, systemRole);
+    if (authorities != null) {
+      await prefs.setStringList(_kAuthorities, _authorities);
+    }
+    permissionRevision.value++;
   }
 
   static String? get token => _token;
@@ -126,6 +151,7 @@ class AuthStorage {
     await prefs.remove(_kSystemRole);
     await prefs.remove(_kEmpId);
     await prefs.remove(_kAuthorities);
+    permissionRevision.value++;
   }
 }
 

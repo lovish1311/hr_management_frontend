@@ -986,9 +986,11 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                 children: [
                   Icon(Icons.account_balance_outlined, size: 18, color: t.primary),
                   const SizedBox(width: 8),
-                  Text(
-                    'Company Tax Policy: New Regime (Section 115BAC)',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text),
+                  Expanded(
+                    child: Text(
+                      'Company Tax Policy: New Regime (Section 115BAC)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text),
+                    ),
                   ),
                 ],
               ),

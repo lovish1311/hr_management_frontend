@@ -25,6 +25,8 @@ class ResponsiveScaffold extends StatefulWidget {
 }
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -36,6 +38,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 800;
+            final currentRoute = ModalRoute.of(context)?.settings.name ?? '/';
 
             return Container(
               decoration: BoxDecoration(
@@ -46,6 +49,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                 ),
               ),
               child: Scaffold(
+                key: _scaffoldKey,
                 backgroundColor: Colors.transparent,
                 extendBodyBehindAppBar: false,
                 appBar: isDesktop
@@ -72,7 +76,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                             ),
                           )
                         : null),
-                drawer: isDesktop ? null : HrDrawer(key: ValueKey('drawer_${t.name}')),
+                drawer: isDesktop ? null : HrDrawer(key: ValueKey('drawer_${t.name}'), currentRoute: currentRoute),
                 floatingActionButton: widget.floatingActionButton,
                 body: Row(
                   children: [
@@ -96,6 +100,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                           alignment: Alignment.topLeft,
                           child: HrDrawer(
                             key: ValueKey('sidebar_${t.name}'),
+                            currentRoute: currentRoute,
                             onCollapse: () {
                               ResponsiveScaffold.isSidebarCollapsed.value = true;
                             },
@@ -236,7 +241,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               if (item.route != null && item.route != currentRoute) {
                 Navigator.pushReplacementNamed(context, item.route!);
               } else if (item.route == null) {
-                Scaffold.of(context).openDrawer();
+                _scaffoldKey.currentState?.openDrawer();
               }
             },
             items: items.map((item) {

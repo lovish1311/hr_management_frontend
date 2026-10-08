@@ -1601,13 +1601,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 8,
+                                      runSpacing: 4,
                                       children: [
                                         const Text(
                                           'Full Admin Access (Co-Leader)',
                                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                         ),
-                                        const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
@@ -1695,13 +1697,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       const Text(
                                         'Payroll Operations Access',
                                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                       ),
-                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
@@ -1771,13 +1775,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       const Text(
                                         'Salary Structure & Compensation',
                                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                       ),
-                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
@@ -1846,13 +1852,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       const Text(
                                         'Global Leave Approver',
                                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                       ),
-                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(

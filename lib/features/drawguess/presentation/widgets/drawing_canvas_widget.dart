@@ -1,5 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../data/models/draw_guess_models.dart';
+import 'canvas_raster_engine.dart';
 
 class DrawingCanvasWidget extends StatefulWidget {
   final bool isDrawer;
@@ -7,6 +9,7 @@ class DrawingCanvasWidget extends StatefulWidget {
   final double selectedBrushSize;
   final StrokeType selectedTool;
   final List<DrawStroke> strokes;
+  final int canvasResetEpoch;
   final Function(DrawStroke stroke)? onStrokeCompleted;
 
   const DrawingCanvasWidget({
@@ -16,6 +19,7 @@ class DrawingCanvasWidget extends StatefulWidget {
     this.selectedBrushSize = 4.0,
     this.selectedTool = StrokeType.draw,
     required this.strokes,
+    this.canvasResetEpoch = 0,
     this.onStrokeCompleted,
   });
 
@@ -24,17 +28,88 @@ class DrawingCanvasWidget extends StatefulWidget {
 }
 
 class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
+  final CanvasRasterEngine _rasterEngine = CanvasRasterEngine();
+  ui.Image? _bakedImage;
+
   final List<DrawPoint> _currentPoints = [];
   int _lastStreamTimestamp = 0;
   int _streamStartIndex = 0;
   String? _currentStrokeId;
 
+  int _rasterRenderToken = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.strokes.any((s) => s.strokeType == StrokeType.fill)) {
+      _rebuildRasterForFills();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant DrawingCanvasWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When canvas reset epoch advances or strokes are cleared, immediately wipe state
+    if (widget.canvasResetEpoch != oldWidget.canvasResetEpoch || widget.strokes.isEmpty) {
+      _rasterRenderToken++;
+      _bakedImage = null;
+      _rasterEngine.clear();
+      _currentPoints.clear();
+      final hasFill = widget.strokes.any((s) => s.strokeType == StrokeType.fill);
+      if (hasFill) {
+        _rebuildRasterForFills();
+      }
+      return;
+    }
+
+    // If there is any fill stroke, ensure raster is up to date
+    final hasFill = widget.strokes.any((s) => s.strokeType == StrokeType.fill);
+    final hadFill = oldWidget.strokes.any((s) => s.strokeType == StrokeType.fill);
+
+    if (!hasFill) {
+      if (hadFill || _bakedImage != null) {
+        _rasterRenderToken++;
+        _bakedImage = null;
+        _rasterEngine.clear();
+      }
+    } else if (!hadFill || widget.strokes.length != oldWidget.strokes.length) {
+      _rebuildRasterForFills();
+    }
+  }
+
+  void _rebuildRasterForFills() {
+    final currentToken = ++_rasterRenderToken;
+    _rasterEngine.renderAllStrokes(widget.strokes, (img) {
+      if (mounted && _rasterRenderToken == currentToken) {
+        final stillHasFill = widget.strokes.any((s) => s.strokeType == StrokeType.fill);
+        if (stillHasFill) {
+          setState(() {
+            _bakedImage = img;
+          });
+        }
+      }
+    });
+  }
+
   void _handlePanStart(DragStartDetails details, BoxConstraints constraints) {
     if (!widget.isDrawer) return;
 
-    // Use details.localPosition directly within the AspectRatio canvas bounds
     final normX = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
     final normY = (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0);
+
+    // If Fill tool is active: emit a fill stroke immediately on tap/touch!
+    if (widget.selectedTool == StrokeType.fill) {
+      final fillStroke = DrawStroke(
+        strokeId: DateTime.now().microsecondsSinceEpoch.toString(),
+        roomCode: '',
+        strokeType: StrokeType.fill,
+        color: widget.selectedColor,
+        brushSize: 1.0,
+        points: [DrawPoint(x: normX, y: normY)],
+      );
+      widget.onStrokeCompleted?.call(fillStroke);
+      return;
+    }
 
     _currentStrokeId = DateTime.now().microsecondsSinceEpoch.toString();
     _lastStreamTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -47,7 +122,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
   }
 
   void _handlePanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
-    if (!widget.isDrawer) return;
+    if (!widget.isDrawer || widget.selectedTool == StrokeType.fill) return;
 
     final normX = (details.localPosition.dx / constraints.maxWidth).clamp(0.0, 1.0);
     final normY = (details.localPosition.dy / constraints.maxHeight).clamp(0.0, 1.0);
@@ -80,7 +155,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
   }
 
   void _handlePanEnd(DragEndDetails details) {
-    if (!widget.isDrawer || _currentPoints.isEmpty) return;
+    if (!widget.isDrawer || widget.selectedTool == StrokeType.fill || _currentPoints.isEmpty) return;
 
     if (_streamStartIndex < _currentPoints.length - 1) {
       final remaining = _currentPoints.sublist(_streamStartIndex);
@@ -127,7 +202,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
 
     return Center(
       child: AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 4 / 3, // Standard 4:3 canvas matching 400x300 raster engine
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Container(
@@ -154,6 +229,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
                 child: CustomPaint(
                   size: Size(constraints.maxWidth, constraints.maxHeight),
                   painter: _CanvasCustomPainter(
+                    bakedImage: _bakedImage,
                     strokes: widget.strokes,
                     currentPoints: _currentPoints,
                     currentColor: widget.selectedTool == StrokeType.erase
@@ -173,6 +249,7 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
 }
 
 class _CanvasCustomPainter extends CustomPainter {
+  final ui.Image? bakedImage;
   final List<DrawStroke> strokes;
   final List<DrawPoint> currentPoints;
   final Color currentColor;
@@ -180,6 +257,7 @@ class _CanvasCustomPainter extends CustomPainter {
   final StrokeType currentTool;
 
   _CanvasCustomPainter({
+    required this.bakedImage,
     required this.strokes,
     required this.currentPoints,
     required this.currentColor,
@@ -189,13 +267,22 @@ class _CanvasCustomPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw background
+    // 1. Clean crisp white canvas background
     final bgPaint = Paint()..color = Colors.white;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    // Draw committed strokes
+    // 2. Paint baked fills (if bucket fill used) with high bicubic filter quality
+    if (bakedImage != null) {
+      final src = Rect.fromLTWH(0, 0, bakedImage!.width.toDouble(), bakedImage!.height.toDouble());
+      final dst = Rect.fromLTWH(0, 0, size.width, size.height);
+      final fillPaint = Paint()..filterQuality = FilterQuality.high;
+      canvas.drawImageRect(bakedImage!, src, dst, fillPaint);
+    }
+
+    // 2. ALWAYS paint completed vector strokes!
+    // Instant GPU-accelerated rendering on every frame as soon as strokes arrive
     for (final stroke in strokes) {
-      if (stroke.points.isEmpty) continue;
+      if (stroke.points.isEmpty || stroke.strokeType == StrokeType.fill) continue;
 
       final paint = Paint()
         ..color = stroke.color
@@ -207,7 +294,7 @@ class _CanvasCustomPainter extends CustomPainter {
       _renderPoints(canvas, stroke.points, size, paint);
     }
 
-    // Draw current active stroke
+    // 2. Draw current active stroke with vector path for instant 60fps responsiveness
     if (currentPoints.isNotEmpty) {
       final activePaint = Paint()
         ..color = currentColor
@@ -221,9 +308,10 @@ class _CanvasCustomPainter extends CustomPainter {
   }
 
   void _renderPoints(Canvas canvas, List<DrawPoint> points, Size size, Paint paint) {
+    if (points.isEmpty) return;
     if (points.length == 1) {
       final p = Offset(points[0].x * size.width, points[0].y * size.height);
-      canvas.drawCircle(p, paint.strokeWidth / 2, paint..style = PaintingStyle.fill);
+      canvas.drawCircle(p, paint.strokeWidth / 2, Paint()..color = paint.color..style = PaintingStyle.fill);
       return;
     }
 
@@ -232,14 +320,9 @@ class _CanvasCustomPainter extends CustomPainter {
     path.moveTo(first.dx, first.dy);
 
     for (int i = 1; i < points.length; i++) {
-      final p1 = Offset(points[i - 1].x * size.width, points[i - 1].y * size.height);
-      final p2 = Offset(points[i].x * size.width, points[i].y * size.height);
-      final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      path.quadraticBezierTo(p1.dx, p1.dy, mid.dx, mid.dy);
+      final p = Offset(points[i].x * size.width, points[i].y * size.height);
+      path.lineTo(p.dx, p.dy);
     }
-
-    final last = Offset(points.last.x * size.width, points.last.y * size.height);
-    path.lineTo(last.dx, last.dy);
 
     canvas.drawPath(path, paint);
   }

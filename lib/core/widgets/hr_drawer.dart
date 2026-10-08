@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 
 class HrDrawer extends StatelessWidget {
   final VoidCallback? onCollapse;
-  const HrDrawer({super.key, this.onCollapse});
+  final String? currentRoute;
+  const HrDrawer({super.key, this.onCollapse, this.currentRoute});
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: ThemeManager.instance,
+      listenable: Listenable.merge([ThemeManager.instance, AuthStorage.permissionRevision]),
       builder: (context, _) {
         final t = context.appTheme;
-        final activeRoute = ModalRoute.of(context)?.settings.name ?? '/';
+        final activeRoute = currentRoute ?? ModalRoute.of(context)?.settings.name ?? '/';
 
         return Drawer(
           backgroundColor: t.sidebar,
@@ -21,6 +23,7 @@ class HrDrawer extends StatelessWidget {
           children: [
             Expanded(
               child: ListView(
+                key: const PageStorageKey('hr_drawer_listview'),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 children: [
                   // ── Header / Logo ───────────────────────────────────────
@@ -246,6 +249,21 @@ class HrDrawer extends StatelessWidget {
                     ),
                   ),
                   IconButton(
+                    icon: Icon(Icons.settings_outlined, color: t.textSecondary, size: 20),
+                    tooltip: 'Settings',
+                    onPressed: () {
+                      final scaffold = Scaffold.maybeOf(context);
+                      if (scaffold != null && scaffold.isDrawerOpen) {
+                        Navigator.pop(context);
+                      }
+                      if (activeRoute != '/settings') {
+                        Future.delayed(const Duration(milliseconds: 150), () {
+                          PermissionSocketService.navigatorKey.currentState?.pushNamed('/settings');
+                        });
+                      }
+                    },
+                  ),
+                  IconButton(
                     icon: Icon(Icons.logout_rounded, color: Colors.red.shade400, size: 20),
                     tooltip: 'Sign Out',
                     onPressed: () => _handleLogout(context),
@@ -293,12 +311,23 @@ class HrDrawer extends StatelessWidget {
             ),
           ),
           onTap: () {
+            debugPrint('👉 Drawer item tapped: $label -> $route (activeRoute=$activeRoute)');
             final scaffold = Scaffold.maybeOf(context);
-            if (scaffold != null && scaffold.isDrawerOpen) {
-              Navigator.pop(context); // close mobile drawer overlay only if open
+            final bool wasDrawerOpen = scaffold != null && scaffold.isDrawerOpen;
+            if (wasDrawerOpen) {
+              Navigator.of(context).pop();
             }
             if (activeRoute != route) {
-              Navigator.pushReplacementNamed(context, route);
+              Future.delayed(Duration(milliseconds: wasDrawerOpen ? 150 : 0), () {
+                debugPrint('👉 Pushing route: $route');
+                if (route == '/') {
+                  PermissionSocketService.navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (r) => false);
+                } else {
+                  PermissionSocketService.navigatorKey.currentState?.pushNamed(route);
+                }
+              });
+            } else {
+              debugPrint('👉 Already on active route: $route');
             }
           },
         ),
@@ -333,6 +362,7 @@ class HrDrawer extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
+      PermissionSocketService.instance.disconnect();
       await AuthStorage.clear();
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);

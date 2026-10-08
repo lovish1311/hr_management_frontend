@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/features/auth/data/auth_api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -77,6 +78,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
           authorities: authorities,
         );
+        PermissionSocketService.instance.init();
       }
 
 

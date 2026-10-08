@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import '../../data/models/tambola_models.dart';
@@ -532,111 +532,104 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        leading: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF312E81), Color(0xFF4338CA)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: const Text('🎟️', style: TextStyle(fontSize: 24)),
-        ),
-        title: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            Text(
-              game.title,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-            ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF312E81), Color(0xFF4338CA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w800),
-                ),
+                borderRadius: BorderRadius.circular(14),
               ),
+              alignment: Alignment.center,
+              child: const Text('🎟️', style: TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          game.title,
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: TextStyle(color: statusColor, fontSize: 9.5, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          'CODE: ${game.roomCode}',
+                          style: const TextStyle(
+                            color: Color(0xFFD97706),
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Host: ${game.createdByName}',
+                        style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${game.playerCount} Players',
+                        style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+              onPressed: () => _handleJoinGame(game.roomCode),
+              child: const Text('ENTER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
             ),
           ],
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'CODE: ${game.roomCode}',
-                  style: const TextStyle(
-                    color: Color(0xFFD97706),
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.person_rounded, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Host: ${game.createdByName}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.group_rounded, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${game.playerCount} Players',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          ),
-          onPressed: () => _handleJoinGame(game.roomCode),
-          child: const Text('ENTER', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
       ),
-    ),
-  );
+    );
   }
 }
 

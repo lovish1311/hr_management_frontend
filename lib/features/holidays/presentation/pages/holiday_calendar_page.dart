@@ -281,10 +281,7 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
         final adminButton = isHrOrAdmin
             ? ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HolidayManagementPage()),
-                  ).then((_) => _fetchCalendar());
+                  Navigator.pushNamed(context, '/holiday_management').then((_) => _fetchCalendar());
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: t.primary,

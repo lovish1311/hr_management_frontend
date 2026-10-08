@@ -6,6 +6,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats.dart';
 import 'package:hr_management/features/dashboard/domain/repositories/dashboard_repository.dart';
+import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -28,7 +29,21 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    AuthStorage.permissionRevision.addListener(_onPermissionsChanged);
     _fetchStats();
+  }
+
+  void _onPermissionsChanged() {
+    if (mounted) {
+      setState(() {});
+      _fetchStats();
+    }
+  }
+
+  @override
+  void dispose() {
+    AuthStorage.permissionRevision.removeListener(_onPermissionsChanged);
+    super.dispose();
   }
 
   Future<void> _fetchStats() async {
@@ -516,18 +531,20 @@ class _DashboardPageState extends State<DashboardPage> {
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: t.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
+                        if (_pendingLeaves.isNotEmpty) ...[
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: t.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${_pendingLeaves.length}',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary),
+                            ),
                           ),
-                          child: Text(
-                            '',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary),
-                          ),
-                        ),
+                        ],
                       ],
                     ),
                   ),

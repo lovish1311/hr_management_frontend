@@ -196,9 +196,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         _errorMessage = 'Failed to fetch leave requests from server (Status: ${myLeavesRes.statusCode}).';
       }
 
-      // 3. Fetch pending approval requests for Manager / HR
-      if (AuthStorage.isManager || AuthStorage.isHr) {
-        final endpoint = AuthStorage.isHr ? '$_baseUrl/pending/all' : '$_baseUrl/pending/manager/$empId';
+      // 3. Fetch pending approval requests for Manager / HR / Global Approver
+      if (AuthStorage.isManager || AuthStorage.isHr || AuthStorage.canApproveAllLeaves) {
+        final endpoint = (AuthStorage.isHr || AuthStorage.canApproveAllLeaves)
+            ? '$_baseUrl/pending/all'
+            : '$_baseUrl/pending/manager/$empId';
         try {
           final pendingRes = await http.get(Uri.parse(endpoint), headers: headers);
           if (pendingRes.statusCode == 200) {
@@ -1259,6 +1261,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 20,
@@ -1280,28 +1283,33 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                           fontWeight: FontWeight.w800,
                           color: t.text,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         empEmail.isNotEmpty ? '$empEmail • $dept' : dept,
                         style: TextStyle(fontSize: 12, color: t.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: t.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$leaveType ($totalDays Days)',
+                          style: TextStyle(
+                            color: t.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
                     ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: t.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$leaveType ($totalDays Days)',
-                    style: TextStyle(
-                      color: t.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
                   ),
                 ),
               ],

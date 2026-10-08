@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/app/router.dart';
 import 'package:hr_management/app/theme.dart';
+import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 
 class HRManagementApp extends StatelessWidget {
@@ -18,6 +19,8 @@ class HRManagementApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: manager.activeThemeConfig.themeMode,
+          navigatorKey: PermissionSocketService.navigatorKey,
+          navigatorObservers: [PermissionRouteTracker()],
           initialRoute: '/splash',
           routes: AppRouter.routes,
           builder: (context, child) {

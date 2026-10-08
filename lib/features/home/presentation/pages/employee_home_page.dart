@@ -9,11 +9,12 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/features/attendance/data/repositories/attendance_repository_impl.dart';
-import 'package:hr_management/features/attendance/domain/entities/attendance_calendar_day.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
+import 'package:hr_management/features/holidays/data/services/holiday_service.dart';
+import 'package:hr_management/features/holidays/data/models/holiday_model.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -27,8 +28,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   DateTime _now = DateTime.now();
   bool _showSalary = false; // Salary hidden by default
   int _exceptionDaysCount = 0;
-  List<AttendanceCalendarDay> _dynamicHolidays = [];
   bool _isLoadingAttendance = true;
+  List<HolidayModel> _upcomingHolidays = [];
+  bool _isHolidayCalendarPublished = false;
+  bool _isLoadingHolidays = true;
   List<dynamic> _teamPendingApprovals = [];
   bool _isLoadingTeamApprovals = true;
 
@@ -67,6 +70,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   @override
   void initState() {
     super.initState();
+    AuthStorage.permissionRevision.addListener(_onPermissionsChanged);
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -75,8 +79,17 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       }
     });
     _fetchEmployeeAttendanceData();
+    _fetchUpcomingHolidays();
     _fetchTeamApprovals();
     _fetchLatestPayslip();
+  }
+
+  void _onPermissionsChanged() {
+    if (mounted) {
+      setState(() {});
+      _fetchTeamApprovals();
+      _fetchLatestPayslip();
+    }
   }
 
   Future<void> _fetchLatestPayslip() async {
@@ -219,6 +232,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
 
   @override
   void dispose() {
+    AuthStorage.permissionRevision.removeListener(_onPermissionsChanged);
     _clockTimer.cancel();
     super.dispose();
   }
@@ -238,12 +252,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         return isPastOrToday && (d.status == 'ABSENT' || d.status == 'LOP_LEAVE');
       }).toList();
 
-      final holidays = days.where((d) => d.isHoliday || d.status == 'HOLIDAY').toList();
 
       if (mounted) {
         setState(() {
           _exceptionDaysCount = absentDays.length;
-          _dynamicHolidays = holidays;
           _isLoadingAttendance = false;
         });
       }
@@ -251,6 +263,39 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       if (mounted) {
         setState(() {
           _isLoadingAttendance = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchUpcomingHolidays() async {
+    final now = DateTime.now();
+    try {
+      final calendar = await HolidayService.getEmployeeHolidayCalendar(now.year);
+      if (mounted) {
+        final allHolidays = calendar.holidays;
+        final isPublished = allHolidays.isNotEmpty;
+
+        final todayMidnight = DateTime(now.year, now.month, now.day);
+        final upcoming = allHolidays.where((h) {
+          final hMidnight = DateTime(h.date.year, h.date.month, h.date.day);
+          return !hMidnight.isBefore(todayMidnight);
+        }).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+
+        setState(() {
+          _isHolidayCalendarPublished = isPublished;
+          _upcomingHolidays = upcoming;
+          _isLoadingHolidays = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching holiday calendar on dashboard: $e');
+      if (mounted) {
+        setState(() {
+          _isHolidayCalendarPublished = false;
+          _upcomingHolidays = [];
+          _isLoadingHolidays = false;
         });
       }
     }
@@ -895,41 +940,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   }
 
   Widget _buildUpcomingHolidaysSection(bool isDark) {
-    final holidaysToDisplay = _dynamicHolidays.isNotEmpty
-        ? _dynamicHolidays
-        : [
-            AttendanceCalendarDay(
-              date: DateTime(DateTime.now().year, 8, 15),
-              status: 'HOLIDAY',
-              statusLabel: 'Independence Day',
-              isHoliday: true,
-            ),
-            AttendanceCalendarDay(
-              date: DateTime(DateTime.now().year, 8, 26),
-              status: 'HOLIDAY',
-              statusLabel: 'Janmashtami',
-              isHoliday: true,
-            ),
-            AttendanceCalendarDay(
-              date: DateTime(DateTime.now().year, 10, 2),
-              status: 'HOLIDAY',
-              statusLabel: 'Mahatma Gandhi Jayanti',
-              isHoliday: true,
-            ),
-            AttendanceCalendarDay(
-              date: DateTime(DateTime.now().year, 11, 1),
-              status: 'HOLIDAY',
-              statusLabel: 'Diwali',
-              isHoliday: true,
-            ),
-            AttendanceCalendarDay(
-              date: DateTime(DateTime.now().year, 12, 25),
-              status: 'HOLIDAY',
-              statusLabel: 'Christmas',
-              isHoliday: true,
-            ),
-          ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -947,26 +957,134 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${DateTime.now().year} Calendar',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+            InkWell(
+              onTap: () => Navigator.pushNamed(context, '/holidays'),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${DateTime.now().year} Calendar',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF3B82F6)),
+                  ],
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        if (_isLoadingAttendance)
-          const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
+        if (_isLoadingHolidays)
+          const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+        else if (!_isHolidayCalendarPublished)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.event_busy_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Holiday calendar is not published yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The official company holiday calendar for ${DateTime.now().year} will appear here once published by HR.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else if (_upcomingHolidays.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.event_available_rounded,
+                    color: Color(0xFF3B82F6),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No more upcoming holidays for ${DateTime.now().year}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'All scheduled holidays for this calendar year have concluded.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
         else
-          ...holidaysToDisplay.map((h) {
+          ..._upcomingHolidays.take(5).map((h) {
             final dateStr = _formatFullDate(h.date);
             final dayStr = _formatDayName(h.date);
+            final isRestricted = h.isRestricted;
+            final iconColor = isRestricted ? const Color(0xFF8B5CF6) : const Color(0xFF0D9488);
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
@@ -1012,10 +1130,14 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                color: iconColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.beach_access_rounded, color: Color(0xFF0D9488), size: 20),
+                              child: Icon(
+                                isRestricted ? Icons.event_note_rounded : Icons.beach_access_rounded,
+                                color: iconColor,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Flexible(
@@ -1023,7 +1145,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    h.statusLabel.isNotEmpty ? h.statusLabel : 'Company Holiday',
+                                    h.name.isNotEmpty ? h.name : 'Company Holiday',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -1034,7 +1156,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '$dayStr • Official Holiday',
+                                    '$dayStr • ${isRestricted ? 'Restricted Holiday' : 'Official Holiday'}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
