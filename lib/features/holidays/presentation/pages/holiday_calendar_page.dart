@@ -40,11 +40,13 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
 
     try {
       final data = await HolidayService.getEmployeeHolidayCalendar(_selectedYear);
+      if (!mounted) return;
       setState(() {
         _calendarData = data;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception:', '').trim();
         _isLoading = false;

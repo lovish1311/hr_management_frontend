@@ -1295,12 +1295,15 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                           children: [
                             Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 16),
                             SizedBox(width: 8),
-                            Text(
-                              'Minimum 2 players required to start the game',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFF59E0B),
+                            Flexible(
+                              child: Text(
+                                'Minimum 2 players required to start the game',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFF59E0B),
+                                ),
                               ),
                             ),
                           ],
@@ -1321,9 +1324,12 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
                     children: [
                       Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 18),
                       SizedBox(width: 8),
-                      Text(
-                        'Waiting for host to start the game...',
-                        style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFF59E0B), fontSize: 13),
+                      Flexible(
+                        child: Text(
+                          'Waiting for host to start the game...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFF59E0B), fontSize: 13),
+                        ),
                       ),
                     ],
                   ),
