@@ -11,6 +11,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 
 import '../../../../core/services/auth_storage.dart';
 import '../widgets/apply_leave_dialog.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class QuotaGridCardItem {
   final String title;
@@ -465,37 +466,48 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ),
       ),
 
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [t.primary, t.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: t.primary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+      floatingActionButton: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = MediaQuery.of(context).size.width < 500;
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [t.primary, t.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: t.primary.withValues(alpha: 0.4),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          elevation: 0,
-          highlightElevation: 0,
-          backgroundColor: Colors.transparent,
-          onPressed: _showApplyRequestOptions,
-          icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: Text(
-            AuthStorage.isHr ? 'Apply On Behalf of Employee' : 'Apply Request',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-        ),
+            child: FloatingActionButton.extended(
+              elevation: 0,
+              highlightElevation: 0,
+              backgroundColor: Colors.transparent,
+              onPressed: _showApplyRequestOptions,
+              icon: Icon(Icons.add_rounded, color: Colors.white, size: isMobile ? 18 : 22),
+              label: Text(
+                AuthStorage.isHr
+                    ? (isMobile ? 'Apply on Behalf' : 'Apply On Behalf of Employee')
+                    : (isMobile ? 'Apply Leave' : 'Apply Request'),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: isMobile ? 12 : 13,
+                ),
+              ),
+            ),
+          );
+        },
       ),
       body: SafeArea(
         child: _isLoading
-            ? Center(child: CircularProgressIndicator(color: t.primary))
+            ? const LeaveManagementSkeletonLoader()
             : (_hasError
                 ? _buildErrorView(t)
                 : (AuthStorage.isHr
@@ -590,186 +602,217 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   Widget _buildMyLeavesDashboard(AppThemeConfig t) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Dashboard Welcome Hero Banner
-          _buildHeroBanner(t),
-          const SizedBox(height: 28),
-
-          // 2. Leave Quotas Grid (Desktop 4-col / Mobile 2-col)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12.0 : 24.0,
+            vertical: isMobile ? 12.0 : 24.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Leave Quota Balances',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: t.onBackgroundText,
-                ),
+              // 1. Dashboard Welcome Hero Banner
+              _buildHeroBanner(t),
+              SizedBox(height: isMobile ? 16 : 28),
+
+              // 2. Leave Quotas Grid (Desktop 4-col / Mobile 2-col)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Leave Quota Balances',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isMobile ? 15 : 18,
+                        fontWeight: FontWeight.w800,
+                        color: t.onBackgroundText,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Allocated by HR Admin',
+                    style: TextStyle(fontSize: isMobile ? 10.5 : 12, color: t.onBackgroundTextSecondary),
+                  ),
+                ],
               ),
-              Text(
-                'Allocated by HR Admin',
-                style: TextStyle(fontSize: 12, color: t.onBackgroundTextSecondary),
+              SizedBox(height: isMobile ? 10 : 14),
+              if (_currentEmployee != null && (_currentEmployee!.isProbation || _currentEmployee!.status == 'PROBATION'))
+                _buildProbationWarningBanner(t),
+              if (_currentEmployee != null && (_currentEmployee!.isNoticePeriod || _currentEmployee!.status == 'NOTICE_PERIOD' || _currentEmployee!.status == 'NOTICE'))
+                _buildNoticeWarningBanner(t),
+              _buildQuotaGrid(t),
+              SizedBox(height: isMobile ? 20 : 32),
+
+              // 3. Responsive Main Grid
+              LayoutBuilder(
+                builder: (context, gridConstraints) {
+                  final isDesktop = gridConstraints.maxWidth > 850;
+                  if (isDesktop) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: _buildHistorySection(t),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 3,
+                          child: _buildSidebarSection(t),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        _buildHistorySection(t),
+                        SizedBox(height: isMobile ? 16 : 24),
+                        _buildSidebarSection(t),
+                      ],
+                    );
+                  }
+                },
               ),
             ],
           ),
-          const SizedBox(height: 14),
-                    if (_currentEmployee != null && (_currentEmployee!.isProbation || _currentEmployee!.status == 'PROBATION'))
-            _buildProbationWarningBanner(t),
-          if (_currentEmployee != null && (_currentEmployee!.isNoticePeriod || _currentEmployee!.status == 'NOTICE_PERIOD' || _currentEmployee!.status == 'NOTICE'))
-            _buildNoticeWarningBanner(t),
-          _buildQuotaGrid(t),
-          const SizedBox(height: 32),
-
-          // 3. Responsive Main Grid
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth > 850;
-              if (isDesktop) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: _buildHistorySection(t),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 3,
-                      child: _buildSidebarSection(t),
-                    ),
-                  ],
-                );
-              } else {
-                return Column(
-                  children: [
-                    _buildHistorySection(t),
-                    const SizedBox(height: 24),
-                    _buildSidebarSection(t),
-                  ],
-                );
-              }
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // Gradient Welcome Hero Banner matching Dashboard
   Widget _buildHeroBanner(AppThemeConfig t) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24.0),
-      decoration: BoxDecoration(
-        color: t.card,
-        borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: t.border, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: t.glow,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: t.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: t.primary.withValues(alpha: 0.25)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final textBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: t.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: t.primary.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.beach_access_rounded, color: Color(0xFFF59E0B), size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'LIVE LEAVE PORTAL',
+                    style: TextStyle(color: t.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.beach_access_rounded, color: Color(0xFFF59E0B), size: 14),
-                      const SizedBox(width: 6),
-                      Text(
-                        'LIVE LEAVE PORTAL',
-                        style: TextStyle(color: t.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Account for your absence by managing leaves 👋',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: t.text,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Apply for time off, monitor remaining quotas, and track request approvals in real-time.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: t.textSecondary,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [t.primary, t.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: t.primary.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+            SizedBox(height: isMobile ? 8 : 12),
+            Text(
+              'Account for your absence by managing leaves 👋',
+              style: TextStyle(
+                fontSize: isMobile ? 17 : 22,
+                fontWeight: FontWeight.w800,
+                color: t.text,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Apply for time off, monitor remaining quotas, and track request approvals in real-time.',
+              style: TextStyle(
+                fontSize: isMobile ? 11.5 : 13,
+                color: t.textSecondary,
+              ),
+            ),
+          ],
+        );
+
+        final actionButtons = Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [t.primary, t.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: ElevatedButton.icon(
-                  onPressed: _showApplyRequestOptions,
-                  icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                  label: const Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                borderRadius: BorderRadius.circular(isMobile ? 14 : 20),
+                boxShadow: [
+                  BoxShadow(
+                    color: t.primary.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _showApplyRequestOptions,
+                icon: Icon(Icons.add_rounded, size: isMobile ? 16 : 18, color: Colors.white),
+                label: Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12.5 : 14, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 24, vertical: isMobile ? 10 : 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 14 : 20)),
                 ),
               ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/holidays'),
-                icon: Icon(Icons.event_available_rounded, size: 16, color: t.primary),
-                label: Text('Holidays & RH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: t.primary)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: t.primary.withValues(alpha: 0.4)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/holidays'),
+              icon: Icon(Icons.event_available_rounded, size: isMobile ? 15 : 16, color: t.primary),
+              label: Text('Holidays & RH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 11.5 : 12, color: t.primary)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: t.primary.withValues(alpha: 0.4)),
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 9 : 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 14 : 16)),
+              ),
+            ),
+          ],
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(isMobile ? 14.0 : 24.0),
+          decoration: BoxDecoration(
+            color: t.card,
+            borderRadius: BorderRadius.circular(isMobile ? 18.0 : 24.0),
+            border: Border.all(color: t.border, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: t.glow,
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-        ],
-      ),
+          child: isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    textBlock,
+                    const SizedBox(height: 12),
+                    actionButtons,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: textBlock),
+                    const SizedBox(width: 16),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [actionButtons],
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -778,14 +821,15 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 550 ? 3 : 2);
+        final childAspect = constraints.maxWidth < 400 ? 1.35 : 1.45;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.45,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
+            childAspectRatio: childAspect,
+            crossAxisSpacing: constraints.maxWidth < 400 ? 10 : 14,
+            mainAxisSpacing: constraints.maxWidth < 400 ? 10 : 14,
           ),
           itemCount: _quotaGridItems.length,
           itemBuilder: (context, index) {
@@ -883,7 +927,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           if (filtered.isEmpty)
             _buildEmptyState('No leave requests found for status "$_selectedStatusFilter"')
           else
-            ...filtered.map((leave) => _buildInspirationLeaveCard(leave, t)),
+            ...filtered.map((leave) => RepaintBoundary(child: _buildInspirationLeaveCard(leave, t))),
         ],
       ),
     );
@@ -941,23 +985,29 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         children: [
           // Header Chip Box
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: t.primary.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
               border: Border(bottom: BorderSide(color: t.border.withValues(alpha: 0.5))),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '$leaveType - $totalDays day(s)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: t.text),
+                Expanded(
+                  child: Text(
+                    '$leaveType - $totalDays day(s)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t.text),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: statusBgColor,
                         borderRadius: BorderRadius.circular(12),
@@ -965,12 +1015,12 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(statusIcon, size: 13, color: statusTextColor),
-                          const SizedBox(width: 5),
+                          Icon(statusIcon, size: 12, color: statusTextColor),
+                          const SizedBox(width: 4),
                           Text(
                             status,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.bold,
                               color: statusTextColor,
                             ),
@@ -978,71 +1028,82 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.north_east_rounded, size: 16, color: t.primary),
+                    const SizedBox(width: 6),
+                    Icon(Icons.north_east_rounded, size: 15, color: t.primary),
                   ],
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(18.0),
+            padding: const EdgeInsets.all(13.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 20,
+                  runSpacing: 8,
                   children: [
-                    Icon(Icons.folder_open_rounded, size: 16, color: t.textSecondary),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Category', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(category, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
+                        Icon(Icons.folder_open_rounded, size: 15, color: t.textSecondary),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Category', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 1),
+                            Text(category, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text)),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(width: 32),
-                    Icon(Icons.check_box_outlined, size: 16, color: t.textSecondary),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Applied on', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(appliedOn, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
+                        Icon(Icons.check_box_outlined, size: 15, color: t.textSecondary),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Applied on', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 1),
+                            Text(appliedOn, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text)),
+                          ],
+                        ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_outlined, size: 16, color: t.textSecondary),
-                    const SizedBox(width: 10),
+                    Icon(Icons.calendar_today_outlined, size: 15, color: t.textSecondary),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Row(
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('From', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              Text(startDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
-                              Text(startSession, style: TextStyle(fontSize: 10, color: t.textSecondary)),
+                              Text('From', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 1),
+                              Text(startDate, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.text)),
+                              Text(startSession, style: TextStyle(fontSize: 9.5, color: t.textSecondary)),
                             ],
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
                             child: Text('—', style: TextStyle(color: t.textSecondary, fontWeight: FontWeight.bold)),
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('To', style: TextStyle(fontSize: 10, color: t.textSecondary, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              Text(endDate, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
-                              Text(endSession, style: TextStyle(fontSize: 10, color: t.textSecondary)),
+                              Text('To', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 1),
+                              Text(endDate, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.text)),
+                              Text(endSession, style: TextStyle(fontSize: 9.5, color: t.textSecondary)),
                             ],
                           ),
                         ],
@@ -1200,43 +1261,65 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   }
 
   Widget _buildPendingApprovalsView(AppThemeConfig t) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        return Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12.0 : 24.0,
+            vertical: isMobile ? 10.0 : 20.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Pending Team Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.onBackgroundText)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text('${_pendingApprovals.length} Pending', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      'Pending Team Requests',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold, color: t.onBackgroundText),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: isMobile ? 4 : 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_pendingApprovals.length} Pending',
+                      style: TextStyle(color: Colors.white, fontSize: isMobile ? 11 : 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isMobile ? 10 : 14),
+              Expanded(
+                child: _pendingApprovals.isEmpty
+                    ? _buildEmptyState('No pending approval requests.')
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 88.0),
+                        itemCount: _pendingApprovals.length,
+                        itemBuilder: (context, index) {
+                          final leave = _pendingApprovals[index];
+                          return RepaintBoundary(
+                            child: _buildApprovalCard(leave, t, isMobile: isMobile),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Expanded(
-            child: _pendingApprovals.isEmpty
-                ? _buildEmptyState('No pending approval requests.')
-                : ListView.builder(
-                    itemCount: _pendingApprovals.length,
-                    itemBuilder: (context, index) {
-                      final leave = _pendingApprovals[index];
-                      return _buildApprovalCard(leave, t);
-                    },
-                  ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildApprovalCard(dynamic leave, AppThemeConfig t) {
+  Widget _buildApprovalCard(dynamic leave, AppThemeConfig t, {bool isMobile = false}) {
     final empId = leave['employeeId'];
     final empName = leave['employeeName'] ?? leave['employee']?['name'] ?? 'Employee #$empId';
     final empEmail = leave['employeeEmail'] ?? leave['employee']?['email'] ?? '';
@@ -1248,17 +1331,17 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     final reason = leave['reason'] ?? 'None provided';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: EdgeInsets.only(bottom: isMobile ? 10 : 14),
       decoration: BoxDecoration(
         color: t.card,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
         border: Border.all(color: t.border),
         boxShadow: [
           BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1266,14 +1349,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  radius: 20,
+                  radius: isMobile ? 17 : 20,
                   backgroundColor: t.primary.withValues(alpha: 0.15),
                   child: Text(
                     empName.isNotEmpty ? empName[0] : 'E',
-                    style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: isMobile ? 14 : 16),
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: isMobile ? 10 : 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,23 +1364,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       Text(
                         empName,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: isMobile ? 14.5 : 16,
                           fontWeight: FontWeight.w800,
                           color: t.text,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         empEmail.isNotEmpty ? '$empEmail • $dept' : dept,
-                        style: TextStyle(fontSize: 12, color: t.textSecondary),
+                        style: TextStyle(fontSize: isMobile ? 11 : 12, color: t.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isMobile ? 6 : 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 3 : 4),
                         decoration: BoxDecoration(
                           color: t.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -1307,7 +1390,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                           style: TextStyle(
                             color: t.primary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                            fontSize: isMobile ? 10 : 11,
                           ),
                         ),
                       ),
@@ -1316,35 +1399,35 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isMobile ? 10 : 16),
             Divider(height: 1, color: t.border),
-            const SizedBox(height: 14),
+            SizedBox(height: isMobile ? 10 : 14),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 16, color: t.textSecondary),
+                Icon(Icons.calendar_today_outlined, size: isMobile ? 14 : 16, color: t.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text), overflow: TextOverflow.ellipsis),
+                  child: Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600, color: t.text), overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.notes_rounded, size: 16, color: t.textSecondary),
+                Icon(Icons.notes_rounded, size: isMobile ? 14 : 16, color: t.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Reason: $reason', style: TextStyle(fontSize: 13, color: t.textSecondary)),
+                  child: Text('Reason: $reason', style: TextStyle(fontSize: isMobile ? 12 : 13, color: t.textSecondary)),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: isMobile ? 12 : 18),
             if (empId != null && AuthStorage.employeeId != null && empId.toString() == AuthStorage.employeeId.toString())
               Align(
                 alignment: Alignment.centerRight,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: t.cardSoft,
                     borderRadius: BorderRadius.circular(12),
@@ -1353,11 +1436,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shield_outlined, size: 16, color: t.textSecondary),
-                      const SizedBox(width: 8),
+                      Icon(Icons.shield_outlined, size: 14, color: t.textSecondary),
+                      const SizedBox(width: 6),
                       Text(
                         'Self Request (Self-Approval Prohibited)',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.textSecondary),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.textSecondary),
                       ),
                     ],
                   ),
@@ -1366,29 +1449,28 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             else
               Wrap(
                 alignment: WrapAlignment.end,
-                spacing: 12,
+                spacing: 10,
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED', rejectionReason: 'Manager Rejected'),
-                    icon: const Icon(Icons.close_rounded, size: 16),
-                    label: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: Icon(Icons.close_rounded, size: isMobile ? 14 : 16),
+                    label: Text('Reject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEF4444),
                       side: const BorderSide(color: Color(0xFFEF4444)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: isMobile ? 8 : 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () => _updateLeaveStatus(leave['id'], 'APPROVED'),
-                    icon: const Icon(Icons.check_rounded, size: 16),
-                    label: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: Icon(Icons.check_rounded, size: isMobile ? 14 : 16),
+                    label: Text('Approve', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 8 : 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
@@ -1633,85 +1715,97 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
     final color = item.color;
     final isDesktop = kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: t.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _isHovered ? color : color.withValues(alpha: 0.3),
-            width: _isHovered ? 1.8 : 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _isHovered ? color.withValues(alpha: 0.2) : t.glow,
-              blurRadius: _isHovered ? 16 : 10,
-              offset: const Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 185;
+        return MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
+            padding: EdgeInsets.all(isCompact ? 11.0 : 18.0),
+            decoration: BoxDecoration(
+              color: t.card,
+              borderRadius: BorderRadius.circular(isCompact ? 14 : 20),
+              border: Border.all(
+                color: _isHovered ? color : color.withValues(alpha: 0.3),
+                width: _isHovered ? 1.8 : 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _isHovered ? color.withValues(alpha: 0.2) : t.glow,
+                  blurRadius: _isHovered ? 16 : 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: TextStyle(fontSize: isCompact ? 11.5 : 13, fontWeight: FontWeight.bold, color: color),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: EdgeInsets.all(isCompact ? 5 : 7),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(isCompact ? 8 : 10),
+                      ),
+                      child: Icon(item.icon, color: color, size: isCompact ? 15 : 18),
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${rem % 1 == 0 ? rem.toInt() : rem}',
+                        style: TextStyle(
+                          fontSize: isCompact ? 20 : 24,
+                          fontWeight: FontWeight.w800,
+                          color: t.text,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      item.key == 'Work From Home' ? 'Remote Days' : 'Out of ${limit.toInt()} Allocated',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: isCompact ? 9.5 : 11, color: t.textSecondary),
+                    ),
+                  ],
+                ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: item.key == 'Work From Home' ? 1.0 : (limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0),
+                    backgroundColor: t.border,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                    minHeight: isCompact ? 4 : 5,
                   ),
-                  child: Icon(item.icon, color: color, size: 18),
                 ),
               ],
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${rem % 1 == 0 ? rem.toInt() : rem}',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: t.text,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.key == 'Work From Home' ? 'Cumulative Remote Days Taken' : 'Out of ${limit.toInt()} Allocated Days',
-                  style: TextStyle(fontSize: 11, color: t.textSecondary),
-                ),
-              ],
-            ),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: item.key == 'Work From Home' ? 1.0 : (limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0),
-                backgroundColor: t.border,
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-                minHeight: 5,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

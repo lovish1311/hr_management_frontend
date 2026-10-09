@@ -8,6 +8,7 @@ import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats
 import 'package:hr_management/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -94,10 +95,12 @@ class _DashboardPageState extends State<DashboardPage> {
               position: slideLeftAnimation,
               child: FadeTransition(
                 opacity: animation,
-                child: LeaveRequestTile(
-                  employeeName: removedItem.employeeName,
-                  dates: removedItem.dates,
-                  reason: removedItem.reason,
+                child: RepaintBoundary(
+                  child: LeaveRequestTile(
+                    employeeName: removedItem.employeeName,
+                    dates: removedItem.dates,
+                    reason: removedItem.reason,
+                  ),
                 ),
               ),
             );
@@ -201,7 +204,7 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Stack(
           children: [
             _isLoading
-                ? Center(child: CircularProgressIndicator(color: t.primary))
+                ? const DashboardSkeletonLoader()
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
@@ -227,229 +230,197 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                       )
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Welcome Hero Banner
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(24.0),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [t.primaryDark, t.primary, t.secondary],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(24.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: t.glow,
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                    : LayoutBuilder(
+                        builder: (context, rootConstraints) {
+                          final isMobile = rootConstraints.maxWidth < 600;
+                          final pagePadding = isMobile
+                              ? const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0)
+                              : const EdgeInsets.all(24.0);
+                          final bannerPadding = isMobile ? const EdgeInsets.all(14.0) : const EdgeInsets.all(24.0);
+                          final bannerTitleSize = isMobile ? 18.0 : 24.0;
+                          final bannerSubtitleSize = isMobile ? 12.0 : 14.0;
+
+                          return SingleChildScrollView(
+                            padding: pagePadding,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Welcome Hero Banner
+                                RepaintBoundary(
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: bannerPadding,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [t.primaryDark, t.primary, t.secondary],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(isMobile ? 18.0 : 24.0),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: t.glow,
+                                          blurRadius: isMobile ? 12 : 20,
+                                          offset: Offset(0, isMobile ? 5 : 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Icon(Icons.bolt, color: Color(0xFFFACC15), size: 14),
-                                              SizedBox(width: 4),
-                                              Flexible(
-                                                child: Text(
-                                                  'LIVE HR METRICS',
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withValues(alpha: 0.15),
+                                                  borderRadius: BorderRadius.circular(20),
                                                 ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.bolt, color: Color(0xFFFACC15), size: 13),
+                                                    SizedBox(width: 4),
+                                                    Flexible(
+                                                      child: Text(
+                                                        'LIVE HR METRICS',
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(height: isMobile ? 8 : 12),
+                                              Text(
+                                                'Good Morning, HR Team 👋',
+                                                style: TextStyle(
+                                                  fontSize: bannerTitleSize,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                  letterSpacing: -0.5,
+                                                ),
+                                              ),
+                                              SizedBox(height: isMobile ? 4 : 6),
+                                              Text(
+                                                'Here is what is happening across your organization today.',
+                                                style: TextStyle(fontSize: bannerSubtitleSize, color: Colors.white.withValues(alpha: 0.85)),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
-                                        const Text(
-                                          'Good Morning, HR Team 👋',
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Here is what is happening across your organization today.',
-                                          style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
-                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
+                                ),
+                                SizedBox(height: isMobile ? 14 : 24),
 
-                            // KPI Stat Cards (semantic colors from theme)
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final isNarrow = constraints.maxWidth < 650;
-                                final isUltraNarrow = constraints.maxWidth < 360;
-                                if (isUltraNarrow) {
-                                  return Column(
-                                    children: [
-                                      Row(
+                                // KPI Stat Cards (semantic colors from theme)
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final isNarrow = constraints.maxWidth < 650;
+                                    if (isNarrow) {
+                                      return Column(
                                         children: [
-                                          KpiCard(
-                                            title: 'Total Employees',
-                                            value: (_stats?.totalEmployees ?? 0).toString(),
-                                            icon: Icons.people_alt_rounded,
-                                            cardType: KpiCardType.primary,
-                                            trendText: '+12.4%',
-                                            isTrendPositive: true,
+                                          Row(
+                                            children: [
+                                              KpiCard(
+                                                title: 'Total Employees',
+                                                value: (_stats?.totalEmployees ?? 0).toString(),
+                                                icon: Icons.people_alt_rounded,
+                                                cardType: KpiCardType.primary,
+                                                trendText: '+12.4%',
+                                                isTrendPositive: true,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              KpiCard(
+                                                title: 'Present Today',
+                                                value: (_stats?.presentToday ?? 0).toString(),
+                                                icon: Icons.verified_user_rounded,
+                                                cardType: KpiCardType.success,
+                                                trendText: '96.2%',
+                                                isTrendPositive: true,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              KpiCard(
+                                                title: 'On Leave Today',
+                                                value: (_stats?.onLeaveToday ?? 0).toString(),
+                                                icon: Icons.event_busy_rounded,
+                                                cardType: KpiCardType.warning,
+                                                trendText: '${_pendingLeaves.length} pending',
+                                                isTrendPositive: false,
+                                              ),
+                                            ],
                                           ),
                                         ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          KpiCard(
-                                            title: 'Present Today',
-                                            value: (_stats?.presentToday ?? 0).toString(),
-                                            icon: Icons.verified_user_rounded,
-                                            cardType: KpiCardType.success,
-                                            trendText: '96.2%',
-                                            isTrendPositive: true,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          KpiCard(
-                                            title: 'On Leave Today',
-                                            value: (_stats?.onLeaveToday ?? 0).toString(),
-                                            icon: Icons.event_busy_rounded,
-                                            cardType: KpiCardType.warning,
-                                            trendText: '${_pendingLeaves.length} pending',
-                                            isTrendPositive: false,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  );
-                                }
-                                if (isNarrow) {
-                                  return Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          KpiCard(
-                                            title: 'Total Employees',
-                                            value: (_stats?.totalEmployees ?? 0).toString(),
-                                            icon: Icons.people_alt_rounded,
-                                            cardType: KpiCardType.primary,
-                                            trendText: '+12.4%',
-                                            isTrendPositive: true,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          KpiCard(
-                                            title: 'Present Today',
-                                            value: (_stats?.presentToday ?? 0).toString(),
-                                            icon: Icons.verified_user_rounded,
-                                            cardType: KpiCardType.success,
-                                            trendText: '96.2%',
-                                            isTrendPositive: true,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          KpiCard(
-                                            title: 'On Leave Today',
-                                            value: (_stats?.onLeaveToday ?? 0).toString(),
-                                            icon: Icons.event_busy_rounded,
-                                            cardType: KpiCardType.warning,
-                                            trendText: '${_pendingLeaves.length} pending',
-                                            isTrendPositive: false,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  );
-                                }
+                                      );
+                                    }
 
-                                return Row(
-                                  children: [
-                                    KpiCard(
-                                      title: 'Total Employees',
-                                      value: (_stats?.totalEmployees ?? 0).toString(),
-                                      icon: Icons.people_alt_rounded,
-                                      cardType: KpiCardType.primary,
-                                      trendText: '+12.4%',
-                                      isTrendPositive: true,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    KpiCard(
-                                      title: 'Present Today',
-                                      value: (_stats?.presentToday ?? 0).toString(),
-                                      icon: Icons.verified_user_rounded,
-                                      cardType: KpiCardType.success,
-                                      trendText: '96.2%',
-                                      isTrendPositive: true,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    KpiCard(
-                                      title: 'On Leave Today',
-                                      value: (_stats?.onLeaveToday ?? 0).toString(),
-                                      icon: Icons.event_busy_rounded,
-                                      cardType: KpiCardType.warning,
-                                      trendText: '${_pendingLeaves.length} pending',
-                                      isTrendPositive: false,
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 32),
+                                    return Row(
+                                      children: [
+                                        KpiCard(
+                                          title: 'Total Employees',
+                                          value: (_stats?.totalEmployees ?? 0).toString(),
+                                          icon: Icons.people_alt_rounded,
+                                          cardType: KpiCardType.primary,
+                                          trendText: '+12.4%',
+                                          isTrendPositive: true,
+                                        ),
+                                        const SizedBox(width: 16),
+                                        KpiCard(
+                                          title: 'Present Today',
+                                          value: (_stats?.presentToday ?? 0).toString(),
+                                          icon: Icons.verified_user_rounded,
+                                          cardType: KpiCardType.success,
+                                          trendText: '96.2%',
+                                          isTrendPositive: true,
+                                        ),
+                                        const SizedBox(width: 16),
+                                        KpiCard(
+                                          title: 'On Leave Today',
+                                          value: (_stats?.onLeaveToday ?? 0).toString(),
+                                          icon: Icons.event_busy_rounded,
+                                          cardType: KpiCardType.warning,
+                                          trendText: '${_pendingLeaves.length} pending',
+                                          isTrendPositive: false,
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                SizedBox(height: isMobile ? 18 : 32),
 
-                            // Quick Actions
-                            Text(
-                              'Quick Actions',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.onBackgroundText),
-                            ),
+                                // Quick Actions
+                                Text(
+                                  'Quick Actions',
+                                  style: TextStyle(fontSize: isMobile ? 15 : 18, fontWeight: FontWeight.w800, color: t.onBackgroundText),
+                                ),
 
-                            const SizedBox(height: 16),
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final crossAxisCount = constraints.maxWidth < 450 ? 1 : 3;
-                                const spacing = 12.0;
-                                final cardWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+                                SizedBox(height: isMobile ? 10 : 16),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final isSmall = constraints.maxWidth < 500;
+                                    final crossAxisCount = isSmall ? 1 : 3;
+                                    final spacing = isSmall ? 8.0 : 12.0;
+                                    final cardWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
 
-                                return Wrap(
-                                  spacing: spacing,
-                                  runSpacing: spacing,
-                                  children: [
-                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.person_add_alt_1_rounded, title: 'Add Employee', subtitle: 'Onboard new hire', onTap: () => Navigator.pushNamed(context, '/employee_create'))),
-                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.rule_rounded, title: 'Attendance', subtitle: 'Mark log today', onTap: () => Navigator.pushNamed(context, '/attendance'))),
-                                    SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.beach_access_rounded, title: 'Apply Leave', subtitle: 'Time off request', onTap: () => Navigator.pushNamed(context, '/leaves'))),
-                                  ],
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 32),
+                                    return Wrap(
+                                      spacing: spacing,
+                                      runSpacing: spacing,
+                                      children: [
+                                        SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.person_add_alt_1_rounded, title: 'Add Employee', subtitle: 'Onboard new hire', isCompact: isSmall, onTap: () => Navigator.pushNamed(context, '/employee_create'))),
+                                        SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.rule_rounded, title: 'Attendance', subtitle: 'Mark log today', isCompact: isSmall, onTap: () => Navigator.pushNamed(context, '/attendance'))),
+                                        SizedBox(width: cardWidth, child: _buildQuickActionCard(context, icon: Icons.beach_access_rounded, title: 'Apply Leave', subtitle: 'Time off request', isCompact: isSmall, onTap: () => Navigator.pushNamed(context, '/leaves'))),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                SizedBox(height: isMobile ? 18 : 32),
 
                             // Responsive Main Grid (Pending Leaves + Culture Events)
                             LayoutBuilder(
@@ -480,7 +451,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ],
                         ),
-                      ),
+                      );
+                    },
+                  ),
             // Centered Action Loading Spinner Overlay
             if (_isActionLoading)
               Container(
@@ -497,11 +470,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildPendingLeaveSection(BuildContext context) {
     final t = context.appTheme;
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return Container(
-      padding: const EdgeInsets.all(22.0),
+      padding: EdgeInsets.all(isMobile ? 14.0 : 22.0),
       decoration: BoxDecoration(
         color: t.card,
-        borderRadius: BorderRadius.circular(20.0),
+        borderRadius: BorderRadius.circular(isMobile ? 16.0 : 20.0),
         border: Border.all(color: t.border, width: 1.2),
         boxShadow: [
           BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
@@ -600,12 +574,14 @@ class _DashboardPageState extends State<DashboardPage> {
           position: slideInAnimation,
           child: FadeTransition(
             opacity: animation,
-            child: LeaveRequestTile(
-              employeeName: leave.employeeName,
-              dates: leave.dates,
-              reason: leave.reason,
-              onApprove: () => _handleAction(leave, 'APPROVED'),
-              onDecline: () => _handleAction(leave, 'REJECTED'),
+            child: RepaintBoundary(
+              child: LeaveRequestTile(
+                employeeName: leave.employeeName,
+                dates: leave.dates,
+                reason: leave.reason,
+                onApprove: () => _handleAction(leave, 'APPROVED'),
+                onDecline: () => _handleAction(leave, 'REJECTED'),
+              ),
             ),
           ),
         );
@@ -619,54 +595,103 @@ class _DashboardPageState extends State<DashboardPage> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    bool isCompact = false,
   }) {
     final t = context.appTheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 12.0 : 16.0,
+          vertical: isCompact ? 10.0 : 16.0,
+        ),
         decoration: BoxDecoration(
           color: t.card,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isCompact ? 12 : 16),
           border: Border.all(color: t.border, width: 1.2),
           boxShadow: [
-            BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 3)),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [t.primary, t.primaryDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 4)),
+        child: isCompact
+            ? Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [t.primary, t.primaryDark],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(color: t.glow, blurRadius: 6, offset: const Offset(0, 3)),
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10.5, color: t.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 13, color: t.textSecondary),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [t.primary, t.primaryDark],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(color: t.glow, blurRadius: 8, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t.text),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: t.textSecondary),
+                  ),
                 ],
               ),
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-            const SizedBox(height: 12),
-            Text(title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t.text),
-            ),
-            const SizedBox(height: 2),
-            Text(subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: t.textSecondary),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'package:hr_management/features/attendance/data/repositories/attendance_r
 import 'package:hr_management/features/attendance/domain/entities/attendance_calendar_day.dart';
 import 'package:hr_management/features/attendance/domain/repositories/attendance_repository.dart';
 import 'package:hr_management/features/attendance/presentation/widgets/attendance_calendar_grid.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class EmployeeProfilePage extends StatefulWidget {
   const EmployeeProfilePage({super.key});
@@ -261,7 +262,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const ProfileSkeletonLoader()
             : _employee == null
                 ? const Center(child: Text('Employee not found.'))
                 : LayoutBuilder(
@@ -275,11 +276,15 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               width: 340,
                               child: SingleChildScrollView(
                                 padding: const EdgeInsets.fromLTRB(20, 20, 10, 20),
-                                child: _buildSummaryCard(context, _employee!, true),
+                                child: RepaintBoundary(
+                                  child: _buildSummaryCard(context, _employee!, true),
+                                ),
                               ),
                             ),
                             Expanded(
-                              child: _buildDetailsArea(context, _employee!, isWideScreen: true),
+                              child: RepaintBoundary(
+                                child: _buildDetailsArea(context, _employee!, isWideScreen: true),
+                              ),
                             ),
                           ],
                         );
@@ -289,9 +294,13 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildSummaryCard(context, _employee!, false),
+                              RepaintBoundary(
+                                child: _buildSummaryCard(context, _employee!, false),
+                              ),
                               const SizedBox(height: 16),
-                              _buildDetailsArea(context, _employee!, isWideScreen: false),
+                              RepaintBoundary(
+                                child: _buildDetailsArea(context, _employee!, isWideScreen: false),
+                              ),
                             ],
                           ),
                         );

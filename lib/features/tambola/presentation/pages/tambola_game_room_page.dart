@@ -75,9 +75,9 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
     _loadState();
     _initWebSocket();
 
-    // Fallback periodic sync every 5 seconds
+    // Fallback periodic sync every 5 seconds (only when WebSocket is disconnected)
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) _loadState(silent: true);
+      if (mounted && !_socketService.isConnected) _loadState(silent: true);
     });
   }
 
@@ -1012,11 +1012,13 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
 
                 // Ticket Section (No hints)
                 if (_gameState!.myTicket != null) ...[
-                  TambolaTicketWidget(
-                    ticket: _gameState!.myTicket!,
-                    drawnNumbers: drawnNumbers,
-                    markedNumbers: _markedNumbers,
-                    onNumberToggled: _toggleNumber,
+                  RepaintBoundary(
+                    child: TambolaTicketWidget(
+                      ticket: _gameState!.myTicket!,
+                      drawnNumbers: drawnNumbers,
+                      markedNumbers: _markedNumbers,
+                      onNumberToggled: _toggleNumber,
+                    ),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -1036,9 +1038,11 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TambolaBoardWidget(
-                  drawnNumbers: drawnNumbers,
-                  latestNumber: game.lastDrawnNumber,
+                RepaintBoundary(
+                  child: TambolaBoardWidget(
+                    drawnNumbers: drawnNumbers,
+                    latestNumber: game.lastDrawnNumber,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 _buildWinnersCard(),
@@ -1088,11 +1092,13 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
                 child: Column(
                   children: [
                     if (_gameState!.myTicket != null)
-                      TambolaTicketWidget(
-                        ticket: _gameState!.myTicket!,
-                        drawnNumbers: drawnNumbers,
-                        markedNumbers: _markedNumbers,
-                        onNumberToggled: _toggleNumber,
+                      RepaintBoundary(
+                        child: TambolaTicketWidget(
+                          ticket: _gameState!.myTicket!,
+                          drawnNumbers: drawnNumbers,
+                          markedNumbers: _markedNumbers,
+                          onNumberToggled: _toggleNumber,
+                        ),
                       ),
                     const SizedBox(height: 14),
                     _buildPrizeCenter(game),
@@ -1103,9 +1109,11 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
               // Tab 2: 90 Board
               SingleChildScrollView(
                 padding: const EdgeInsets.all(14),
-                child: TambolaBoardWidget(
-                  drawnNumbers: drawnNumbers,
-                  latestNumber: game.lastDrawnNumber,
+                child: RepaintBoundary(
+                  child: TambolaBoardWidget(
+                    drawnNumbers: drawnNumbers,
+                    latestNumber: game.lastDrawnNumber,
+                  ),
                 ),
               ),
 

@@ -250,8 +250,6 @@ class AttendanceCalendarGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isNarrow = screenWidth < 500;
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
 
     final firstDayOfMonth = DateTime(activeMonth.year, activeMonth.month, 1);
@@ -260,195 +258,214 @@ class AttendanceCalendarGrid extends StatelessWidget {
 
     final weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    return Column(
-      children: [
-        // Weekday Headers
-        Container(
-          padding: EdgeInsets.symmetric(vertical: isNarrow ? 6 : 10),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: weekdays.map((day) {
-              final isWeekendHeader = day == 'Sun' || day == 'Sat';
-              return Expanded(
-                child: Text(
-                  day,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: isNarrow ? 11 : 12,
-                    fontWeight: FontWeight.w700,
-                    color: isWeekendHeader
-                        ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
-                        : (isDark ? Colors.white70 : const Color(0xFF475569)),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        SizedBox(height: isNarrow ? 6 : 10),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final isNarrow = availableWidth < 500;
+        final isUltraNarrow = availableWidth < 360;
+        final gridSpacing = isUltraNarrow ? 3.0 : (isNarrow ? 4.0 : 6.0);
+        final colWidth = (availableWidth - (gridSpacing * 6)) / 7.0;
+        // Dynamically compute cell height proportional to column width (never stretched or awkward)
+        final cellHeight = ((isNarrow ? (colWidth * 1.05) : (colWidth * 1.15)) + (textScale - 1.0) * 16.0)
+            .clamp(38.0, 72.0);
 
-        // Grid Cells
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisExtent: ((isNarrow ? 56.0 : 68.0) + (textScale - 1.0) * 24.0).clamp(56.0, 110.0),
-            crossAxisSpacing: isNarrow ? 4 : 8,
-            mainAxisSpacing: isNarrow ? 4 : 8,
-          ),
-          itemCount: leadingPaddingDays + daysInMonth,
-          itemBuilder: (context, index) {
-            if (index < leadingPaddingDays) {
-              return const SizedBox.shrink(); // Empty space before 1st day of month
-            }
+        final dayMap = <int, AttendanceCalendarDay>{
+          for (final d in days)
+            if (d.date.year == activeMonth.year && d.date.month == activeMonth.month)
+              d.date.day: d,
+        };
 
-            final dayNumber = index - leadingPaddingDays + 1;
-            final targetDate = DateTime(activeMonth.year, activeMonth.month, dayNumber);
-            
-            final dayData = days.firstWhere(
-              (d) => d.date.year == targetDate.year && d.date.month == targetDate.month && d.date.day == targetDate.day,
-              orElse: () => AttendanceCalendarDay(
-                date: targetDate,
-                status: targetDate.weekday == DateTime.saturday || targetDate.weekday == DateTime.sunday ? 'WEEKEND' : 'UPCOMING',
-                statusLabel: '',
-                isWeekend: targetDate.weekday == DateTime.saturday || targetDate.weekday == DateTime.sunday,
+        return Column(
+          children: [
+            // Weekday Headers
+            Container(
+              padding: EdgeInsets.symmetric(vertical: isNarrow ? 6 : 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
               ),
-            );
-
-            final statusColor = _getStatusColor(dayData.status, isDark);
-            final isToday = DateTime.now().year == targetDate.year &&
-                DateTime.now().month == targetDate.month &&
-                DateTime.now().day == targetDate.day;
-
-            Offset tapPos = Offset.zero;
-
-            return GestureDetector(
-              onTapDown: (details) {
-                tapPos = details.globalPosition;
-              },
-              onTap: () {
-                _showContextMenu(context, dayData, tapPos);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: EdgeInsets.all(isNarrow ? 4 : 6),
-                decoration: BoxDecoration(
-                  gradient: dayData.status == 'UPCOMING'
-                      ? LinearGradient(
-                          colors: isDark
-                              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-                              : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: dayData.status == 'UPCOMING'
-                      ? null
-                      : (dayData.status == 'WEEKEND'
-                          ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.4) : const Color(0xFFF1F5F9))
-                          : statusColor.withValues(alpha: isDark ? 0.22 : 0.14)),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isToday
-                        ? const Color(0xFF3B82F6)
-                        : (dayData.status == 'UPCOMING'
-                            ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
-                            : (dayData.status == 'WEEKEND'
-                                ? Colors.transparent
-                                : statusColor.withValues(alpha: 0.4))),
-                    width: isToday ? 2.0 : 1.0,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Top Row: Day Number & Today indicator
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$dayNumber',
-                            style: TextStyle(
-                              fontSize: isNarrow ? 12 : 14,
-                              fontWeight: isToday || dayData.status != 'UPCOMING' ? FontWeight.w800 : FontWeight.w600,
-                              color: dayData.status == 'WEEKEND'
-                                  ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
-                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
-                            ),
-                          ),
-                          if (isToday) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF3B82F6),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: weekdays.map((day) {
+                  final isWeekendHeader = day == 'Sun' || day == 'Sat';
+                  return Expanded(
+                    child: Text(
+                      day,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isNarrow ? 11 : 12,
+                        fontWeight: FontWeight.w700,
+                        color: isWeekendHeader
+                            ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
+                            : (isDark ? Colors.white70 : const Color(0xFF475569)),
                       ),
                     ),
+                  );
+                }).toList(),
+              ),
+            ),
+            SizedBox(height: isNarrow ? 6 : 10),
 
-                    // Bottom: Status Indicator
-                    if (dayData.status != 'WEEKEND' && dayData.status != 'UPCOMING')
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
+            // Grid Cells
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                mainAxisExtent: cellHeight,
+                crossAxisSpacing: gridSpacing,
+                mainAxisSpacing: gridSpacing,
+              ),
+              itemCount: leadingPaddingDays + daysInMonth,
+              itemBuilder: (context, index) {
+                if (index < leadingPaddingDays) {
+                  return const SizedBox.shrink(); // Empty space before 1st day of month
+                }
+
+                final dayNumber = index - leadingPaddingDays + 1;
+                final targetDate = DateTime(activeMonth.year, activeMonth.month, dayNumber);
+                
+                final dayData = dayMap[dayNumber] ??
+                    AttendanceCalendarDay(
+                      date: targetDate,
+                      status: targetDate.weekday == DateTime.saturday || targetDate.weekday == DateTime.sunday ? 'WEEKEND' : 'UPCOMING',
+                      statusLabel: '',
+                      isWeekend: targetDate.weekday == DateTime.saturday || targetDate.weekday == DateTime.sunday,
+                    );
+
+                final statusColor = _getStatusColor(dayData.status, isDark);
+                final isToday = DateTime.now().year == targetDate.year &&
+                    DateTime.now().month == targetDate.month &&
+                    DateTime.now().day == targetDate.day;
+
+                Offset tapPos = Offset.zero;
+
+                return RepaintBoundary(
+                  child: GestureDetector(
+                    onTapDown: (details) {
+                      tapPos = details.globalPosition;
+                    },
+                    onTap: () {
+                      _showContextMenu(context, dayData, tapPos);
+                    },
+                    child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: EdgeInsets.all(isNarrow ? 3.5 : 6),
+                    decoration: BoxDecoration(
+                      gradient: dayData.status == 'UPCOMING'
+                          ? LinearGradient(
+                              colors: isDark
+                                  ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                                  : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: dayData.status == 'UPCOMING'
+                          ? null
+                          : (dayData.status == 'WEEKEND'
+                              ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.4) : const Color(0xFFF1F5F9))
+                              : statusColor.withValues(alpha: isDark ? 0.22 : 0.14)),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isToday
+                            ? const Color(0xFF3B82F6)
+                            : (dayData.status == 'UPCOMING'
+                                ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
+                                : (dayData.status == 'WEEKEND'
+                                    ? Colors.transparent
+                                    : statusColor.withValues(alpha: 0.4))),
+                        width: isToday ? 2.0 : 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Top Row: Day Number & Today indicator
+                        FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isNarrow ? 3 : 5,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-                              ),
-                              const SizedBox(width: 3),
-                              Flexible(
-                                child: Text(
-                                  _getMicroStatusLabel(dayData.status, dayData.leaveType, isNarrow),
-                                  style: TextStyle(
-                                    fontSize: isNarrow ? 8 : 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: statusColor,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                              Text(
+                                '$dayNumber',
+                                style: TextStyle(
+                                  fontSize: isNarrow ? 11 : 13,
+                                  fontWeight: isToday || dayData.status != 'UPCOMING' ? FontWeight.w800 : FontWeight.w600,
+                                  color: dayData.status == 'WEEKEND'
+                                      ? (isDark ? Colors.white38 : const Color(0xFF94A3B8))
+                                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                 ),
                               ),
+                              if (isToday) ...[
+                                const SizedBox(width: 3),
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF3B82F6),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                        ),
-                      ),
-                  ],
+
+                        // Bottom: Status Indicator
+                        if (dayData.status != 'WEEKEND' && dayData.status != 'UPCOMING')
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isNarrow ? 3 : 5,
+                                  vertical: 1.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 3.5,
+                                      height: 3.5,
+                                      decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 2.5),
+                                    Flexible(
+                                      child: Text(
+                                        _getMicroStatusLabel(dayData.status, dayData.leaveType, isNarrow),
+                                        style: TextStyle(
+                                          fontSize: isNarrow ? 7.5 : 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: statusColor,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-      ],
+              );
+            },
+            ),
+          ],
+        );
+      },
     );
   }
 

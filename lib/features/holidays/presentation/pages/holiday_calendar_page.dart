@@ -5,6 +5,8 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../data/models/holiday_model.dart';
 import '../../data/services/holiday_service.dart';
 import 'holiday_management_page.dart';
+import 'package:hr_management/core/services/data_cache.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class HolidayCalendarPage extends StatefulWidget {
   const HolidayCalendarPage({super.key});
@@ -32,7 +34,21 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
     _fetchCalendar();
   }
 
-  Future<void> _fetchCalendar() async {
+  Future<void> _fetchCalendar({bool forceRefresh = false}) async {
+    final cacheKey = 'holiday_cal_$_selectedYear';
+
+    if (!forceRefresh) {
+      final cached = DataCache.instance.get<EmployeeHolidayCalendarModel>(cacheKey);
+      if (cached != null) {
+        setState(() {
+          _calendarData = cached;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -41,6 +57,9 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
     try {
       final data = await HolidayService.getEmployeeHolidayCalendar(_selectedYear);
       if (!mounted) return;
+
+      DataCache.instance.set(cacheKey, data, const Duration(hours: 24));
+
       setState(() {
         _calendarData = data;
         _isLoading = false;
@@ -198,7 +217,7 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
           IconButton(
             icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
             tooltip: 'Refresh Calendar',
-            onPressed: _fetchCalendar,
+            onPressed: () => _fetchCalendar(forceRefresh: true),
           ),
           const SizedBox(width: 8),
         ],
@@ -213,12 +232,7 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
             const SizedBox(height: 24),
 
             if (_isLoading)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(60.0),
-                  child: CircularProgressIndicator(color: t.primary),
-                ),
-              )
+              const HolidayCalendarSkeletonLoader()
             else if (_errorMessage != null)
               _buildErrorBanner(t)
             else if (_calendarData == null || _calendarData!.holidays.isEmpty)
@@ -500,7 +514,9 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
         separatorBuilder: (_, __) => Divider(height: 1, color: t.border),
         itemBuilder: (context, index) {
           final h = filtered[index];
-          return _buildHolidayRow(t, h);
+          return RepaintBoundary(
+            child: _buildHolidayRow(t, h),
+          );
         },
       ),
     );

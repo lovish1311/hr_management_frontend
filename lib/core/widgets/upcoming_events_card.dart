@@ -15,122 +15,132 @@ class UpcomingEventsCard extends StatelessWidget {
     final primaryTextColor = isDark ? const Color(0xFFF0F9FF) : const Color(0xFF0369A1);
     final secondaryTextColor = isDark ? const Color(0xFFBAE6FD) : const Color(0xFF0284C7);
 
-    return Container(
-      padding: const EdgeInsets.all(22.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20.0),
-        border: Border.all(
-          color: isDark ? const Color(0xFF1E40AF).withValues(alpha: 0.3) : const Color(0xFFBAE6FD),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              Text(
-                'Culture & Events',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: primaryTextColor,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'THIS WEEK',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0284C7),
-                    letterSpacing: 0.5,
-                  ),
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 450;
+        final padding = isNarrow ? const EdgeInsets.all(14.0) : const EdgeInsets.all(22.0);
+        final titleFontSize = isNarrow ? 15.0 : 18.0;
+        final illustrationHeight = isNarrow ? 76.0 : 130.0;
+        final spacing = isNarrow ? 10.0 : 16.0;
+
+        return Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradientColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(isNarrow ? 16.0 : 20.0),
+            border: Border.all(
+              color: isDark ? const Color(0xFF1E40AF).withValues(alpha: 0.3) : const Color(0xFFBAE6FD),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: isNarrow ? 10 : 14,
+                offset: Offset(0, isNarrow ? 4 : 6),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 130,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: CakeAndBalloonsPainter(isDark: isDark),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Column(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Wrap(
-                alignment: WrapAlignment.center,
+                alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
                   Text(
-                    'Co-worker Birthdays ',
+                    'Culture & Events',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.w800,
                       color: primaryTextColor,
                     ),
                   ),
-                  const Text('🎉', style: TextStyle(fontSize: 16)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'THIS WEEK',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0284C7),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Celebrate 3 team birthdays & work anniversaries this week!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: secondaryTextColor,
+              SizedBox(height: spacing),
+              SizedBox(
+                height: illustrationHeight,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: CakeAndBalloonsPainter(isDark: isDark),
+                ),
+              ),
+              SizedBox(height: spacing),
+              Column(
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Co-worker Birthdays ',
+                        style: TextStyle(
+                          fontSize: isNarrow ? 14.5 : 16,
+                          fontWeight: FontWeight.bold,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                      const Text('🎉', style: TextStyle(fontSize: 15)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Celebrate 3 team birthdays & work anniversaries this week!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isNarrow ? 11.5 : 13,
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isNarrow ? 12 : 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(vertical: isNarrow ? 9 : 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                  ),
+                  onPressed: () {},
+                  icon: Icon(Icons.celebration_rounded, size: isNarrow ? 16 : 18),
+                  label: Text(
+                    'View Celebrations',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: isNarrow ? 12 : 13),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0284C7),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-              ),
-              onPressed: () {},
-              icon: const Icon(Icons.celebration_rounded, size: 18),
-              label: const Text(
-                'View Celebrations',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

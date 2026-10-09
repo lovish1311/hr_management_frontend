@@ -10,6 +10,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/core/widgets/animated_gradient_border.dart';
 
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class PeoplePage extends StatefulWidget {
   const PeoplePage({super.key});
@@ -67,7 +68,13 @@ class _PeoplePageState extends State<PeoplePage> {
     super.dispose();
   }
 
+  DateTime _lastScrollCheck = DateTime.fromMillisecondsSinceEpoch(0);
+
   void _onScroll() {
+    final now = DateTime.now();
+    if (now.difference(_lastScrollCheck).inMilliseconds < 250) return;
+    _lastScrollCheck = now;
+
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       if (!_isLoadingMore && _hasMorePages && _directoryTab == 'Everyone') {
         _fetchEmployeesPage(reset: false);
@@ -250,7 +257,7 @@ class _PeoplePageState extends State<PeoplePage> {
         ],
       ),
       body: _isLoadingInitial
-          ? Center(child: CircularProgressIndicator(color: t.primary))
+          ? const PeopleDirectorySkeletonLoader()
           : (_selectedView == 'Directory'
               ? _buildDirectoryView(t, isDesktop)
               : _buildDynamicOrgChartView(t, isDesktop)),
@@ -466,22 +473,24 @@ class _PeoplePageState extends State<PeoplePage> {
                       final emp = employees[index];
                       final isSelected = _selectedEmployee?.id == emp.id;
                       final isStarred = _starredEmployeeIds.contains(emp.id);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _EmployeeListTile(
-                          emp: emp,
-                          isSelected: isSelected,
-                          isStarred: isStarred,
-                          t: t,
-                          onTap: () {
-                            setState(() {
-                              _selectedEmployee = emp;
-                            });
-                            if (MediaQuery.of(context).size.width < 900) {
-                              _showMobileEmployeeSheet(context, emp, t);
-                            }
-                          },
-                          onStarToggle: () => _toggleStar(emp),
+                      return RepaintBoundary(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: _EmployeeListTile(
+                            emp: emp,
+                            isSelected: isSelected,
+                            isStarred: isStarred,
+                            t: t,
+                            onTap: () {
+                              setState(() {
+                                _selectedEmployee = emp;
+                              });
+                              if (MediaQuery.of(context).size.width < 900) {
+                                _showMobileEmployeeSheet(context, emp, t);
+                              }
+                            },
+                            onStarToggle: () => _toggleStar(emp),
+                          ),
                         ),
                       );
                     },

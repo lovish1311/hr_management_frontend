@@ -15,6 +15,7 @@ import 'package:hr_management/features/leaves/presentation/widgets/apply_leave_d
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class AttendanceCalendarPage extends StatefulWidget {
   final String currentEmployeeId;
@@ -1033,10 +1034,10 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
                   // Calendar Main Card
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isMobile ? 12 : 22),
                     decoration: BoxDecoration(
                       color: t.card,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(isMobile ? 18 : 24),
                       border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 4)),
@@ -1086,10 +1087,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
                         // Calendar Grid Component
                         _isLoading
-                            ? const Padding(
-                                padding: EdgeInsets.all(40.0),
-                                child: Center(child: CircularProgressIndicator()),
-                              )
+                            ? const CalendarSkeletonLoader()
                             : AttendanceCalendarGrid(
                                 activeMonth: _activeMonth,
                                 days: _days,
@@ -1190,144 +1188,184 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
   Widget _buildEmployeeSelector(AppThemeConfig t) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: t.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: t.primary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Select Employee to View Attendance',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: t.text,
-                    letterSpacing: 0.3,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 500;
+        final cardPadding = isNarrow ? const EdgeInsets.all(12) : const EdgeInsets.all(20);
+        final innerPadding = isNarrow ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10) : const EdgeInsets.symmetric(horizontal: 16, vertical: 14);
+
+        return Container(
+          padding: cardPadding,
+          decoration: BoxDecoration(
+            color: t.card,
+            borderRadius: BorderRadius.circular(isNarrow ? 18 : 24),
+            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              setState(() {
-                _isDropdownOpen = !_isDropdownOpen;
-                if (_isDropdownOpen && _dropdownEmployees.isEmpty) {
-                  _loadDropdownPage(reset: true);
-                }
-              });
-            },
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: _isDropdownOpen
-                        ? t.primary
-                        : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                    width: 1.5,
-                  ),
-                  boxShadow: _isDropdownOpen
-                      ? [BoxShadow(color: t.primary.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4))]
-                      : null,
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: t.primary.withValues(alpha: 0.12),
-                      child: Text(
-                        _selectedEmployee != null && _selectedEmployee!.name.isNotEmpty
-                            ? _selectedEmployee!.name[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(color: Color(0xFF6366F1), fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: t.primary,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _selectedEmployee?.name ?? 'Search and select an employee...',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: _selectedEmployee != null
-                                  ? (t.text)
-                                  : Colors.grey,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Select Employee to View Attendance',
+                      style: TextStyle(
+                        fontSize: isNarrow ? 13 : 14,
+                        fontWeight: FontWeight.bold,
+                        color: t.text,
+                        letterSpacing: 0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isNarrow ? 10 : 16),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() {
+                    _isDropdownOpen = !_isDropdownOpen;
+                    if (_isDropdownOpen && _dropdownEmployees.isEmpty) {
+                      _loadDropdownPage(reset: true);
+                    }
+                  });
+                },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: innerPadding,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(isNarrow ? 14 : 18),
+                      border: Border.all(
+                        color: _isDropdownOpen
+                            ? t.primary
+                            : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                        width: 1.5,
+                      ),
+                      boxShadow: _isDropdownOpen
+                          ? [BoxShadow(color: t.primary.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 4))]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: isNarrow ? 18 : 22,
+                              backgroundColor: t.primary.withValues(alpha: 0.12),
+                              child: Text(
+                                _selectedEmployee != null && _selectedEmployee!.name.isNotEmpty
+                                    ? _selectedEmployee!.name[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: const Color(0xFF6366F1),
+                                  fontSize: isNarrow ? 14 : 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _selectedEmployee != null
-                                ? '${_selectedEmployee!.role} • ${_selectedEmployee!.department} • Balance: ${_selectedEmployee!.leaveBalance} days'
-                                : 'Tap to search & filter the workforce directory',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            SizedBox(width: isNarrow ? 10 : 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedEmployee?.name ?? 'Search and select an employee...',
+                                    style: TextStyle(
+                                      fontSize: isNarrow ? 14 : 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: _selectedEmployee != null
+                                          ? (t.text)
+                                          : Colors.grey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _selectedEmployee != null
+                                        ? '${_selectedEmployee!.role} • ${_selectedEmployee!.department} • Balance: ${_selectedEmployee!.leaveBalance} days'
+                                        : 'Tap to search & filter the workforce directory',
+                                    style: TextStyle(fontSize: isNarrow ? 10.5 : 11, color: Colors.grey),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            if (!isNarrow && _selectedEmployee != null && !_isDropdownOpen) ...[
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
+                                },
+                                icon: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                                label: const Text('New Request', style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: t.success,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Icon(
+                              _isDropdownOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              color: Colors.grey,
+                              size: isNarrow ? 20 : 24,
+                            ),
+                          ],
+                        ),
+                        if (isNarrow && _selectedEmployee != null && !_isDropdownOpen) ...[
+                          const SizedBox(height: 8),
+                          Divider(height: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () {
+                                  _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
+                                },
+                                icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: t.success),
+                                label: Text(
+                                  'New Request for ${_selectedEmployee!.name.split(' ').first}',
+                                  style: TextStyle(color: t.success, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    if (_selectedEmployee != null && !_isDropdownOpen) ...[
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
-                            },
-                            icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                            label: const Text('New Request', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: t.success,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Icon(
-                      _isDropdownOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                      color: Colors.grey,
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
           if (_isDropdownOpen) ...[
             const SizedBox(height: 12),
             AnimatedContainer(
@@ -1458,6 +1496,8 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
           ],
         ],
       ),
+    );
+      },
     );
   }
 

@@ -5,6 +5,8 @@ import 'package:hr_management/features/employees/domain/repositories/employee_re
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/presentation/widgets/employee_card.dart';
 import 'package:hr_management/features/employees/presentation/pages/employee_form_page.dart';
+import 'package:hr_management/core/services/data_cache.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class EmployeeDirectoryPage extends StatefulWidget {
   const EmployeeDirectoryPage({super.key});
@@ -54,18 +56,34 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
     super.dispose();
   }
 
-  Future<void> _fetchEmployees() async {
+  Future<void> _fetchEmployees({bool forceRefresh = false}) async {
+    final cacheKey = 'employees_dept_$_selectedDepartment';
+    if (!forceRefresh) {
+      final cached = DataCache.instance.get<List<Employee>>(cacheKey);
+      if (cached != null) {
+        setState(() {
+          _employees = cached;
+          _isLoading = false;
+        });
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
     try {
       final employees = await _repository.getEmployees(departmentFilter: _selectedDepartment);
       if (mounted) {
+        final filteredList = employees.where((emp) {
+          final r = emp.role.toUpperCase();
+          return r != 'SUPER_ADMIN' && r != 'ROLE_SUPER_ADMIN' && r != 'ADMIN';
+        }).toList();
+
+        DataCache.instance.set(cacheKey, filteredList, const Duration(minutes: 2));
+
         setState(() {
-          _employees = employees.where((emp) {
-            final r = emp.role.toUpperCase();
-            return r != 'SUPER_ADMIN' && r != 'ROLE_SUPER_ADMIN' && r != 'ADMIN';
-          }).toList();
+          _employees = filteredList;
           _isLoading = false;
         });
       }
@@ -126,7 +144,8 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
       builder: (context) => const EmployeeFormPage(isModal: true),
     );
     if (result == true) {
-      _fetchEmployees();
+      DataCache.instance.invalidatePrefix('employees_dept_');
+      _fetchEmployees(forceRefresh: true);
     }
   }
 
@@ -137,14 +156,16 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
       builder: (context) => EmployeeFormPage(initialEmployee: employee, isModal: true),
     );
     if (result == true) {
-      _fetchEmployees();
+      DataCache.instance.invalidatePrefix('employees_dept_');
+      _fetchEmployees(forceRefresh: true);
     }
   }
 
   Future<void> _toggleEmployeeStatus(Employee employee, String newStatus) async {
     final success = await _repository.toggleEmployeeStatus(employee.id, newStatus);
     if (success) {
-      _fetchEmployees();
+      DataCache.instance.invalidatePrefix('employees_dept_');
+      _fetchEmployees(forceRefresh: true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -430,8 +451,8 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 14.0),
               sliver: _isLoading
-                  ? const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()),
+                  ? const SliverToBoxAdapter(
+                      child: EmployeeGridSkeleton(),
                     )
                   : _filteredEmployees.isEmpty
                       ? SliverFillRemaining(
@@ -459,17 +480,19 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                                   final employee = _filteredEmployees[index];
-                                  return EmployeeCard(
-                                    employee: employee,
-                                    onTap: () {
-                                      Navigator.pushNamed(
-                                        context,
-                                        '/employee_profile',
-                                        arguments: employee.id,
-                                      );
-                                    },
-                                    onEdit: () => _openEditEmployee(employee),
-                                    onStatusChanged: (newStatus) => _toggleEmployeeStatus(employee, newStatus),
+                                  return RepaintBoundary(
+                                    child: EmployeeCard(
+                                      employee: employee,
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/employee_profile',
+                                          arguments: employee.id,
+                                        );
+                                      },
+                                      onEdit: () => _openEditEmployee(employee),
+                                      onStatusChanged: (newStatus) => _toggleEmployeeStatus(employee, newStatus),
+                                    ),
                                   );
                                 },
                                 childCount: _filteredEmployees.length,

@@ -31,6 +31,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _draftUse24HourTime = manager.use24HourTime;
   }
 
+  bool _isApplying = false;
+
   bool get _hasChanges {
     final manager = ThemeManager.instance;
     return _draftTheme != manager.currentTheme ||
@@ -57,23 +59,31 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _applyChanges() async {
-    await ThemeManager.instance.applySettingsBatch(
-      theme: _draftTheme,
-      fontSizeMultiplier: _draftFontSize,
-      fontFamily: _draftFontFamily,
-      densityMode: _draftDensityMode,
-      use24HourTime: _draftUse24HourTime,
-    );
+    if (_isApplying) return;
+    setState(() => _isApplying = true);
 
-    if (!mounted) return;
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Settings applied successfully!'),
-        backgroundColor: Color(0xFF10B981),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    try {
+      await ThemeManager.instance.applySettingsBatch(
+        theme: _draftTheme,
+        fontSizeMultiplier: _draftFontSize,
+        fontFamily: _draftFontFamily,
+        densityMode: _draftDensityMode,
+        use24HourTime: _draftUse24HourTime,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings applied successfully!'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isApplying = false);
+      }
+    }
   }
 
   @override
@@ -82,6 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final t = context.appTheme;
+        final hasChanges = _hasChanges;
 
         return ResponsiveScaffold(
           body: Column(
@@ -143,15 +154,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                     final type = ThemeManager.themes.keys.elementAt(index);
                                     final cfg = ThemeManager.themes[type]!;
                                     final isDraftActive = _draftTheme == type;
-                                    return _ThemeCard(
-                                      type: type,
-                                      config: cfg,
-                                      isActive: isDraftActive,
-                                      onSelect: () {
-                                        setState(() {
-                                          _draftTheme = type;
-                                        });
-                                      },
+                                    return RepaintBoundary(
+                                      child: _ThemeCard(
+                                        type: type,
+                                        config: cfg,
+                                        isActive: isDraftActive,
+                                        onSelect: () {
+                                          setState(() {
+                                            _draftTheme = type;
+                                          });
+                                        },
+                                      ),
                                     );
                                   },
                                 );
@@ -389,13 +402,13 @@ class _SettingsPageState extends State<SettingsPage> {
                             runSpacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              if (_hasChanges)
+                              if (hasChanges)
                                 TextButton(
                                   style: TextButton.styleFrom(
                                     foregroundColor: t.textSecondary,
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                   ),
-                                  onPressed: _cancelDraft,
+                                  onPressed: _isApplying ? null : _cancelDraft,
                                   child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cancel', style: TextStyle(fontSize: 12))),
                                 ),
                               ElevatedButton.icon(
@@ -403,15 +416,21 @@ class _SettingsPageState extends State<SettingsPage> {
                                   backgroundColor: t.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  elevation: _hasChanges ? 4 : 0,
+                                  elevation: hasChanges ? 4 : 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
-                                onPressed: _hasChanges ? _applyChanges : null,
-                                icon: const Icon(Icons.check_rounded, size: 16),
+                                onPressed: (hasChanges && !_isApplying) ? _applyChanges : null,
+                                icon: _isApplying
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Icon(Icons.check_rounded, size: 16),
                                 label: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   child: Text(
-                                    _hasChanges ? 'Apply' : 'Applied',
+                                    _isApplying ? 'Applying...' : (hasChanges ? 'Apply' : 'Applied'),
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                                   ),
                                 ),
@@ -431,19 +450,19 @@ class _SettingsPageState extends State<SettingsPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          onPressed: _resetToDefaults,
+                          onPressed: _isApplying ? null : _resetToDefaults,
                           icon: const Icon(Icons.restart_alt_rounded, size: 18),
                           label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Reset to Default', style: TextStyle(fontWeight: FontWeight.bold))),
                         ),
                         const Spacer(),
 
-                        if (_hasChanges) ...[
+                        if (hasChanges) ...[
                           TextButton.icon(
                             style: TextButton.styleFrom(
                               foregroundColor: t.textSecondary,
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                             ),
-                            onPressed: _cancelDraft,
+                            onPressed: _isApplying ? null : _cancelDraft,
                             icon: const Icon(Icons.close_rounded, size: 18),
                             label: const Text('Cancel / Revert'),
                           ),
@@ -455,13 +474,19 @@ class _SettingsPageState extends State<SettingsPage> {
                             backgroundColor: t.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                            elevation: _hasChanges ? 4 : 0,
+                            elevation: hasChanges ? 4 : 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          onPressed: _hasChanges ? _applyChanges : null,
-                          icon: const Icon(Icons.check_rounded, size: 18),
+                          onPressed: (hasChanges && !_isApplying) ? _applyChanges : null,
+                          icon: _isApplying
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.check_rounded, size: 18),
                           label: Text(
-                            _hasChanges ? 'Apply Changes' : 'Applied',
+                            _isApplying ? 'Applying...' : (hasChanges ? 'Apply Changes' : 'Applied'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),

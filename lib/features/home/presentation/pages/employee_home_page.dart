@@ -24,8 +24,6 @@ class EmployeeHomePage extends StatefulWidget {
 }
 
 class _EmployeeHomePageState extends State<EmployeeHomePage> {
-  late Timer _clockTimer;
-  DateTime _now = DateTime.now();
   bool _showSalary = false; // Salary hidden by default
   int _exceptionDaysCount = 0;
   bool _isLoadingAttendance = true;
@@ -51,33 +49,15 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  String _formatTwoDigits(int n) => n.toString().padLeft(2, '0');
-
-  String _formatTime(DateTime dt) {
-    int hour = dt.hour % 12;
-    if (hour == 0) hour = 12;
-    return '${_formatTwoDigits(hour)}:${_formatTwoDigits(dt.minute)}';
-  }
-
-  String _formatAmPm(DateTime dt) => dt.hour >= 12 ? 'PM' : 'AM';
-
-  String _formatDayName(DateTime dt) => _days[dt.weekday - 1];
-
-  String _formatFullDate(DateTime dt) {
-    return '${_formatTwoDigits(dt.day)} ${_months[dt.month - 1]} ${dt.year}';
-  }
+  static String _formatTwoDigits(int n) => n.toString().padLeft(2, '0');
+  static String _formatDayName(DateTime dt) => _days[dt.weekday - 1];
+  static String _formatFullDate(DateTime dt) =>
+      '${_formatTwoDigits(dt.day)} ${_months[dt.month - 1]} ${dt.year}';
 
   @override
   void initState() {
     super.initState();
     AuthStorage.permissionRevision.addListener(_onPermissionsChanged);
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _now = DateTime.now();
-        });
-      }
-    });
     _fetchEmployeeAttendanceData();
     _fetchUpcomingHolidays();
     _fetchTeamApprovals();
@@ -233,7 +213,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   @override
   void dispose() {
     AuthStorage.permissionRevision.removeListener(_onPermissionsChanged);
-    _clockTimer.cancel();
     super.dispose();
   }
 
@@ -315,11 +294,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         ? formattedName.substring(0, 2).toUpperCase()
         : 'EM';
 
-    final dayName = _formatDayName(_now);
-    final fullDateStr = _formatFullDate(_now);
-    final timeStr = _formatTime(_now);
-    final amPmStr = _formatAmPm(_now);
-
     final t = context.appTheme;
 
     return ResponsiveScaffold(
@@ -399,8 +373,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   const SizedBox(height: 16),
 
 
-                  // Sun Clock Shift Card (No Sign In Button, Clean Proportions)
-                  _buildSunClockShiftCard(isDark, dayName, fullDateStr, timeStr, amPmStr),
+                  // Sun Clock Shift Card (Isolated RepaintBoundary with internal ticker)
+                  const RepaintBoundary(
+                    child: _SunClockShiftCard(),
+                  ),
 
                   const SizedBox(height: 14),
 
@@ -432,174 +408,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   }
 
   String _getGreeting() {
-    final hour = _now.hour;
+    final hour = DateTime.now().hour;
     if (hour < 12) return 'Morning';
     if (hour < 17) return 'Afternoon';
     return 'Evening';
-  }
-
-  Widget _buildSunClockShiftCard(
-    bool isDark,
-    String dayName,
-    String fullDateStr,
-    String timeStr,
-    String amPmStr,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // City Skyline Graphic Banner Top
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isDark
-                    ? [const Color(0xFF3B0764), const Color(0xFF1E293B)]
-                    : [const Color(0xFFFDE68A), const Color(0xFFFFFBEB)],
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ClipRect(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final count = (constraints.maxWidth / 22).floor().clamp(4, 40);
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: List.generate(
-                            count,
-                            (i) => Container(
-                              width: 12.0 + (i % 3) * 6,
-                              height: 16.0 + (i % 5) * 5,
-                              color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
-                                  .withValues(alpha: 0.6),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: Row(
-              children: [
-                // Sun Clock graphic on left
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFFDE047),
-                        Color(0xFFF59E0B),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(6.0),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              timeStr,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF78350F),
-                              ),
-                            ),
-                            Text(
-                              amPmStr,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF92400E),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
-
-                // Shift Timings Info on right
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$dayName | 10:00 AM To 19:00 PM Shift',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              fullDateStr,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildExceptionAlertBar(bool isDark) {
@@ -1598,3 +1410,223 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     ).whenComplete(() => controller.dispose());
   }
 }
+
+/// Isolated Sun Clock Shift Card that maintains its own internal 1-second ticker.
+/// Prevents the parent EmployeeHomePage and its 150+ widgets from rebuilding every second.
+class _SunClockShiftCard extends StatefulWidget {
+  const _SunClockShiftCard();
+
+  @override
+  State<_SunClockShiftCard> createState() => _SunClockShiftCardState();
+}
+
+class _SunClockShiftCardState extends State<_SunClockShiftCard> {
+  late Timer _timer;
+  DateTime _currentTime = DateTime.now();
+
+  static const List<String> _days = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  ];
+
+  static const List<String> _months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  String _formatTwoDigits(int n) => n.toString().padLeft(2, '0');
+
+  String _formatTime(DateTime dt) {
+    int hour = dt.hour % 12;
+    if (hour == 0) hour = 12;
+    return '${_formatTwoDigits(hour)}:${_formatTwoDigits(dt.minute)}';
+  }
+
+  String _formatAmPm(DateTime dt) => dt.hour >= 12 ? 'PM' : 'AM';
+  String _formatDayName(DateTime dt) => _days[dt.weekday - 1];
+  String _formatFullDate(DateTime dt) =>
+      '${_formatTwoDigits(dt.day)} ${_months[dt.month - 1]} ${dt.year}';
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dayName = _formatDayName(_currentTime);
+    final fullDateStr = _formatFullDate(_currentTime);
+    final timeStr = _formatTime(_currentTime);
+    final amPmStr = _formatAmPm(_currentTime);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // City Skyline Graphic Banner Top
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [const Color(0xFF3B0764), const Color(0xFF1E293B)]
+                    : [const Color(0xFFFDE68A), const Color(0xFFFFFBEB)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRect(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final count = (constraints.maxWidth / 22).floor().clamp(4, 40);
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: List.generate(
+                            count,
+                            (i) => Container(
+                              width: 12.0 + (i % 3) * 6,
+                              height: 16.0 + (i % 5) * 5,
+                              color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            child: Row(
+              children: [
+                // Sun Clock graphic on left
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFFDE047),
+                        Color(0xFFF59E0B),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              timeStr,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF78350F),
+                              ),
+                            ),
+                            Text(
+                              amPmStr,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+
+                // Shift Timings Info on right
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$dayName | 10:00 AM To 19:00 PM Shift',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              fullDateStr,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

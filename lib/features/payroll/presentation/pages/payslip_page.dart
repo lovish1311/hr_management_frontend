@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/services/data_cache.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 /// Domain Model for Payslip Records
 class PayrollRecord {
@@ -123,15 +125,29 @@ class _PayslipPageState extends State<PayslipPage> {
     _fetchPayrollData();
   }
 
-  Future<void> _fetchPayrollData() async {
+  Future<void> _fetchPayrollData({bool forceRefresh = false}) async {
+    final empId = AuthStorage.employeeId ?? 15;
+    final cacheKey = 'payroll_history_$empId';
+
+    if (!forceRefresh) {
+      final cached = DataCache.instance.get<List<PayrollRecord>>(cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        setState(() {
+          _payrollHistory = cached;
+          _selectedRecord = cached.first;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Default to employee ID 15 (Lovish) if not present in auth storage
-      final empId = AuthStorage.employeeId ?? 15;
       final url = Uri.parse('$_baseUrl/api/v1/payroll/employee/$empId');
       
       final response = await http.get(
@@ -144,6 +160,8 @@ class _PayslipPageState extends State<PayslipPage> {
       if (response.statusCode == 200) {
         final List<dynamic> list = json.decode(response.body);
         final records = list.map((item) => PayrollRecord.fromJson(item)).toList();
+
+        DataCache.instance.set(cacheKey, records, const Duration(minutes: 5));
 
         setState(() {
           _payrollHistory = records;
@@ -273,9 +291,7 @@ class _PayslipPageState extends State<PayslipPage> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF2563EB)),
-              )
+            ? const PayslipSkeletonLoader()
             : _errorMessage != null
                 ? Center(
                     child: Padding(

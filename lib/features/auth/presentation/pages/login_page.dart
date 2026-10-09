@@ -368,12 +368,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           );
         },
       ),
-    ).then((_) {
-      emailCtrl.dispose();
-      otpCtrl.dispose();
-      newPassCtrl.dispose();
-      confirmPassCtrl.dispose();
-    });
+    );
   }
 
   void _showActivateAccountDialog() {
@@ -569,11 +564,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           );
         },
       ),
-    ).then((_) {
-      keyCtrl.dispose();
-      passCtrl.dispose();
-      confirmCtrl.dispose();
-    });
+    );
   }
 
   Future<void> _handleLogin() async {
