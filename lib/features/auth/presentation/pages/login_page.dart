@@ -1074,23 +1074,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                         ),
                       ),
-                      if (_isProductionMode) ...[
-                        const SizedBox(height: 18),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: _showActivateAccountDialog,
-                            icon: const Icon(Icons.key_rounded, size: 16, color: Color(0xFF0284C7)),
-                            label: const Text(
-                              'New Employee? Enter Activation Key',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0284C7),
-                              ),
+                      const SizedBox(height: 18),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _showActivateAccountDialog,
+                          icon: const Icon(Icons.key_rounded, size: 16, color: Color(0xFF0284C7)),
+                          label: const Text(
+                            'New Employee? Enter Activation Key',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0284C7),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
