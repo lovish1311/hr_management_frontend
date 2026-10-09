@@ -1,7 +1,7 @@
 import 'package:hr_management/core/network/api_config.dart';
+import 'package:hr_management/core/network/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats.dart';
 import 'package:hr_management/features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -14,10 +14,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
   Future<DashboardStats> getDashboardStats() async {
     final url = Uri.parse('$_baseUrl/api/v1/dashboard');
     try {
-      final response = await http.get(
-        url,
-        headers: AuthStorage.authHeaders,
-      );
+      final response = await ApiClient.get(url);
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -48,9 +45,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
       'approverId': approverId.toString(),
     });
     try {
-      final response = await http.put(
+      final response = await ApiClient.put(
         url,
-        headers: AuthStorage.authHeaders,
         body: body,
       );
       if (response.statusCode == 200) {

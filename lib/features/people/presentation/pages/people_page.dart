@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/network/api_client.dart';
 import 'package:hr_management/core/network/api_config.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
@@ -18,6 +19,7 @@ class PeoplePage extends StatefulWidget {
 }
 
 class _PeoplePageState extends State<PeoplePage> {
+  http.Client get _http => ApiClient.client;
   String _selectedView = 'Directory'; // 'Directory' or 'Org Chart'
   String _directoryTab = 'Everyone'; // 'Starred' or 'Everyone'
   String _searchQuery = '';
@@ -77,7 +79,7 @@ class _PeoplePageState extends State<PeoplePage> {
     final empId = AuthStorage.employeeId ?? 1;
     final url = Uri.parse('$_baseUrl/api/v1/employees/starred?starrerId=$empId');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List<dynamic> list = json.decode(res.body);
         if (mounted) {
@@ -110,7 +112,7 @@ class _PeoplePageState extends State<PeoplePage> {
     final url = Uri.parse('$_baseUrl/api/v1/employees/search?page=$_currentPage&size=$_pageSize$queryParam');
 
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(res.body);
         final List<dynamic> content = data['content'] ?? [];
@@ -164,7 +166,7 @@ class _PeoplePageState extends State<PeoplePage> {
     });
 
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode != 200) {
         // Revert on failure
         setState(() {

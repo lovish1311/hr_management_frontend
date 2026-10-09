@@ -1,4 +1,5 @@
 import 'package:hr_management/core/network/api_config.dart';
+import 'package:hr_management/core/network/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -17,10 +18,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/v1/attendance/calendar-summary?employeeId=$employeeId&year=$year&month=$month');
     try {
-      final response = await http.get(
-        url,
-        headers: AuthStorage.authHeaders,
-      );
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> list = json.decode(response.body);
@@ -56,7 +54,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
         filename: fileName,
       ));
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await ApiClient.client.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {

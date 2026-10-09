@@ -64,6 +64,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
   // Available managers list
   List<Employee> _availableManagers = [];
   bool _isLoading = false;
+  bool _sendActivationEmail = true;
 
   final List<String> _departments = [
     'Engineering',
@@ -532,6 +533,43 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                           ),
                         ],
                       ),
+                      if (!isEdit) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.mark_email_read_rounded, color: Color(0xFF0D9488), size: 22),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Email Login Credentials & Activation Key',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0D9488)),
+                                    ),
+                                    Text(
+                                      'Employee will receive a secure welcome email with a one-time key to initialize their password.',
+                                      style: TextStyle(fontSize: 11, color: textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _sendActivationEmail,
+                                activeThumbColor: const Color(0xFF0D9488),
+                                onChanged: (val) => setState(() => _sendActivationEmail = val),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

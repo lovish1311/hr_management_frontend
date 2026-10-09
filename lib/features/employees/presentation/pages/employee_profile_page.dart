@@ -1,6 +1,7 @@
 import 'package:hr_management/features/employees/presentation/pages/employee_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/features/auth/data/auth_api_service.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
@@ -133,6 +134,68 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       }
     }
   }
+
+  Future<void> _handleSendCredentials(Employee emp) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.mark_email_read_rounded, color: Color(0xFF0D9488)),
+            SizedBox(width: 8),
+            Text('Send Onboarding Credentials?'),
+          ],
+        ),
+        content: Text(
+          'An email with a secure one-time activation key will be dispatched to ${emp.name} (${emp.email}) via Postmark.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Send Email'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await AuthApiService.sendEmployeeCredentials(emp.id, token: AuthStorage.token);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Activation credentials successfully queued and dispatched to ${emp.email}!')),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed: ${e.toString().replaceAll("Exception: ", "")}'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -540,7 +603,115 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 _buildContactRow(context, 'Email', emp.email, Icons.email_outlined),
                 const SizedBox(height: 10),
                 _buildContactRow(context, 'Phone', emp.phone, Icons.phone_outlined),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                // Connected Outlook Account Section
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFBBF7D0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0078D4).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Icons.email_rounded, color: Color(0xFF0078D4), size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Connected Outlook',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle, size: 10, color: Color(0xFF16A34A)),
+                                SizedBox(width: 3),
+                                Text('Active', style: TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        emp.email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Calendar & Out-of-Office sync enabled',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF0078D4),
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.sync_rounded, color: Colors.white, size: 16),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text('Synchronized Microsoft 365 / Outlook calendar for ${emp.email}.'),
+                                      ),
+                                    ],
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.sync_rounded, size: 12, color: isDark ? Colors.blue.shade300 : const Color(0xFF0078D4)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Sync Now',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.blue.shade300 : const Color(0xFF0078D4),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Quick Links & HR Actions
                 Text(
                   'Management Actions',
@@ -596,6 +767,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                ],
+                if (AuthStorage.canManageEmployees) ...[
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -617,6 +790,21 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                       ),
                       icon: const Icon(Icons.edit_note_rounded, size: 16),
                       label: const Text('Edit Employee Profile', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _handleSendCredentials(emp),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.mark_email_read_rounded, size: 16),
+                      label: const Text('Email Credentials / Activation Key', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: 8),

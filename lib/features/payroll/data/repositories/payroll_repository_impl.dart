@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/network/api_client.dart';
 import 'package:hr_management/core/network/api_config.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/payroll/domain/entities/salary_structure_entity.dart';
@@ -11,6 +12,7 @@ import 'package:hr_management/features/payroll/domain/entities/payroll_reconcili
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 
 class PayrollRepositoryImpl implements PayrollRepository {
+  static http.Client get _http => ApiClient.client;
   String get _baseUrl => ApiConfig.baseUrl;
 
   String _formatError(http.Response res) {
@@ -37,7 +39,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<SalaryStructureEntity> getSalaryStructure(int employeeId) async {
     final url = Uri.parse('$_baseUrl/api/payroll/structure/$employeeId');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         return SalaryStructureEntity.fromJson(json.decode(res.body));
       }
@@ -52,7 +54,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<List<SalaryStructureEntity>> getAllSalaryStructures() async {
     final url = Uri.parse('$_baseUrl/api/payroll/structure');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => SalaryStructureEntity.fromJson(item)).toList();
@@ -68,7 +70,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<SalaryStructureEntity> saveSalaryStructure(SalaryStructureEntity structure) async {
     final url = Uri.parse('$_baseUrl/api/payroll/structure');
     try {
-      final res = await http.post(
+      final res = await _http.post(
         url,
         headers: AuthStorage.authHeaders,
         body: json.encode(structure.toJson()),
@@ -90,7 +92,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/inputs?month=$month&year=$year');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => MonthlyPayrollInputEntity.fromJson(item)).toList();
@@ -106,7 +108,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<MonthlyPayrollInputEntity> saveMonthlyPayrollInput(MonthlyPayrollInputEntity input) async {
     final url = Uri.parse('$_baseUrl/api/payroll/inputs');
     try {
-      final res = await http.post(
+      final res = await _http.post(
         url,
         headers: AuthStorage.authHeaders,
         body: json.encode(input.toJson()),
@@ -128,7 +130,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/inputs/sync?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => MonthlyPayrollInputEntity.fromJson(item)).toList();
@@ -144,7 +146,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<void> lockInputs({required String month, required int year}) async {
     final url = Uri.parse('$_baseUrl/api/payroll/inputs/lock?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode != 200) {
         throw Exception(_formatError(res));
       }
@@ -158,7 +160,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<void> unlockInputs({required String month, required int year}) async {
     final url = Uri.parse('$_baseUrl/api/payroll/inputs/unlock?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode != 200) {
         throw Exception(_formatError(res));
       }
@@ -176,7 +178,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<List<PayrollRecordEntity>> processPayroll({required String month, required int year}) async {
     final url = Uri.parse('$_baseUrl/api/payroll/process?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => PayrollRecordEntity.fromJson(item)).toList();
@@ -192,7 +194,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<void> verifyPayroll({required String month, required int year}) async {
     final url = Uri.parse('$_baseUrl/api/payroll/verify?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode != 200) {
         throw Exception(_formatError(res));
       }
@@ -210,7 +212,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<void> publishPayroll({required String month, required int year}) async {
     final url = Uri.parse('$_baseUrl/api/payroll/publish?month=$month&year=$year');
     try {
-      final res = await http.post(url, headers: AuthStorage.authHeaders);
+      final res = await _http.post(url, headers: AuthStorage.authHeaders);
       if (res.statusCode != 200) {
         throw Exception(_formatError(res));
       }
@@ -227,7 +229,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/payslips?employeeId=$employeeId&onlyPublished=$onlyPublished');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => PayrollRecordEntity.fromJson(item)).toList();
@@ -243,7 +245,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   Future<PayrollRecordEntity> getPayslipById(String recordId) async {
     final url = Uri.parse('$_baseUrl/api/payroll/payslip/$recordId');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         return PayrollRecordEntity.fromJson(json.decode(res.body));
       }
@@ -261,7 +263,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/records?month=$month&year=$year');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         final List list = json.decode(res.body);
         return list.map((item) => PayrollRecordEntity.fromJson(item)).toList();
@@ -285,7 +287,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/summary?month=$month&year=$year');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         return PayrollSummaryEntity.fromJson(json.decode(res.body));
       }
@@ -307,7 +309,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/reconciliation?month=$month&year=$year');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         return PayrollReconciliationReportEntity.fromJson(json.decode(res.body));
       }
@@ -325,7 +327,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
   }) async {
     final url = Uri.parse('$_baseUrl/api/payroll/export/bank-file?month=$month&year=$year');
     try {
-      final res = await http.get(url, headers: AuthStorage.authHeaders);
+      final res = await _http.get(url, headers: AuthStorage.authHeaders);
       if (res.statusCode == 200) {
         return res.bodyBytes;
       }

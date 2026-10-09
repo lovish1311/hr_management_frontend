@@ -98,6 +98,9 @@ class AuthStorage {
   static bool get canApproveAllLeaves =>
       isAdmin || isHr || hasAuthority('LEAVE_APPROVE_ALL');
 
+  static bool get canManageEmployees =>
+      isAdmin || isHr || hasAuthority('EMPLOYEE_CREATE') || hasAuthority('EMPLOYEE_MANAGE');
+
   static bool get isAuthenticated => _token != null && _token!.isNotEmpty;
 
   /// Super Admin holds the highest master administrative control tier (can manage Admins)

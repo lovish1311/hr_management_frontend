@@ -1,8 +1,7 @@
 import 'package:hr_management/core/network/api_config.dart';
+import 'package:hr_management/core/network/api_client.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 
@@ -32,10 +31,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
     List<Employee> list = [];
 
     try {
-      final response = await http.get(
-        url,
-        headers: AuthStorage.authHeaders,
-      );
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -66,10 +62,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<Employee?> getEmployeeById(String id) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/$id');
     try {
-      final response = await http.get(
-        url,
-        headers: AuthStorage.authHeaders,
-      );
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
@@ -97,9 +90,8 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<Employee> createEmployee(Employee employee) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees');
     try {
-      final res = await http.post(
+      final res = await ApiClient.post(
         url,
-        headers: AuthStorage.authHeaders,
         body: json.encode({
           'firstName': employee.firstName,
           'lastName': employee.lastName,
@@ -144,9 +136,8 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<Employee> updateEmployee(Employee employee) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/${employee.id}');
     try {
-      final res = await http.put(
+      final res = await ApiClient.put(
         url,
-        headers: AuthStorage.authHeaders,
         body: json.encode({
           'firstName': employee.firstName,
           'lastName': employee.lastName,
@@ -202,9 +193,8 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<bool> assignManager(String employeeId, String managerId) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/$employeeId/manager');
     try {
-      final res = await http.patch(
+      final res = await ApiClient.patch(
         url,
-        headers: AuthStorage.authHeaders,
         body: json.encode({'managerId': int.tryParse(managerId)}),
       );
       if (res.statusCode == 200) {
@@ -222,9 +212,8 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
   Future<bool> updatePermissions(String employeeId, {bool? isAttendanceTracked, String? lateArrivalAllowedUntil, String? earlyOutAllowedAfter}) async {
     final url = Uri.parse('$_baseUrl/api/v1/employees/$employeeId/permissions');
     try {
-      final res = await http.patch(
+      final res = await ApiClient.patch(
         url,
-        headers: AuthStorage.authHeaders,
         body: json.encode({
           if (isAttendanceTracked != null) 'isAttendanceTracked': isAttendanceTracked,
           if (lateArrivalAllowedUntil != null) 'lateArrivalAllowedUntil': lateArrivalAllowedUntil,
@@ -258,9 +247,8 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
       if (systemRole != null && systemRole.isNotEmpty) {
         payload['systemRole'] = systemRole;
       }
-      final res = await http.put(
+      final res = await ApiClient.put(
         url,
-        headers: AuthStorage.authHeaders,
         body: json.encode(payload),
       );
       if (res.statusCode == 200) {
@@ -284,10 +272,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
     final queryStr = query != null && query.isNotEmpty ? 'query=${Uri.encodeComponent(query)}&' : '';
     final url = Uri.parse('$_baseUrl/api/v1/employees/search?${queryStr}page=$page&size=$size');
     try {
-      final response = await http.get(
-        url,
-        headers: AuthStorage.authHeaders,
-      );
+      final response = await ApiClient.get(url);
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);

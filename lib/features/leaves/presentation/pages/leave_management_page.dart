@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:hr_management/core/network/api_client.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 
@@ -33,6 +34,7 @@ class LeaveManagementPage extends StatefulWidget {
 }
 
 class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTickerProviderStateMixin {
+  http.Client get _http => ApiClient.client;
   Employee? _currentEmployee;
   late TabController _tabController;
   bool _isLoading = true;
@@ -146,7 +148,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     try {
       // 1. Fetch employee leave balances from DB (fresh, un-cached)
       final t = DateTime.now().millisecondsSinceEpoch;
-      final balanceRes = await http.get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
+      final balanceRes = await _http.get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
       if (balanceRes.statusCode == 200) {
         final Map<String, dynamic> b = json.decode(balanceRes.body);
         _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
@@ -164,7 +166,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       }
 
       // 2. Fetch employee leave history from DB
-      final myLeavesRes = await http.get(Uri.parse('$_baseUrl/employee/$empId'), headers: headers);
+      final myLeavesRes = await _http.get(Uri.parse('$_baseUrl/employee/$empId'), headers: headers);
       if (myLeavesRes.statusCode == 200) {
         final List<dynamic> decoded = json.decode(myLeavesRes.body);
         _myLeaves = decoded.map((item) {
@@ -202,7 +204,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             ? '$_baseUrl/pending/all'
             : '$_baseUrl/pending/manager/$empId';
         try {
-          final pendingRes = await http.get(Uri.parse(endpoint), headers: headers);
+          final pendingRes = await _http.get(Uri.parse(endpoint), headers: headers);
           if (pendingRes.statusCode == 200) {
             final List<dynamic> pendingList = json.decode(pendingRes.body);
             _pendingApprovals = pendingList;
@@ -261,7 +263,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           ? Uri.parse('$_baseUrl/admin/apply-on-behalf')
           : Uri.parse('$_baseUrl/apply');
 
-      final res = await http.post(
+      final res = await _http.post(
         url,
         headers: AuthStorage.authHeaders,
         body: body,
@@ -331,7 +333,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     final type = leave['leaveType'] as String? ?? 'Leave';
 
     try {
-      final res = await http.put(
+      final res = await _http.put(
         Uri.parse('$_baseUrl/$leaveId/withdraw'),
         headers: AuthStorage.authHeaders,
         body: json.encode({'actorId': (AuthStorage.employeeId ?? 1).toString()}),
@@ -374,7 +376,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     });
 
     try {
-      final res = await http.put(
+      final res = await _http.put(
         Uri.parse('$_baseUrl/$leaveId/status'),
         headers: AuthStorage.authHeaders,
         body: body,

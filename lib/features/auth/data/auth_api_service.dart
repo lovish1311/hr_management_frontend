@@ -1,4 +1,5 @@
 import 'package:hr_management/core/network/api_config.dart';
+import 'package:hr_management/core/network/api_client.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -92,4 +93,88 @@ class AuthApiService {
       throw Exception(message ?? 'Registration failed (HTTP ${response.statusCode}).');
     }
   }
+
+  static Future<void> forgotPassword(String email) async {
+    final url = Uri.parse('$baseUrl/auth/forgot-password');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    if (response.statusCode != 200) {
+      String msg = 'Failed to dispatch verification code';
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['message'] != null) msg = data['message'].toString();
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  static Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/reset-password');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'token': token,
+        'newPassword': newPassword,
+      }),
+    );
+    if (response.statusCode != 200) {
+      String msg = 'Failed to reset password';
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['message'] != null) msg = data['message'].toString();
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  static Future<Map<String, dynamic>> activateAccount({
+    required String activationKey,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/activate');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'activationKey': activationKey,
+        'newPassword': newPassword,
+      }),
+    );
+    if (response.statusCode != 200) {
+      String msg = 'Failed to activate account';
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['message'] != null) msg = data['message'].toString();
+      } catch (_) {}
+      throw Exception(msg);
+    }
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> sendEmployeeCredentials(String employeeId, {String? token}) async {
+    final url = Uri.parse('$baseUrl/employees/$employeeId/send-credentials');
+    final response = await ApiClient.post(url);
+    if (response.statusCode != 200) {
+      String msg = 'Failed to send credentials';
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['message'] != null) msg = data['message'].toString();
+      } catch (_) {}
+      throw Exception(msg);
+    }
+  }
 }
+
