@@ -145,7 +145,12 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           children: [
             Icon(Icons.mark_email_read_rounded, color: Color(0xFF0D9488)),
             SizedBox(width: 8),
-            Text('Send Onboarding Credentials?'),
+            Expanded(
+              child: Text(
+                'Send Onboarding Credentials?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -2354,6 +2359,27 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         final isCompact = constraints.maxWidth < 500;
         final isNarrowStat = constraints.maxWidth < 460;
 
+        String formatDisplayRole(String role) {
+          if (role.isEmpty) return 'Employee';
+          return role
+              .replaceAll('ROLE_', '')
+              .replaceAll('_', ' ')
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+              .join(' ');
+        }
+
+        String formatDisplayStatus(String status) {
+          if (status.isEmpty) return 'Active';
+          return status
+              .replaceAll('_', ' ')
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+              .join(' ');
+        }
+
         Widget buildFieldGroup(String label1, String value1, String label2, String value2) {
           if (isCompact) {
             return Column(
@@ -2385,7 +2411,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 const SizedBox(height: 16),
                 buildFieldGroup('Employee ID', emp.id, 'Department', emp.department),
                 const SizedBox(height: 16),
-                buildFieldGroup('Role', emp.role, 'Status', emp.status),
+                buildFieldGroup('Role', formatDisplayRole(emp.role), 'Status', formatDisplayStatus(emp.status)),
                 const SizedBox(height: 16),
                 buildFieldGroup('Date of Birth', emp.dateOfBirth, 'Location', emp.location),
                 const SizedBox(height: 32),

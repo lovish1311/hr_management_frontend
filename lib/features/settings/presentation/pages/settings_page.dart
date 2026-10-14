@@ -22,6 +22,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadCurrentSettings();
   }
 
+  bool _isApplying = false;
+  bool _hasChangesCached = false;
+
   void _loadCurrentSettings() {
     final manager = ThemeManager.instance;
     _draftTheme = manager.currentTheme;
@@ -29,18 +32,19 @@ class _SettingsPageState extends State<SettingsPage> {
     _draftFontFamily = manager.fontFamily;
     _draftDensityMode = manager.densityMode;
     _draftUse24HourTime = manager.use24HourTime;
+    _updateHasChanges();
   }
 
-  bool _isApplying = false;
-
-  bool get _hasChanges {
+  void _updateHasChanges() {
     final manager = ThemeManager.instance;
-    return _draftTheme != manager.currentTheme ||
+    _hasChangesCached = _draftTheme != manager.currentTheme ||
         _draftFontSize != manager.fontSizeMultiplier ||
         _draftFontFamily != manager.fontFamily ||
         _draftDensityMode != manager.densityMode ||
         _draftUse24HourTime != manager.use24HourTime;
   }
+
+  bool get _hasChanges => _hasChangesCached;
 
   void _resetToDefaults() {
     setState(() {
@@ -49,6 +53,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _draftFontFamily = 'Default';
       _draftDensityMode = 'Comfortable';
       _draftUse24HourTime = false;
+      _updateHasChanges();
     });
   }
 
@@ -93,13 +98,14 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context, _) {
         final t = context.appTheme;
         final hasChanges = _hasChanges;
+        final isSmallScreen = MediaQuery.sizeOf(context).width < 600;
 
         return ResponsiveScaffold(
           body: Column(
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(isSmallScreen ? 14 : 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -107,7 +113,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       Text(
                         'Appearance Settings',
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: isSmallScreen ? 22 : 28,
                           fontWeight: FontWeight.bold,
                           color: t.onBackgroundText,
                         ),

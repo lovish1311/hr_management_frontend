@@ -63,7 +63,7 @@ class ApiClient {
     final uri = resolveUri(url);
     final response = await _handler.post(
       uri,
-      headers: headers,
+      headers: mergeHeaders(headers),
       body: body,
       encoding: encoding,
     );
@@ -80,7 +80,7 @@ class ApiClient {
     final uri = resolveUri(url);
     final response = await _handler.put(
       uri,
-      headers: headers,
+      headers: mergeHeaders(headers),
       body: body,
       encoding: encoding,
     );
@@ -97,7 +97,7 @@ class ApiClient {
     final uri = resolveUri(url);
     final response = await _handler.delete(
       uri,
-      headers: headers,
+      headers: mergeHeaders(headers),
       body: body,
       encoding: encoding,
     );
@@ -114,7 +114,7 @@ class ApiClient {
     final uri = resolveUri(url);
     final response = await _handler.patch(
       uri,
-      headers: headers,
+      headers: mergeHeaders(headers),
       body: body,
       encoding: encoding,
     );
@@ -173,9 +173,17 @@ class _ApiClientHandler extends http.BaseClient {
       }
     });
 
-    if (!request.headers.containsKey('Content-Type') &&
-        (request.method == 'POST' || request.method == 'PUT' || request.method == 'PATCH')) {
-      request.headers['Content-Type'] = 'application/json';
+    final contentTypeKey = request.headers.keys.firstWhere(
+      (k) => k.toLowerCase() == 'content-type',
+      orElse: () => '',
+    );
+    if (contentTypeKey.isEmpty || request.headers[contentTypeKey]!.startsWith('text/plain')) {
+      if (request.method == 'POST' || request.method == 'PUT' || request.method == 'PATCH') {
+        request.headers['Content-Type'] = 'application/json';
+        if (contentTypeKey.isNotEmpty && contentTypeKey != 'Content-Type') {
+          request.headers.remove(contentTypeKey);
+        }
+      }
     }
 
     final response = await _inner.send(request);

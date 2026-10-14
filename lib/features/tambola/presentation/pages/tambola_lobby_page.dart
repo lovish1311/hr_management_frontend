@@ -18,6 +18,11 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
   bool _isLoading = true;
   bool _isActionLoading = false;
   String? _errorMessage;
+
+  String _currentWeekday() {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[DateTime.now().weekday - 1];
+  }
   Timer? _refreshTimer;
 
   @override
@@ -121,7 +126,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                       controller: titleController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'e.g. Friday Fun Tambola',
+                        hintText: 'e.g. ${_currentWeekday()} Fun Tambola',
                         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                         filled: true,
                         fillColor: const Color(0xFF0F172A),
@@ -281,9 +286,13 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'HR Team Tambola Lounge 🎉',
-                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                      Text(
+                        '${AuthStorage.userName?.split(' ').first ?? 'TeamJoy'} Tambola Lounge 🎉',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: MediaQuery.of(context).size.width < 500 ? 20 : 24,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(

@@ -228,7 +228,56 @@ class _MockHttpClientResponse extends Stream<List<int>> implements HttpClientRes
     final path = _url.path;
     String jsonStr = '{}';
 
-    if (path.contains('/api/v1/dashboard')) {
+    if (path.contains('/api/auth/account-status')) {
+      final email = _url.queryParameters['email'] ?? '';
+      if (email.contains('pending')) {
+        jsonStr = json.encode({
+          'email': email,
+          'status': 'PENDING_ACTIVATION',
+          'isActivated': false,
+          'firstName': 'Aarav',
+          'message': 'Account pending activation. Enter your activation key to set your password.'
+        });
+      } else if (email.contains('deactivated')) {
+        jsonStr = json.encode({
+          'email': email,
+          'status': 'DEACTIVATED',
+          'isActivated': true,
+          'firstName': 'John',
+          'message': 'This account has been deactivated. Please contact HR.'
+        });
+      } else if (email.contains('unknown') || email.contains('notfound')) {
+        jsonStr = json.encode({
+          'email': email,
+          'status': 'NOT_FOUND',
+          'isActivated': false,
+          'firstName': null,
+          'message': 'No account found for this email. Please contact HR.'
+        });
+      } else {
+        jsonStr = json.encode({
+          'email': email.isNotEmpty ? email : 'admin@company.com',
+          'status': 'ACTIVE',
+          'isActivated': true,
+          'firstName': 'System',
+          'message': 'Account is active.'
+        });
+      }
+    } else if (path.contains('/api/auth/login')) {
+      jsonStr = json.encode({
+        'token': 'mock-jwt-token',
+        'email': 'admin@company.com',
+        'role': 'ROLE_SUPER_ADMIN',
+        'systemRole': 'SUPER_ADMIN',
+        'employeeId': 1,
+        'authorities': ['ROLE_SUPER_ADMIN']
+      });
+    } else if (path.contains('/api/auth/activate')) {
+      jsonStr = json.encode({
+        'email': 'newhire@company.com',
+        'message': 'Account successfully activated! You may now sign in.'
+      });
+    } else if (path.contains('/api/v1/dashboard')) {
       jsonStr = json.encode({
         'totalEmployees': 18,
         'presentToday': 16,

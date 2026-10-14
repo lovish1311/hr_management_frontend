@@ -891,31 +891,44 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
           // Applying to (Assigned Manager Chip) Section
           Text('Applying to (Assigned Approver)*', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFA7F3D0)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.2),
-                  child: const Text('HK', style: TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold)),
+          Builder(
+            builder: (context) {
+              final mgrName = _selectedOnBehalfEmployee?.managerName ?? AuthStorage.managerName ?? 'Harsh Kaushal';
+              final initials = mgrName.trim().split(' ').where((p) => p.isNotEmpty).map((p) => p[0].toUpperCase()).take(2).join();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
                 ),
-                const SizedBox(width: 10),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Harsh Kaushal (Engineering Lead)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF065F46))),
-                    Text('Assigned Reporting Manager • #EMP-101', style: TextStyle(fontSize: 10, color: Color(0xFF047857))),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.2),
+                      child: Text(initials.isNotEmpty ? initials : 'M', style: const TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$mgrName (Reporting Manager)',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Text('Assigned Reporting Manager', style: TextStyle(fontSize: 10, color: Color(0xFF047857))),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 20),
 

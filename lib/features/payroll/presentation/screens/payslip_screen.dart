@@ -3,6 +3,7 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
@@ -157,32 +158,20 @@ class _PayslipScreenState extends State<PayslipScreen> {
           // Main Scrollable Area
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const PayslipSkeletonLoader()
                 : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline, size: 48, color: t.danger),
-                            const SizedBox(height: 12),
-                            Text(_errorMessage!, style: TextStyle(color: t.danger)),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: _fetchPayslips,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _buildErrorState(context, t)
                     : RefreshIndicator(
                         onRefresh: _fetchPayslips,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                          child: Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 960),
+                        child: Builder(
+                          builder: (context) {
+                            final isCompact = MediaQuery.sizeOf(context).width < 600;
+                            return SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 24, vertical: isCompact ? 14 : 20),
+                              child: Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(maxWidth: 960),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -227,8 +216,10 @@ class _PayslipScreenState extends State<PayslipScreen> {
                               ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -331,8 +322,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
   }
 
   Widget _buildYtdCard(BuildContext context, dynamic t) {
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       decoration: BoxDecoration(
         color: t.card,
         borderRadius: BorderRadius.circular(16),
@@ -354,17 +346,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
               ),
             ],
           ),
-          const Divider(height: 24),
+          Divider(height: isCompact ? 18 : 24),
           Row(
             children: [
               Expanded(
-                child: _buildYtdStat('Total Gross Earned', '₹${_ytdGross.toStringAsFixed(0)}', t.text, t),
+                child: _buildYtdStat('Total Gross Earned', '₹${_ytdGross.toStringAsFixed(0)}', t.text, t, isCompact),
               ),
               Expanded(
-                child: _buildYtdStat('Total Deductions', '₹${_ytdTaxDeductions.toStringAsFixed(0)}', t.danger, t),
+                child: _buildYtdStat('Total Deductions', '₹${_ytdTaxDeductions.toStringAsFixed(0)}', t.danger, t, isCompact),
               ),
               Expanded(
-                child: _buildYtdStat('Net Take-Home', '₹${_ytdNet.toStringAsFixed(0)}', t.success, t),
+                child: _buildYtdStat('Net Take-Home', '₹${_ytdNet.toStringAsFixed(0)}', t.success, t, isCompact),
               ),
             ],
           ),
@@ -373,13 +365,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
     );
   }
 
-  Widget _buildYtdStat(String label, String value, Color valueCol, dynamic t) {
+  Widget _buildYtdStat(String label, String value, Color valueCol, dynamic t, bool isCompact) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: t.textSecondary)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: isCompact ? 10 : 11, color: t.textSecondary)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: valueCol)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value, style: TextStyle(fontSize: isCompact ? 16 : 18, fontWeight: FontWeight.bold, color: valueCol)),
+        ),
       ],
     );
   }
@@ -527,6 +523,88 @@ class _PayslipScreenState extends State<PayslipScreen> {
             style: TextStyle(fontSize: 12, color: t.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+
+  String _formatErrorMessage(String error) {
+    final lower = error.toLowerCase();
+    if (lower.contains('connection closed') ||
+        lower.contains('connection refused') ||
+        lower.contains('clientexception') ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('network is unreachable')) {
+      return 'Unable to connect to server. Please verify the backend service is running on port 8080.';
+    }
+    return error;
+  }
+
+  Widget _buildErrorState(BuildContext context, dynamic t) {
+    final friendlyMsg = _formatErrorMessage(_errorMessage ?? 'An unexpected error occurred.');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(
+            color: t.card,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: t.danger.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: t.danger.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.cloud_off_rounded, size: 36, color: t.danger),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Connection Issue',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: t.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                friendlyMsg,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: t.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _fetchPayslips,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry Connection'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: t.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

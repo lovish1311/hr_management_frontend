@@ -8,7 +8,7 @@ import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats
 import 'package:hr_management/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
-import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -68,6 +68,33 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  String _formatCurrentDate() {
+    final now = DateTime.now();
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
+  }
+
+  String _getDisplayName() {
+    final user = AuthStorage.userName;
+    if (user != null && user.trim().isNotEmpty) return user.trim();
+    final email = AuthStorage.userEmail;
+    if (email != null && email.contains('@')) {
+      final name = email.split('@').first;
+      if (name.isNotEmpty) {
+        return name[0].toUpperCase() + name.substring(1);
+      }
+    }
+    return 'HR Team';
+  }
+
   Future<void> _handleAction(LeaveRequest request, String status) async {
     setState(() {
       _isActionLoading = true;
@@ -95,12 +122,10 @@ class _DashboardPageState extends State<DashboardPage> {
               position: slideLeftAnimation,
               child: FadeTransition(
                 opacity: animation,
-                child: RepaintBoundary(
-                  child: LeaveRequestTile(
-                    employeeName: removedItem.employeeName,
-                    dates: removedItem.dates,
-                    reason: removedItem.reason,
-                  ),
+                child: LeaveRequestTile(
+                  employeeName: removedItem.employeeName,
+                  dates: removedItem.dates,
+                  reason: removedItem.reason,
                 ),
               ),
             );
@@ -161,7 +186,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    'Friday, Aug 21',
+                    _formatCurrentDate(),
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -204,7 +229,7 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Stack(
           children: [
             _isLoading
-                ? const DashboardSkeletonLoader()
+                ? const DashboardSkeleton()
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
@@ -246,72 +271,56 @@ class _DashboardPageState extends State<DashboardPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Welcome Hero Banner
-                                RepaintBoundary(
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: bannerPadding,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [t.primaryDark, t.primary, t.secondary],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                                Container(
+                                  width: double.infinity,
+                                  padding: bannerPadding,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [t.primaryDark, t.primary, t.secondary],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(isMobile ? 18.0 : 24.0),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: t.glow,
+                                        blurRadius: isMobile ? 12 : 20,
+                                        offset: Offset(0, isMobile ? 5 : 8),
                                       ),
-                                      borderRadius: BorderRadius.circular(isMobile ? 18.0 : 24.0),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: t.glow,
-                                          blurRadius: isMobile ? 12 : 20,
-                                          offset: Offset(0, isMobile ? 5 : 8),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                            ),
+                                            SizedBox(height: isMobile ? 8 : 12),
+                                            Text(
+                                              'Good ${_getGreeting()}, ${_getDisplayName()} 👋',
+                                              style: TextStyle(
+                                                fontSize: bannerTitleSize,
+                                                fontWeight: FontWeight.w800,
+                                                color: Colors.white,
+                                                letterSpacing: -0.5,
+                                              ),
+                                            ),
+                                            SizedBox(height: isMobile ? 4 : 6),
+                                            Text(
+                                              'Here is what is happening across your organization today.',
+                                              style: TextStyle(fontSize: bannerSubtitleSize, color: Colors.white.withValues(alpha: 0.85)),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withValues(alpha: 0.15),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                child: const Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(Icons.bolt, color: Color(0xFFFACC15), size: 13),
-                                                    SizedBox(width: 4),
-                                                    Flexible(
-                                                      child: Text(
-                                                        'LIVE HR METRICS',
-                                                        overflow: TextOverflow.ellipsis,
-                                                        style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              SizedBox(height: isMobile ? 8 : 12),
-                                              Text(
-                                                'Good Morning, HR Team 👋',
-                                                style: TextStyle(
-                                                  fontSize: bannerTitleSize,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.white,
-                                                  letterSpacing: -0.5,
-                                                ),
-                                              ),
-                                              SizedBox(height: isMobile ? 4 : 6),
-                                              Text(
-                                                'Here is what is happening across your organization today.',
-                                                style: TextStyle(fontSize: bannerSubtitleSize, color: Colors.white.withValues(alpha: 0.85)),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 SizedBox(height: isMobile ? 14 : 24),
@@ -574,14 +583,12 @@ class _DashboardPageState extends State<DashboardPage> {
           position: slideInAnimation,
           child: FadeTransition(
             opacity: animation,
-            child: RepaintBoundary(
-              child: LeaveRequestTile(
-                employeeName: leave.employeeName,
-                dates: leave.dates,
-                reason: leave.reason,
-                onApprove: () => _handleAction(leave, 'APPROVED'),
-                onDecline: () => _handleAction(leave, 'REJECTED'),
-              ),
+            child: LeaveRequestTile(
+              employeeName: leave.employeeName,
+              dates: leave.dates,
+              reason: leave.reason,
+              onApprove: () => _handleAction(leave, 'APPROVED'),
+              onDecline: () => _handleAction(leave, 'REJECTED'),
             ),
           ),
         );

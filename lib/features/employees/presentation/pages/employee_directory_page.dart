@@ -437,7 +437,7 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
 
                     // 4. Results counter bar
                     Text(
-                      'Showing  employees',
+                      'Showing ${_filteredEmployees.length} employees',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -456,17 +456,25 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
                     )
                   : _filteredEmployees.isEmpty
                       ? SliverFillRemaining(
+                          hasScrollBody: false,
                           child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.people_outline_rounded, size: 48, color: theme.disabledColor),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No employees found matching criteria.',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: theme.textTheme.bodyMedium?.color),
-                                ),
-                              ],
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.people_outline_rounded, size: 44, color: theme.disabledColor),
+                                  const SizedBox(height: 12),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                    child: Text(
+                                      'No employees found matching criteria.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.textTheme.bodyMedium?.color),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         )

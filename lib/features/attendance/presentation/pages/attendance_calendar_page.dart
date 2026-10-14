@@ -15,7 +15,7 @@ import 'package:hr_management/features/leaves/presentation/widgets/apply_leave_d
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
-import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/features/attendance/presentation/widgets/attendance_calendar_skeleton.dart';
 
 class AttendanceCalendarPage extends StatefulWidget {
   final String currentEmployeeId;
@@ -748,15 +748,15 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       appBar: AppBar(
         title: Text(
           isAdmin ? 'Attendance Management' : 'Attendance Calendar',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: t.onBackgroundText),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: t.onBackgroundText),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           if (!isAdmin)
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
               onPressed: _fetchCalendarData,
             ),
         ],
@@ -1087,7 +1087,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
                         // Calendar Grid Component
                         _isLoading
-                            ? const CalendarSkeletonLoader()
+                            ? const AttendanceCalendarSkeleton()
                             : AttendanceCalendarGrid(
                                 activeMonth: _activeMonth,
                                 days: _days,
@@ -1344,18 +1344,22 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              TextButton.icon(
-                                onPressed: () {
-                                  _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
-                                },
-                                icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: t.success),
-                                label: Text(
-                                  'New Request for ${_selectedEmployee!.name.split(' ').first}',
-                                  style: TextStyle(color: t.success, fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  visualDensity: VisualDensity.compact,
+                              Flexible(
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    _showApplyRequestOptionsForDate(AttendanceCalendarDay(date: DateTime.now(), status: 'UPCOMING', statusLabel: ''));
+                                  },
+                                  icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: t.success),
+                                  label: Text(
+                                    'New Request for ${_selectedEmployee!.name.split(' ').first}',
+                                    style: TextStyle(color: t.success, fontSize: 11, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
                                 ),
                               ),
                             ],

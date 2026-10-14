@@ -249,14 +249,19 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                    child: Center(
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 1080),
-                        child: _buildCurrentStepView(context, t),
-                      ),
-                    ),
+                : Builder(
+                    builder: (context) {
+                      final isSmall = MediaQuery.sizeOf(context).width < 600;
+                      return SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(horizontal: isSmall ? 12 : 24, vertical: isSmall ? 12 : 20),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 1080),
+                            child: _buildCurrentStepView(context, t),
+                          ),
+                        ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -370,15 +375,13 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
   }
 
   Widget _buildStepBar(BuildContext context, dynamic t) {
-    final steps = [
-      'Verification',
-      'Calculation',
-      'Reconciliation',
-      'Publish',
-    ];
+    final isCompact = MediaQuery.sizeOf(context).width < 900;
+    final steps = isCompact
+        ? ['Verify', 'Calculate', 'Audit', 'Publish']
+        : ['Verification', 'Calculation', 'Reconciliation', 'Publish'];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 24, vertical: isCompact ? 8 : 12),
       decoration: BoxDecoration(
         color: t.cardSoft,
         border: Border(bottom: BorderSide(color: t.border)),

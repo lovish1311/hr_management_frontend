@@ -463,7 +463,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           tabs: const [
             Tab(icon: Icon(Icons.tune_rounded), text: '1. Leave Allocation'),
             Tab(icon: Icon(Icons.person_pin_rounded), text: '2. Employee Quotas'),
-            Tab(icon: Icon(Icons.timer_rounded), text: '3. Short Break & Permission Rules'),
+            Tab(icon: Icon(Icons.timer_rounded), text: '3. Break & Permissions'),
           ],
         ),
       ),

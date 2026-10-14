@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/features/auth/presentation/pages/login_page.dart';
 import 'package:hr_management/features/auth/presentation/pages/splash_screen.dart';
 import '../helpers/test_app_wrapper.dart';
@@ -9,6 +10,10 @@ void main() {
     await TestAppWrapper.setup();
   });
 
+  tearDown(() {
+    PermissionSocketService.instance.disconnect();
+  });
+
   group('Auth Screens Responsive & Overflow Tests', () {
     testWidgets('SplashScreen renders with 0 overflows across all viewports and text scales', (tester) async {
       await ResponsiveTester.testScreen(
@@ -17,6 +22,7 @@ void main() {
         route: '/splash',
         builder: () => const SplashScreen(),
       );
+      PermissionSocketService.instance.disconnect();
     });
 
     testWidgets('LoginPage renders with 0 overflows across all viewports and text scales', (tester) async {

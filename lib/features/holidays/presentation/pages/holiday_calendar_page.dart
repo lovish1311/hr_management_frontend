@@ -5,8 +5,8 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../data/models/holiday_model.dart';
 import '../../data/services/holiday_service.dart';
 import 'holiday_management_page.dart';
+import '../widgets/holiday_skeleton.dart';
 import 'package:hr_management/core/services/data_cache.dart';
-import 'package:hr_management/core/widgets/skeleton_loaders.dart';
 
 class HolidayCalendarPage extends StatefulWidget {
   const HolidayCalendarPage({super.key});
@@ -223,16 +223,16 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(MediaQuery.of(context).size.width < 500 ? 14.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Controls & Year Selection
             _buildHeader(t, isHrOrAdmin),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             if (_isLoading)
-              const HolidayCalendarSkeletonLoader()
+              const HolidayListSkeleton()
             else if (_errorMessage != null)
               _buildErrorBanner(t)
             else if (_calendarData == null || _calendarData!.holidays.isEmpty)

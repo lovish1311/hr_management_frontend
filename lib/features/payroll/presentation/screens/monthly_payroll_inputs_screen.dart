@@ -454,22 +454,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline, size: 48, color: t.danger),
-                            const SizedBox(height: 12),
-                            Text(_errorMessage!, style: TextStyle(color: t.danger)),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: _fetchInputs,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _buildErrorState(context, t)
                     : _buildTableContent(context, t),
           ),
 
@@ -481,8 +466,9 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
   }
 
   Widget _buildFilterHeader(BuildContext context, dynamic t) {
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 20, vertical: isCompact ? 10 : 14),
       decoration: BoxDecoration(
         color: t.card,
         border: Border(bottom: BorderSide(color: t.border)),
@@ -566,8 +552,8 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                       foregroundColor: t.primary,
                       side: BorderSide(color: t.primary.withValues(alpha: 0.6)),
                       backgroundColor: t.primary.withValues(alpha: 0.08),
-                      minimumSize: const Size(140, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      minimumSize: Size(isCompact ? 0 : 140, isCompact ? 36 : 40),
+                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 14, vertical: isCompact ? 8 : 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
@@ -579,8 +565,8 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
                     style: FilledButton.styleFrom(
                       backgroundColor: _isMonthLocked ? t.cardSoft : t.primary,
                       foregroundColor: _isMonthLocked ? t.text : Colors.white,
-                      minimumSize: const Size(120, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      minimumSize: Size(isCompact ? 0 : 120, isCompact ? 36 : 40),
+                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 14, vertical: isCompact ? 8 : 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
@@ -744,6 +730,49 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
     );
   }
 
+  Widget _buildDesktopRecommendedBanner(BuildContext context, dynamic t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.laptop_mac_rounded, size: 18, color: Color(0xFF2563EB)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 11.5, color: t.text, height: 1.35),
+                children: [
+                  const TextSpan(
+                    text: 'Desktop Recommended: ',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                  ),
+                  TextSpan(
+                    text: 'Multi-column payroll calculation matrices, LOP day inputs, and attendance batch sync are optimized for desktop & laptop displays.',
+                    style: TextStyle(color: t.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableContent(BuildContext context, dynamic t) {
     final list = _filteredInputs;
     if (list.isEmpty) {
@@ -754,11 +783,13 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isSmall = constraints.maxWidth < 600;
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isSmall ? 10 : 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildDesktopRecommendedBanner(context, t),
               _buildTaxRegimePolicyBanner(context, t),
               const SizedBox(height: 14),
               Container(
@@ -1185,6 +1216,88 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _formatErrorMessage(String error) {
+    final lower = error.toLowerCase();
+    if (lower.contains('connection closed') ||
+        lower.contains('connection refused') ||
+        lower.contains('clientexception') ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('network is unreachable')) {
+      return 'Unable to connect to server. Please verify the backend service is running on port 8080.';
+    }
+    return error;
+  }
+
+  Widget _buildErrorState(BuildContext context, dynamic t) {
+    final friendlyMsg = _formatErrorMessage(_errorMessage ?? 'An unexpected error occurred.');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(
+            color: t.card,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: t.danger.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: t.danger.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.cloud_off_rounded, size: 36, color: t.danger),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Connection Issue',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: t.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                friendlyMsg,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: t.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _fetchInputs,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry Connection'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: t.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:hr_management/features/drawguess/presentation/pages/draw_guess_lobby_page.dart';
 import 'package:hr_management/features/drawguess/presentation/pages/draw_guess_game_room_page.dart';
 import 'package:flutter/material.dart';
+import 'package:hr_management/features/query_builder/presentation/pages/query_builder_page.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/attendance/presentation/pages/attendance_calendar_page.dart';
 import 'package:hr_management/features/auth/presentation/pages/login_page.dart';
@@ -66,6 +67,7 @@ class AppRouter {
       '/payroll_inputs': (context) => const MonthlyPayrollInputsScreen(),
       '/salary_structure': (context) => const SalaryStructureScreen(),
       '/dashboard': (context) => const DashboardPage(),
+      '/query_builder': (context) => const QueryBuilderPage(),
       '/draw-and-guess': (context) => const DrawGuessLobbyPage(),
       '/draw-and-guess/room': (context) {
         final args = ModalRoute.of(context)?.settings.arguments;

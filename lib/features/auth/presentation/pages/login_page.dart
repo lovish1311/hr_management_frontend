@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/services/permission_socket_service.dart';
@@ -22,12 +23,18 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   bool _isProductionMode = false;
   String? _errorMessage;
 
+  // Real-time Account Status Lifecycle State
+  Timer? _emailDebounceTimer;
+  AccountStatus? _accountStatus;
+  bool _isCheckingStatus = false;
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
+    _emailController.addListener(_onEmailChanged);
     _loadModePreference();
     _animController = AnimationController(
       vsync: this,
@@ -38,6 +45,58 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       curve: Curves.easeOutCubic,
     );
     _animController.forward();
+
+    // Check prefilled email status after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty && email.contains('@')) {
+        _checkEmailStatus(email);
+      }
+    });
+  }
+
+  void _onEmailChanged() {
+    final rawEmail = _emailController.text.trim();
+    _emailDebounceTimer?.cancel();
+
+    if (rawEmail.isEmpty || !rawEmail.contains('@') || !rawEmail.contains('.')) {
+      if (_accountStatus != null || _isCheckingStatus) {
+        setState(() {
+          _accountStatus = null;
+          _isCheckingStatus = false;
+        });
+      }
+      return;
+    }
+
+    // Debounce by 350ms to allow smooth typing without excessive network queries
+    _emailDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+      _checkEmailStatus(rawEmail);
+    });
+  }
+
+  Future<void> _checkEmailStatus(String email) async {
+    if (!mounted) return;
+    setState(() {
+      _isCheckingStatus = true;
+    });
+
+    try {
+      final status = await AuthApiService.getAccountStatus(email);
+      if (!mounted) return;
+      if (_emailController.text.trim().toLowerCase() == email.toLowerCase()) {
+        setState(() {
+          _accountStatus = status;
+          _isCheckingStatus = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isCheckingStatus = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadModePreference() async {
@@ -50,6 +109,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           if (_isProductionMode) {
             _emailController.clear();
             _passwordController.clear();
+            _accountStatus = null;
           }
         });
       }
@@ -61,8 +121,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_production_login_mode', value);
     } catch (_) {}
+    _emailDebounceTimer?.cancel();
     setState(() {
       _isProductionMode = value;
+      _accountStatus = null;
+      _isCheckingStatus = false;
       if (_isProductionMode) {
         _emailController.clear();
         _passwordController.clear();
@@ -73,10 +136,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         _errorMessage = null;
       }
     });
+    if (!_isProductionMode) {
+      _checkEmailStatus('admin@company.com');
+    }
   }
 
   @override
   void dispose() {
+    _emailDebounceTimer?.cancel();
+    _emailController.removeListener(_onEmailChanged);
     _emailController.dispose();
     _passwordController.dispose();
     _animController.dispose();
@@ -84,11 +152,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   void _fillDemoCredentials(String email, String password) {
+    _emailDebounceTimer?.cancel();
     setState(() {
       _emailController.text = email;
       _passwordController.text = password;
       _errorMessage = null;
     });
+    _checkEmailStatus(email);
   }
 
   void _showForgotPasswordDialog() {
@@ -371,7 +441,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  void _showActivateAccountDialog() {
+  void _showActivateAccountDialog({String? initialEmail}) {
     FocusScope.of(context).unfocus();
     final keyCtrl = TextEditingController();
     final passCtrl = TextEditingController();
@@ -416,14 +486,29 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                               ),
                               Text(
-                                'First-Time Employee Onboarding',
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                initialEmail != null && initialEmail.isNotEmpty
+                                    ? 'Activating for $initialEmail'
+                                    : 'First-Time Employee Onboarding',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: initialEmail != null && initialEmail.isNotEmpty
+                                      ? const Color(0xFF0284C7)
+                                      : Colors.grey.shade600,
+                                  fontWeight: initialEmail != null && initialEmail.isNotEmpty ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, size: 20),
+                          icon: const Icon(Icons.close_rounded, size: 22, color: Color(0xFF64748B)),
+                          tooltip: 'Close / Go Back',
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                           onPressed: isDialogLoading ? null : () => Navigator.pop(dialogContext),
                         ),
                       ],
@@ -444,49 +529,63 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                       ),
                     ],
-                    Text(
+                    const Text(
                       'Enter the one-time activation key sent to your work email and set your password to begin.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: keyCtrl,
+                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
                         labelText: 'Activation Key',
+                        labelStyle: const TextStyle(color: Color(0xFF64748B)),
                         hintText: 'e.g. ACT-A1B2C3D4',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.vpn_key_outlined, size: 18, color: Color(0xFF0284C7)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.8)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: passCtrl,
                       obscureText: obscure,
+                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
                       decoration: InputDecoration(
                         labelText: 'Choose Password',
+                        labelStyle: const TextStyle(color: Color(0xFF64748B)),
                         hintText: 'Min 6 characters',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.lock_outline, size: 18, color: Color(0xFF0284C7)),
                         suffixIcon: IconButton(
-                          icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
+                          icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18, color: const Color(0xFF64748B)),
                           onPressed: () => setDialogState(() => obscure = !obscure),
                         ),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.8)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: confirmCtrl,
                       obscureText: obscure,
+                      style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
+                        labelStyle: const TextStyle(color: Color(0xFF64748B)),
                         prefixIcon: const Icon(Icons.lock_reset_outlined, size: 18, color: Color(0xFF0284C7)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.8)),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -520,12 +619,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 );
                                 if (!context.mounted) return;
                                 Navigator.pop(dialogContext);
-                                final activatedEmail = result['email']?.toString();
+                                final activatedEmail = result['email']?.toString() ?? initialEmail;
                                 setState(() {
                                   if (activatedEmail != null && activatedEmail.isNotEmpty) {
                                     _emailController.text = activatedEmail;
                                   }
                                   _passwordController.text = pass;
+                                  _errorMessage = null;
+                                  if (activatedEmail != null) {
+                                    _accountStatus = AccountStatus(
+                                      email: activatedEmail,
+                                      status: 'ACTIVE',
+                                      isActivated: true,
+                                      message: 'Account is active.',
+                                    );
+                                  }
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -557,6 +665,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : const Text('Activate Account & Save Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
+                    const SizedBox(height: 10),
+                    TextButton.icon(
+                      onPressed: isDialogLoading ? null : () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF64748B)),
+                      label: const Text(
+                        'Back to Sign In',
+                        style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -575,9 +692,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       _errorMessage = null;
     });
 
+    final email = _emailController.text.trim();
     try {
       final response = await AuthApiService.login(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text,
       );
 
@@ -594,7 +712,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         );
         PermissionSocketService.instance.init();
       }
-
 
       if (!mounted) return;
 
@@ -620,6 +737,33 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       // Navigate to Dashboard
       Navigator.pushReplacementNamed(context, '/');
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      if (e.isPendingActivation) {
+        setState(() {
+          _accountStatus = AccountStatus(
+            email: email,
+            status: 'PENDING_ACTIVATION',
+            isActivated: false,
+            message: e.message,
+          );
+          _errorMessage = null;
+        });
+      } else if (e.isDeactivated) {
+        setState(() {
+          _accountStatus = AccountStatus(
+            email: email,
+            status: 'DEACTIVATED',
+            isActivated: true,
+            message: e.message,
+          );
+          _errorMessage = e.message;
+        });
+      } else {
+        setState(() {
+          _errorMessage = e.message;
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -632,6 +776,179 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         });
       }
     }
+  }
+
+  Widget _buildAccountStatusBadge() {
+    if (_isCheckingStatus) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8.0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Verifying account status...',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_accountStatus == null) return const SizedBox.shrink();
+
+    if (_accountStatus!.isPendingActivation) {
+      return Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF93C5FD)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.mark_email_unread_rounded, color: Color(0xFF2563EB), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _accountStatus!.firstName != null
+                        ? 'Welcome ${_accountStatus!.firstName}! Action Needed'
+                        : 'Account Pending Activation',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDBEAFE),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'NEW HIRE',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _accountStatus!.message.isNotEmpty
+                  ? _accountStatus!.message
+                  : 'Your account is pending first-time activation. Enter your activation key to set your password.',
+              style: const TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), height: 1.3),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showActivateAccountDialog(initialEmail: _accountStatus!.email),
+                icon: const Icon(Icons.key_rounded, size: 16),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Enter Activation Key & Set Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_accountStatus!.isDeactivated) {
+      return Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _accountStatus!.message.isNotEmpty
+                    ? _accountStatus!.message
+                    : 'This account has been deactivated. Please contact HR.',
+                style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_accountStatus!.isActive) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6.0),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488), size: 15),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                _accountStatus!.firstName != null
+                    ? 'Account active (${_accountStatus!.firstName})'
+                    : 'Account active',
+                style: const TextStyle(color: Color(0xFF0D9488), fontSize: 12, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_accountStatus!.isNotFound) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 6.0),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Color(0xFF64748B), size: 15),
+            SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Unregistered work email',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   @override
@@ -804,7 +1121,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   side: BorderSide(color: const Color(0xFF0D9488).withValues(alpha: 0.5)),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: const Text('Manager (Harsh)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Manager (Harsh)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)))),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -816,19 +1133,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   side: BorderSide(color: Colors.grey.shade300),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: Text('Admin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                                child: FittedBox(fit: BoxFit.scaleDown, child: Text('Admin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700))),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: () => _fillDemoCredentials('lovish13331@gmail.com', 'ProPassword123!'),
+                                onPressed: () => _fillDemoCredentials('lovish@company.com', 'user123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   side: BorderSide(color: Colors.grey.shade300),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: Text('Lovish (Pro)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                                child: FittedBox(fit: BoxFit.scaleDown, child: Text('Lovish (Emp)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700))),
                               ),
                             ),
                           ],
@@ -904,6 +1221,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           return null;
                         },
                       ),
+                      _buildAccountStatusBadge(),
                       const SizedBox(height: 20),
 
                       // Password Field
@@ -1068,7 +1386,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       const SizedBox(height: 18),
                       Center(
                         child: TextButton.icon(
-                          onPressed: _showActivateAccountDialog,
+                          onPressed: () => _showActivateAccountDialog(initialEmail: _emailController.text.trim()),
                           icon: const Icon(Icons.key_rounded, size: 16, color: Color(0xFF0284C7)),
                           label: const Text(
                             'New Employee? Enter Activation Key',

@@ -1111,7 +1111,7 @@ class _EmployeeListTileState extends State<_EmployeeListTile> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  emp.designation.isNotEmpty ? emp.designation : emp.role,
+                  emp.designation.isNotEmpty ? emp.designation : _formatRole(emp.role),
                   style: TextStyle(fontSize: 11, color: t.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1157,6 +1157,17 @@ class _EmployeeListTileState extends State<_EmployeeListTile> {
         ),
       ),
     );
+  }
+
+  static String _formatRole(String role) {
+    if (role.isEmpty) return 'Employee';
+    return role
+        .replaceAll('ROLE_', '')
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join(' ');
   }
 }
 

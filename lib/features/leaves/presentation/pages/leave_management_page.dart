@@ -431,37 +431,63 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         bottom: AuthStorage.isHr
             ? null
             : PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: t.card.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: t.border.withValues(alpha: 0.3)),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicator: BoxDecoration(
-                      color: t.primary,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: t.primary.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                preferredSize: const Size.fromHeight(42),
+                child: Builder(
+                  builder: (context) {
+                    final isSmallScreen = MediaQuery.sizeOf(context).width < 400;
+                    return Container(
+                      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 24),
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: t.card.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: t.border.withValues(alpha: 0.3)),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          color: t.primary,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: t.primary.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    labelColor: Colors.white,
-                    unselectedLabelColor: t.onBackgroundTextSecondary,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    dividerColor: Colors.transparent,
-                    tabs: const [
-                      Tab(icon: Icon(Icons.person_outline_rounded, size: 18), text: 'My Leaves & Quotas'),
-                      Tab(icon: Icon(Icons.approval_rounded, size: 18), text: 'Team Approvals'),
-                    ],
-                  ),
+                        labelColor: Colors.white,
+                        unselectedLabelColor: t.onBackgroundTextSecondary,
+                        labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 11.5 : 12.5),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        tabs: [
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.person_outline_rounded, size: 15),
+                                const SizedBox(width: 5),
+                                Text(isSmallScreen ? 'My Quotas' : 'My Leaves & Quotas'),
+                              ],
+                            ),
+                          ),
+                          Tab(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.approval_rounded, size: 15),
+                                const SizedBox(width: 5),
+                                Text(isSmallScreen ? 'Approvals' : 'Team Approvals'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
       ),
@@ -606,9 +632,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 12.0 : 24.0,
-            vertical: isMobile ? 12.0 : 24.0,
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 12.0 : 24.0,
+            isMobile ? 10.0 : 24.0,
+            isMobile ? 12.0 : 24.0,
+            96.0,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1725,7 +1753,7 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
             transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
-            padding: EdgeInsets.all(isCompact ? 11.0 : 18.0),
+            padding: EdgeInsets.symmetric(horizontal: isCompact ? 10.0 : 18.0, vertical: isCompact ? 8.0 : 18.0),
             decoration: BoxDecoration(
               color: t.card,
               borderRadius: BorderRadius.circular(isCompact ? 14 : 20),

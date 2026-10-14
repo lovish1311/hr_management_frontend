@@ -2,7 +2,7 @@
 import 'dart:html' as html;
 import 'dart:typed_data';
 
-void downloadFileBytes(Uint8List bytes, String fileName, {String mimeType = 'text/csv'}) {
+Future<String?> downloadFileBytes(Uint8List bytes, String fileName, {String mimeType = 'text/csv'}) async {
   final blob = html.Blob([bytes], mimeType);
   final url = html.Url.createObjectUrlFromBlob(blob);
   final anchor = html.AnchorElement(href: url)
@@ -12,4 +12,5 @@ void downloadFileBytes(Uint8List bytes, String fileName, {String mimeType = 'tex
   anchor.click();
   html.document.body?.children.remove(anchor);
   html.Url.revokeObjectUrl(url);
+  return null;
 }

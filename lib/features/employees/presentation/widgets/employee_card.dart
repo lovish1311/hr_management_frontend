@@ -23,42 +23,42 @@ class EmployeeCard extends StatelessWidget {
 
     // Status dot and theme accents
     Color statusColor = const Color(0xFF10B981); // Emerald
-    String statusLabel = 'ACTIVE';
+    String statusLabel = 'Active';
     IconData statusIcon = Icons.check_circle_rounded;
 
     if (employee.status == 'PROBATION' || employee.isProbation) {
       statusColor = const Color(0xFFF59E0B); // Amber
-      statusLabel = 'PROBATION';
+      statusLabel = 'Probation';
       statusIcon = Icons.timer_outlined;
     } else if (employee.status == 'NOTICE_PERIOD' || employee.isNoticePeriod) {
       statusColor = const Color(0xFF8B5CF6); // Purple
-      statusLabel = 'NOTICE';
+      statusLabel = 'Notice Period';
       statusIcon = Icons.exit_to_app_rounded;
     } else if (employee.status == 'INACTIVE' || employee.status == 'TERMINATED') {
       statusColor = const Color(0xFF94A3B8); // Slate
-      statusLabel = 'INACTIVE';
+      statusLabel = 'Inactive';
       statusIcon = Icons.block_rounded;
     } else if (employee.isAttendanceTracked) {
       switch (employee.todayAttendanceStatus.toUpperCase()) {
         case 'PRESENT':
           statusColor = const Color(0xFF10B981);
-          statusLabel = 'PRESENT';
+          statusLabel = 'Present';
           statusIcon = Icons.check_circle_rounded;
           break;
         case 'LATE':
           statusColor = const Color(0xFFF59E0B);
-          statusLabel = 'LATE';
+          statusLabel = 'Late';
           statusIcon = Icons.access_time_filled_rounded;
           break;
         case 'ON_LEAVE':
         case 'PAID_LEAVE':
           statusColor = const Color(0xFF6366F1);
-          statusLabel = 'ON LEAVE';
+          statusLabel = 'On Leave';
           statusIcon = Icons.beach_access_rounded;
           break;
         case 'ABSENT':
           statusColor = const Color(0xFFEF4444);
-          statusLabel = 'ABSENT';
+          statusLabel = 'Absent';
           statusIcon = Icons.cancel_rounded;
           break;
       }
@@ -293,7 +293,7 @@ class EmployeeCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          employee.role,
+                          _formatRole(employee.role),
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
@@ -380,5 +380,16 @@ class EmployeeCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _formatRole(String role) {
+    if (role.isEmpty) return '';
+    return role
+        .replaceAll('ROLE_', '')
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join(' ');
   }
 }

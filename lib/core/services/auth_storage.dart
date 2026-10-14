@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthStorage {
   static String? _token;
   static String? _userEmail;
+  static String? _userName;
+  static String? _managerName;
   static String? _userRole;
   static String? _userSystemRole;
   static int? _employeeId;
@@ -14,6 +16,8 @@ class AuthStorage {
 
   static const String _kToken = 'auth_token';
   static const String _kEmail = 'auth_email';
+  static const String _kUserName = 'auth_user_name';
+  static const String _kManagerName = 'auth_manager_name';
   static const String _kRole = 'auth_role';
   static const String _kSystemRole = 'auth_system_role';
   static const String _kEmpId = 'auth_employee_id';
@@ -24,6 +28,8 @@ class AuthStorage {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_kToken);
     _userEmail = prefs.getString(_kEmail);
+    _userName = prefs.getString(_kUserName);
+    _managerName = prefs.getString(_kManagerName);
     _userRole = prefs.getString(_kRole);
     _userSystemRole = prefs.getString(_kSystemRole);
     _employeeId = prefs.getInt(_kEmpId);
@@ -33,6 +39,8 @@ class AuthStorage {
   static Future<void> setAuth({
     required String token,
     String? email,
+    String? userName,
+    String? managerName,
     String? role,
     String? systemRole,
     int? employeeId,
@@ -40,6 +48,8 @@ class AuthStorage {
   }) async {
     _token = token;
     _userEmail = email;
+    if (userName != null) _userName = userName;
+    if (managerName != null) _managerName = managerName;
     _userRole = role;
     _userSystemRole = systemRole;
     _employeeId = employeeId;
@@ -50,6 +60,8 @@ class AuthStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kToken, token);
     if (email != null) await prefs.setString(_kEmail, email);
+    if (userName != null) await prefs.setString(_kUserName, userName);
+    if (managerName != null) await prefs.setString(_kManagerName, managerName);
     if (role != null) await prefs.setString(_kRole, role);
     if (systemRole != null) await prefs.setString(_kSystemRole, systemRole);
     if (employeeId != null) await prefs.setInt(_kEmpId, employeeId);
@@ -81,6 +93,8 @@ class AuthStorage {
 
   static String? get token => _token;
   static String? get userEmail => _userEmail;
+  static String? get userName => _userName;
+  static String? get managerName => _managerName;
   static String? get userRole => _userRole;
   static String? get userSystemRole => _userSystemRole;
   static int? get employeeId => _employeeId;
@@ -142,6 +156,8 @@ class AuthStorage {
   static Future<void> clear() async {
     _token = null;
     _userEmail = null;
+    _userName = null;
+    _managerName = null;
     _userRole = null;
     _userSystemRole = null;
     _employeeId = null;
@@ -150,6 +166,8 @@ class AuthStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kToken);
     await prefs.remove(_kEmail);
+    await prefs.remove(_kUserName);
+    await prefs.remove(_kManagerName);
     await prefs.remove(_kRole);
     await prefs.remove(_kSystemRole);
     await prefs.remove(_kEmpId);

@@ -15,6 +15,7 @@ import 'package:hr_management/features/payroll/domain/repositories/payroll_repos
 import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
 import 'package:hr_management/features/holidays/data/services/holiday_service.dart';
 import 'package:hr_management/features/holidays/data/models/holiday_model.dart';
+import 'package:hr_management/features/home/presentation/widgets/home_shimmer.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -295,6 +296,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         : 'EM';
 
     final t = context.appTheme;
+    final isNarrow = MediaQuery.of(context).size.width < 400;
 
     return ResponsiveScaffold(
       backgroundColor: Colors.transparent,
@@ -349,7 +351,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 850), // Responsive Max Width for Desktop Web
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              padding: EdgeInsets.symmetric(
+                horizontal: isNarrow ? 14.0 : 20.0,
+                vertical: isNarrow ? 10.0 : 12.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -357,7 +362,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   Text(
                     'Good ${_getGreeting()}, $formattedName! 👋',
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: isNarrow ? 20 : 22,
                       fontWeight: FontWeight.w800,
                       color: t.onBackgroundText,
                     ),
@@ -366,17 +371,15 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   Text(
                     'Have a productive and joyful day at work',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: isNarrow ? 12 : 13,
                       color: t.onBackgroundTextSecondary,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isNarrow ? 12 : 16),
 
 
-                  // Sun Clock Shift Card (Isolated RepaintBoundary with internal ticker)
-                  const RepaintBoundary(
-                    child: _SunClockShiftCard(),
-                  ),
+                  // Isolated Sun Clock Shift Card (0 parent rebuilds, self-contained time ticker)
+                  const _LiveSunClockShiftCard(),
 
                   const SizedBox(height: 14),
 
@@ -471,20 +474,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
 
   Widget _buildPayslipOverviewCard(bool isDark) {
     if (_isLoadingPayslip) {
-      return Container(
-        height: 180,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(strokeWidth: 2.5),
-        ),
-      );
+      return const HomePayslipSkeleton();
     }
 
     final p = _latestPayslip;
@@ -778,16 +768,19 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${DateTime.now().year} Calendar',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF3B82F6)),
-                  ],
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${DateTime.now().year} Calendar',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF3B82F6)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -795,7 +788,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         ),
         const SizedBox(height: 12),
         if (_isLoadingHolidays)
-          const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+          const HomeHolidaysSkeleton()
         else if (!_isHolidayCalendarPublished)
           Container(
             width: double.infinity,
@@ -1411,18 +1404,18 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
   }
 }
 
-/// Isolated Sun Clock Shift Card that maintains its own internal 1-second ticker.
-/// Prevents the parent EmployeeHomePage and its 150+ widgets from rebuilding every second.
-class _SunClockShiftCard extends StatefulWidget {
-  const _SunClockShiftCard();
+/// Self-contained Sun Clock Shift Card that updates its own time ticker every 30 seconds.
+/// Rebuilding this widget causes 0 frame drops or rebuilds on the parent EmployeeHomePage.
+class _LiveSunClockShiftCard extends StatefulWidget {
+  const _LiveSunClockShiftCard();
 
   @override
-  State<_SunClockShiftCard> createState() => _SunClockShiftCardState();
+  State<_LiveSunClockShiftCard> createState() => _LiveSunClockShiftCardState();
 }
 
-class _SunClockShiftCardState extends State<_SunClockShiftCard> {
-  late Timer _timer;
-  DateTime _currentTime = DateTime.now();
+class _LiveSunClockShiftCardState extends State<_LiveSunClockShiftCard> {
+  Timer? _timer;
+  DateTime _now = DateTime.now();
 
   static const List<String> _days = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -1443,16 +1436,16 @@ class _SunClockShiftCardState extends State<_SunClockShiftCard> {
 
   String _formatAmPm(DateTime dt) => dt.hour >= 12 ? 'PM' : 'AM';
   String _formatDayName(DateTime dt) => _days[dt.weekday - 1];
-  String _formatFullDate(DateTime dt) =>
-      '${_formatTwoDigits(dt.day)} ${_months[dt.month - 1]} ${dt.year}';
+  String _formatFullDate(DateTime dt) => '${_formatTwoDigits(dt.day)} ${_months[dt.month - 1]} ${dt.year}';
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    // Updates once every 30 seconds to maintain exact clock accuracy without burning CPU
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) {
         setState(() {
-          _currentTime = DateTime.now();
+          _now = DateTime.now();
         });
       }
     });
@@ -1460,172 +1453,188 @@ class _SunClockShiftCardState extends State<_SunClockShiftCard> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dayName = _formatDayName(_currentTime);
-    final fullDateStr = _formatFullDate(_currentTime);
-    final timeStr = _formatTime(_currentTime);
-    final amPmStr = _formatAmPm(_currentTime);
+    final dayName = _formatDayName(_now);
+    final fullDateStr = _formatFullDate(_now);
+    final timeStr = _formatTime(_now);
+    final amPmStr = _formatAmPm(_now);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // City Skyline Graphic Banner Top
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isDark
-                    ? [const Color(0xFF3B0764), const Color(0xFF1E293B)]
-                    : [const Color(0xFFFDE68A), const Color(0xFFFFFBEB)],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 450;
+        final circleSize = isNarrow ? 66.0 : 78.0;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
             ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ClipRect(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final count = (constraints.maxWidth / 22).floor().clamp(4, 40);
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: List.generate(
-                            count,
-                            (i) => Container(
-                              width: 12.0 + (i % 3) * 6,
-                              height: 16.0 + (i % 5) * 5,
-                              color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
-                                  .withValues(alpha: 0.6),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // City Skyline Graphic Banner Top
+              Container(
+                height: isNarrow ? 38 : 46,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isDark
+                        ? [const Color(0xFF3B0764), const Color(0xFF1E293B)]
+                        : [const Color(0xFFFDE68A), const Color(0xFFFFFBEB)],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: Row(
-              children: [
-                // Sun Clock graphic on left
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFFDE047),
-                        Color(0xFFF59E0B),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        spreadRadius: 2,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRect(
+                        child: LayoutBuilder(
+                          builder: (context, skylineConstraints) {
+                            final count = (skylineConstraints.maxWidth / 20).floor().clamp(4, 40);
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: List.generate(
+                                count,
+                                (i) => Container(
+                                  width: 10.0 + (i % 3) * 5,
+                                  height: 14.0 + (i % 5) * 4,
+                                  color: (isDark ? Colors.purple.shade900 : Colors.amber.shade200)
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(6.0),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              timeStr,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF78350F),
-                              ),
-                            ),
-                            Text(
-                              amPmStr,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF92400E),
-                              ),
-                            ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isNarrow ? 14.0 : 20.0,
+                  vertical: isNarrow ? 12.0 : 16.0,
+                ),
+                child: Row(
+                  children: [
+                    // Sun Clock graphic on left
+                    Container(
+                      width: circleSize,
+                      height: circleSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFDE047),
+                            Color(0xFFF59E0B),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
-
-                // Shift Timings Info on right
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$dayName | 10:00 AM To 19:00 PM Shift',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              fullDateStr,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                              ),
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  timeStr,
+                                  style: TextStyle(
+                                    fontSize: isNarrow ? 15 : 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF78350F),
+                                  ),
+                                ),
+                                Text(
+                                  amPmStr,
+                                  style: TextStyle(
+                                    fontSize: isNarrow ? 9.5 : 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: isNarrow ? 12 : 18),
+
+                    // Shift Timings Info on right
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$dayName | 10:00 AM To 19:00 PM Shift',
+                            style: TextStyle(
+                              fontSize: isNarrow ? 13.5 : 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: isNarrow ? 13 : 14,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  fullDateStr,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: isNarrow ? 12 : 13,
+                                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

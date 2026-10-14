@@ -247,22 +247,7 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline, size: 48, color: t.danger),
-                        const SizedBox(height: 12),
-                        Text(_errorMessage!, style: TextStyle(color: t.danger)),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _fetchStructures,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
+                ? _buildErrorState(context, t)
                 : Column(
                     children: [
                       // Header & Employee Selector
@@ -270,11 +255,14 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
 
                       // Main Two-Column Scrollable Form
                       Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                          child: Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 1080),
+                        child: Builder(
+                          builder: (context) {
+                            final isSmall = MediaQuery.sizeOf(context).width < 600;
+                            return SingleChildScrollView(
+                              padding: EdgeInsets.symmetric(horizontal: isSmall ? 12 : 24, vertical: isSmall ? 12 : 20),
+                              child: Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(maxWidth: 1080),
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   final isWide = constraints.maxWidth > 720;
@@ -299,8 +287,10 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
                               ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+                  ),
 
                       // Sticky Bottom Calculation Bar
                       _buildStickyBottomBar(context, t),
@@ -588,6 +578,88 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  String _formatErrorMessage(String error) {
+    final lower = error.toLowerCase();
+    if (lower.contains('connection closed') ||
+        lower.contains('connection refused') ||
+        lower.contains('clientexception') ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('network is unreachable')) {
+      return 'Unable to connect to server. Please verify the backend service is running on port 8080.';
+    }
+    return error;
+  }
+
+  Widget _buildErrorState(BuildContext context, dynamic t) {
+    final friendlyMsg = _formatErrorMessage(_errorMessage ?? 'An unexpected error occurred.');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.all(24.0),
+          decoration: BoxDecoration(
+            color: t.card,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(color: t.danger.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: t.danger.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.cloud_off_rounded, size: 36, color: t.danger),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Connection Issue',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: t.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                friendlyMsg,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: t.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: _fetchStructures,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry Connection'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: t.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
