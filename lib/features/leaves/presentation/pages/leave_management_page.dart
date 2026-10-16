@@ -34,7 +34,8 @@ class LeaveManagementPage extends StatefulWidget {
   State<LeaveManagementPage> createState() => _LeaveManagementPageState();
 }
 
-class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTickerProviderStateMixin {
+class _LeaveManagementPageState extends State<LeaveManagementPage>
+    with SingleTickerProviderStateMixin {
   http.Client get _http => ApiClient.client;
   Employee? _currentEmployee;
   late TabController _tabController;
@@ -149,25 +150,36 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     try {
       // 1. Fetch employee leave balances from DB (fresh, un-cached)
       final t = DateTime.now().millisecondsSinceEpoch;
-      final balanceRes = await _http.get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
+      final balanceRes = await _http
+          .get(Uri.parse('$_baseUrl/balance/$empId?t=$t'), headers: headers);
       if (balanceRes.statusCode == 200) {
         final Map<String, dynamic> b = json.decode(balanceRes.body);
-        _balances['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
-        _balances['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
-        _balances['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
-        _balances['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Casual Leave'] =
+            (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Sick Leave'] =
+            (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Earned Leave'] =
+            (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+        _balances['Work From Home'] =
+            (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
 
-        _quotaLimits['Casual Leave'] = (b['casualLeaveQuota'] as num?)?.toDouble() ?? 0.0;
-        _quotaLimits['Sick Leave'] = (b['sickLeaveQuota'] as num?)?.toDouble() ?? 0.0;
-        _quotaLimits['Earned Leave'] = (b['earnedLeaveQuota'] as num?)?.toDouble() ?? 0.0;
-        _quotaLimits['Work From Home'] = (b['workFromHomeQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Casual Leave'] =
+            (b['casualLeaveQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Sick Leave'] =
+            (b['sickLeaveQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Earned Leave'] =
+            (b['earnedLeaveQuota'] as num?)?.toDouble() ?? 0.0;
+        _quotaLimits['Work From Home'] =
+            (b['workFromHomeQuota'] as num?)?.toDouble() ?? 0.0;
       } else {
         _hasError = true;
-        _errorMessage = 'Failed to fetch leave balances from server (Status: ${balanceRes.statusCode}).';
+        _errorMessage =
+            'Failed to fetch leave balances from server (Status: ${balanceRes.statusCode}).';
       }
 
       // 2. Fetch employee leave history from DB
-      final myLeavesRes = await _http.get(Uri.parse('$_baseUrl/employee/$empId'), headers: headers);
+      final myLeavesRes = await _http
+          .get(Uri.parse('$_baseUrl/employee/$empId'), headers: headers);
       if (myLeavesRes.statusCode == 200) {
         final List<dynamic> decoded = json.decode(myLeavesRes.body);
         _myLeaves = decoded.map((item) {
@@ -176,9 +188,12 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               .replaceAll('_', ' ')
               .toLowerCase()
               .split(' ')
-              .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+              .map((w) =>
+                  w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
               .join(' ');
-          final leaveTitle = formattedType.contains('Leave') ? formattedType : '$formattedType Leave';
+          final leaveTitle = formattedType.contains('Leave')
+              ? formattedType
+              : '$formattedType Leave';
 
           return {
             'id': item['id'],
@@ -196,16 +211,20 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         }).toList();
       } else if (!_hasError) {
         _hasError = true;
-        _errorMessage = 'Failed to fetch leave requests from server (Status: ${myLeavesRes.statusCode}).';
+        _errorMessage =
+            'Failed to fetch leave requests from server (Status: ${myLeavesRes.statusCode}).';
       }
 
       // 3. Fetch pending approval requests for Manager / HR / Global Approver
-      if (AuthStorage.isManager || AuthStorage.isHr || AuthStorage.canApproveAllLeaves) {
+      if (AuthStorage.isManager ||
+          AuthStorage.isHr ||
+          AuthStorage.canApproveAllLeaves) {
         final endpoint = (AuthStorage.isHr || AuthStorage.canApproveAllLeaves)
             ? '$_baseUrl/pending/all'
             : '$_baseUrl/pending/manager/$empId';
         try {
-          final pendingRes = await _http.get(Uri.parse(endpoint), headers: headers);
+          final pendingRes =
+              await _http.get(Uri.parse(endpoint), headers: headers);
           if (pendingRes.statusCode == 200) {
             final List<dynamic> pendingList = json.decode(pendingRes.body);
             _pendingApprovals = pendingList;
@@ -219,7 +238,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     } catch (e) {
       debugPrint('[LEAVE FETCH ERROR] Failed to load leave data: $e');
       _hasError = true;
-      _errorMessage = 'Unable to connect to server. Please check your connection and backend API.';
+      _errorMessage =
+          'Unable to connect to server. Please check your connection and backend API.';
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -227,7 +247,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
 
   Future<void> _applyForLeaveFromMap(Map<String, dynamic> data) async {
     final type = data['leaveType']?.toString() ?? 'CASUAL';
-    final fromDateStr = data['fromDate']?.toString() ?? DateTime.now().toIso8601String().split('T')[0];
+    final fromDateStr = data['fromDate']?.toString() ??
+        DateTime.now().toIso8601String().split('T')[0];
     final toDateStr = data['toDate']?.toString() ?? fromDateStr;
     final fromSession = data['fromSession']?.toString() ?? 'Session 1';
     final toSession = data['toSession']?.toString() ?? 'Session 2';
@@ -237,7 +258,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       final start = DateTime.parse(fromDateStr);
       final end = DateTime.parse(toDateStr);
       final diff = end.difference(start).inDays + 1;
-      if (diff == 1 && (fromSession != 'Session 1' || toSession != 'Session 2')) {
+      if (diff == 1 &&
+          (fromSession != 'Session 1' || toSession != 'Session 2')) {
         days = 0.5;
       } else {
         days = diff.toDouble();
@@ -253,13 +275,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       'endDate': toDateStr,
       'leaveType': type.toUpperCase().replaceAll(' ', '_'),
       'totalDays': days,
+      'fromSession': fromSession,
+      'toSession': toSession,
+      'startSession': fromSession,
+      'endSession': toSession,
       'reason': data['reason'] ?? '',
       if (data['startTime'] != null) 'startTime': data['startTime'],
       if (data['endTime'] != null) 'endTime': data['endTime'],
     });
 
     try {
-      final isAdminApply = AuthStorage.isHr && data['onBehalfEmployeeId'] != null;
+      final isAdminApply =
+          AuthStorage.isHr && data['onBehalfEmployeeId'] != null;
       final url = isAdminApply
           ? Uri.parse('$_baseUrl/admin/apply-on-behalf')
           : Uri.parse('$_baseUrl/apply');
@@ -317,7 +344,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     try {
       final decoded = json.decode(res.body);
       if (decoded is Map) {
-        if (decoded.containsKey('message') && decoded['message'] != null && decoded['message'].toString().isNotEmpty) {
+        if (decoded.containsKey('message') &&
+            decoded['message'] != null &&
+            decoded['message'].toString().isNotEmpty) {
           msg = decoded['message'].toString();
         } else if (decoded.containsKey('error') && decoded['error'] != null) {
           msg = decoded['error'].toString();
@@ -335,9 +364,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
 
     try {
       final res = await _http.put(
-        Uri.parse('$_baseUrl/$leaveId/withdraw'),
+        Uri.parse('$_baseUrl/$leaveId/cancel'),
         headers: AuthStorage.authHeaders,
-        body: json.encode({'actorId': (AuthStorage.employeeId ?? 1).toString()}),
+        body:
+            json.encode({'actorId': (AuthStorage.employeeId ?? 1).toString()}),
       );
       if (res.statusCode == 200) {
         // Refetch FRESH balance and leave history from backend — never trust local state
@@ -363,12 +393,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       debugPrint('[WITHDRAW ERROR] $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red.shade700),
+        SnackBar(
+            content: Text('Error: $e'), backgroundColor: Colors.red.shade700),
       );
     }
   }
 
-  Future<void> _updateLeaveStatus(int leaveId, String status, {String? rejectionReason}) async {
+  Future<void> _updateLeaveStatus(int leaveId, String status,
+      {String? rejectionReason}) async {
     final approverId = AuthStorage.employeeId ?? 1;
     final body = json.encode({
       'status': status,
@@ -388,7 +420,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Leave request $status successfully!'),
-            backgroundColor: status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
+            backgroundColor:
+                status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
           ),
         );
       } else {
@@ -404,7 +437,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating status: $e'), backgroundColor: Colors.red.shade700),
+        SnackBar(
+            content: Text('Error updating status: $e'),
+            backgroundColor: Colors.red.shade700),
       );
     }
   }
@@ -416,7 +451,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     return ResponsiveScaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Leave Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: t.onBackgroundText)),
+        title: Text('Leave Management',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: t.onBackgroundText)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: t.onBackgroundText),
@@ -434,14 +473,17 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 preferredSize: const Size.fromHeight(42),
                 child: Builder(
                   builder: (context) {
-                    final isSmallScreen = MediaQuery.sizeOf(context).width < 400;
+                    final isSmallScreen =
+                        MediaQuery.sizeOf(context).width < 400;
                     return Container(
-                      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 24),
+                      margin: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 12 : 24),
                       height: 38,
                       decoration: BoxDecoration(
                         color: t.card.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: t.border.withValues(alpha: 0.3)),
+                        border:
+                            Border.all(color: t.border.withValues(alpha: 0.3)),
                       ),
                       child: TabBar(
                         controller: _tabController,
@@ -458,7 +500,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                         ),
                         labelColor: Colors.white,
                         unselectedLabelColor: t.onBackgroundTextSecondary,
-                        labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 11.5 : 12.5),
+                        labelStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isSmallScreen ? 11.5 : 12.5),
                         indicatorSize: TabBarIndicatorSize.tab,
                         dividerColor: Colors.transparent,
                         tabs: [
@@ -467,9 +511,12 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.person_outline_rounded, size: 15),
+                                const Icon(Icons.person_outline_rounded,
+                                    size: 15),
                                 const SizedBox(width: 5),
-                                Text(isSmallScreen ? 'My Quotas' : 'My Leaves & Quotas'),
+                                Text(isSmallScreen
+                                    ? 'My Quotas'
+                                    : 'My Leaves & Quotas'),
                               ],
                             ),
                           ),
@@ -480,7 +527,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                               children: [
                                 const Icon(Icons.approval_rounded, size: 15),
                                 const SizedBox(width: 5),
-                                Text(isSmallScreen ? 'Approvals' : 'Team Approvals'),
+                                Text(isSmallScreen
+                                    ? 'Approvals'
+                                    : 'Team Approvals'),
                               ],
                             ),
                           ),
@@ -491,7 +540,6 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 ),
               ),
       ),
-
       floatingActionButton: LayoutBuilder(
         builder: (context, constraints) {
           final isMobile = MediaQuery.of(context).size.width < 500;
@@ -516,10 +564,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               highlightElevation: 0,
               backgroundColor: Colors.transparent,
               onPressed: _showApplyRequestOptions,
-              icon: Icon(Icons.add_rounded, color: Colors.white, size: isMobile ? 18 : 22),
+              icon: Icon(Icons.add_rounded,
+                  color: Colors.white, size: isMobile ? 18 : 22),
               label: Text(
                 AuthStorage.isHr
-                    ? (isMobile ? 'Apply on Behalf' : 'Apply On Behalf of Employee')
+                    ? (isMobile
+                        ? 'Apply on Behalf'
+                        : 'Apply On Behalf of Employee')
                     : (isMobile ? 'Apply Leave' : 'Apply Request'),
                 style: TextStyle(
                   color: Colors.white,
@@ -579,7 +630,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage ?? "Unable to connect to server. Please check your network connection or server status.",
+              _errorMessage ??
+                  "Unable to connect to server. Please check your network connection or server status.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -599,15 +651,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   style: ElevatedButton.styleFrom(
                     backgroundColor: t.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () async {
                     await AuthStorage.clear();
                     if (mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/login', (route) => false);
                     }
                   },
                   icon: const Icon(Icons.logout_rounded),
@@ -615,8 +670,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   style: OutlinedButton.styleFrom(
                     foregroundColor: t.primary,
                     side: BorderSide(color: t.primary),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -663,14 +720,21 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   ),
                   Text(
                     'Allocated by HR Admin',
-                    style: TextStyle(fontSize: isMobile ? 10.5 : 12, color: t.onBackgroundTextSecondary),
+                    style: TextStyle(
+                        fontSize: isMobile ? 10.5 : 12,
+                        color: t.onBackgroundTextSecondary),
                   ),
                 ],
               ),
               SizedBox(height: isMobile ? 10 : 14),
-              if (_currentEmployee != null && (_currentEmployee!.isProbation || _currentEmployee!.status == 'PROBATION'))
+              if (_currentEmployee != null &&
+                  (_currentEmployee!.isProbation ||
+                      _currentEmployee!.status == 'PROBATION'))
                 _buildProbationWarningBanner(t),
-              if (_currentEmployee != null && (_currentEmployee!.isNoticePeriod || _currentEmployee!.status == 'NOTICE_PERIOD' || _currentEmployee!.status == 'NOTICE'))
+              if (_currentEmployee != null &&
+                  (_currentEmployee!.isNoticePeriod ||
+                      _currentEmployee!.status == 'NOTICE_PERIOD' ||
+                      _currentEmployee!.status == 'NOTICE'))
                 _buildNoticeWarningBanner(t),
               _buildQuotaGrid(t),
               SizedBox(height: isMobile ? 20 : 32),
@@ -730,11 +794,16 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.beach_access_rounded, color: Color(0xFFF59E0B), size: 14),
+                  const Icon(Icons.beach_access_rounded,
+                      color: Color(0xFFF59E0B), size: 14),
                   const SizedBox(width: 6),
                   Text(
                     'LIVE LEAVE PORTAL',
-                    style: TextStyle(color: t.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                    style: TextStyle(
+                        color: t.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8),
                   ),
                 ],
               ),
@@ -782,24 +851,40 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               ),
               child: ElevatedButton.icon(
                 onPressed: _showApplyRequestOptions,
-                icon: Icon(Icons.add_rounded, size: isMobile ? 16 : 18, color: Colors.white),
-                label: Text('Apply Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12.5 : 14, color: Colors.white)),
+                icon: Icon(Icons.add_rounded,
+                    size: isMobile ? 16 : 18, color: Colors.white),
+                label: Text('Apply Now',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 12.5 : 14,
+                        color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 24, vertical: isMobile ? 10 : 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 14 : 20)),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 14 : 24,
+                      vertical: isMobile ? 10 : 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isMobile ? 14 : 20)),
                 ),
               ),
             ),
             OutlinedButton.icon(
               onPressed: () => Navigator.pushNamed(context, '/holidays'),
-              icon: Icon(Icons.event_available_rounded, size: isMobile ? 15 : 16, color: t.primary),
-              label: Text('Holidays & RH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 11.5 : 12, color: t.primary)),
+              icon: Icon(Icons.event_available_rounded,
+                  size: isMobile ? 15 : 16, color: t.primary),
+              label: Text('Holidays & RH',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: isMobile ? 11.5 : 12,
+                      color: t.primary)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: t.primary.withValues(alpha: 0.4)),
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 9 : 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isMobile ? 14 : 16)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 16,
+                    vertical: isMobile ? 9 : 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(isMobile ? 14 : 16)),
               ),
             ),
           ],
@@ -848,7 +933,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   Widget _buildQuotaGrid(AppThemeConfig t) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 550 ? 3 : 2);
+        final crossAxisCount = constraints.maxWidth > 900
+            ? 4
+            : (constraints.maxWidth > 550 ? 3 : 2);
         final childAspect = constraints.maxWidth < 400 ? 1.35 : 1.45;
         return GridView.builder(
           shrinkWrap: true,
@@ -881,7 +968,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
   Widget _buildHistorySection(AppThemeConfig t) {
     final filtered = _myLeaves.where((leave) {
       if (_selectedStatusFilter == 'All') return true;
-      return (leave['status']?.toString() ?? '').toLowerCase() == _selectedStatusFilter.toLowerCase();
+      return (leave['status']?.toString() ?? '').toLowerCase() ==
+          _selectedStatusFilter.toLowerCase();
     }).toList();
 
     return Container(
@@ -909,14 +997,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: t.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${filtered.length} Requests',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.primary),
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: t.primary),
                 ),
               ),
             ],
@@ -927,7 +1019,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ['All', 'Pending', 'Approved', 'Rejected'].map((status) {
+              children:
+                  ['All', 'Pending', 'Approved', 'Rejected'].map((status) {
                 final isSelected = _selectedStatusFilter == status;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -939,7 +1032,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     side: BorderSide(color: isSelected ? t.primary : t.border),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : t.textSecondary,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       fontSize: 12,
                     ),
                     onSelected: (val) {
@@ -953,9 +1047,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           const SizedBox(height: 20),
 
           if (filtered.isEmpty)
-            _buildEmptyState('No leave requests found for status "$_selectedStatusFilter"')
+            _buildEmptyState(
+                'No leave requests found for status "$_selectedStatusFilter"')
           else
-            ...filtered.map((leave) => RepaintBoundary(child: _buildInspirationLeaveCard(leave, t))),
+            ...filtered.map((leave) =>
+                RepaintBoundary(child: _buildInspirationLeaveCard(leave, t))),
         ],
       ),
     );
@@ -1005,7 +1101,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: t.border),
         boxShadow: [
-          BoxShadow(color: t.glow.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: t.glow.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -1016,8 +1115,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: t.primary.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-              border: Border(bottom: BorderSide(color: t.border.withValues(alpha: 0.5))),
+              borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+              border: Border(
+                  bottom: BorderSide(color: t.border.withValues(alpha: 0.5))),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1027,7 +1128,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     '$leaveType - $totalDays day(s)',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: t.text),
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: t.text),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1035,7 +1139,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: statusBgColor,
                         borderRadius: BorderRadius.circular(12),
@@ -1075,14 +1180,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.folder_open_rounded, size: 15, color: t.textSecondary),
+                        Icon(Icons.folder_open_rounded,
+                            size: 15, color: t.textSecondary),
                         const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Category', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                            Text('Category',
+                                style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: t.textSecondary,
+                                    fontWeight: FontWeight.bold)),
                             const SizedBox(height: 1),
-                            Text(category, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text)),
+                            Text(category,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: t.text)),
                           ],
                         ),
                       ],
@@ -1090,14 +1204,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_box_outlined, size: 15, color: t.textSecondary),
+                        Icon(Icons.check_box_outlined,
+                            size: 15, color: t.textSecondary),
                         const SizedBox(width: 8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Applied on', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                            Text('Applied on',
+                                style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: t.textSecondary,
+                                    fontWeight: FontWeight.bold)),
                             const SizedBox(height: 1),
-                            Text(appliedOn, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.text)),
+                            Text(appliedOn,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: t.text)),
                           ],
                         ),
                       ],
@@ -1107,7 +1230,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_outlined, size: 15, color: t.textSecondary),
+                    Icon(Icons.calendar_today_outlined,
+                        size: 15, color: t.textSecondary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Row(
@@ -1115,23 +1239,47 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('From', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                              Text('From',
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: t.textSecondary,
+                                      fontWeight: FontWeight.bold)),
                               const SizedBox(height: 1),
-                              Text(startDate, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.text)),
-                              Text(startSession, style: TextStyle(fontSize: 9.5, color: t.textSecondary)),
+                              Text(startDate,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: t.text)),
+                              Text(startSession,
+                                  style: TextStyle(
+                                      fontSize: 9.5, color: t.textSecondary)),
                             ],
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                            child: Text('—', style: TextStyle(color: t.textSecondary, fontWeight: FontWeight.bold)),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12.0),
+                            child: Text('—',
+                                style: TextStyle(
+                                    color: t.textSecondary,
+                                    fontWeight: FontWeight.bold)),
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('To', style: TextStyle(fontSize: 9.5, color: t.textSecondary, fontWeight: FontWeight.bold)),
+                              Text('To',
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: t.textSecondary,
+                                      fontWeight: FontWeight.bold)),
                               const SizedBox(height: 1),
-                              Text(endDate, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.text)),
-                              Text(endSession, style: TextStyle(fontSize: 9.5, color: t.textSecondary)),
+                              Text(endDate,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: t.text)),
+                              Text(endSession,
+                                  style: TextStyle(
+                                      fontSize: 9.5, color: t.textSecondary)),
                             ],
                           ),
                         ],
@@ -1146,12 +1294,16 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     child: ElevatedButton.icon(
                       onPressed: () => _withdrawLeave(leave),
                       icon: const Icon(Icons.undo_rounded, size: 14),
-                      label: const Text('Withdraw', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      label: const Text('Withdraw',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: t.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
                       ),
                     ),
                   ),
@@ -1176,7 +1328,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: t.border, width: 1.2),
             boxShadow: [
-              BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
+              BoxShadow(
+                  color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -1193,15 +1346,19 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       color: t.text,
                     ),
                   ),
-                  Icon(Icons.event_available_rounded, size: 20, color: t.primary),
+                  Icon(Icons.event_available_rounded,
+                      size: 20, color: t.primary),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildHolidayItem('Diwali Festival', 'Oct 31, 2026', 'Mandatory', t),
+              _buildHolidayItem(
+                  'Diwali Festival', 'Oct 31, 2026', 'Mandatory', t),
               const SizedBox(height: 10),
-              _buildHolidayItem('Christmas Day', 'Dec 25, 2026', 'Mandatory', t),
+              _buildHolidayItem(
+                  'Christmas Day', 'Dec 25, 2026', 'Mandatory', t),
               const SizedBox(height: 10),
-              _buildHolidayItem("New Year's Eve", 'Dec 31, 2026', 'Restricted', t),
+              _buildHolidayItem(
+                  "New Year's Eve", 'Dec 31, 2026', 'Restricted', t),
             ],
           ),
         ),
@@ -1215,7 +1372,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: t.border, width: 1.2),
             boxShadow: [
-              BoxShadow(color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
+              BoxShadow(
+                  color: t.glow, blurRadius: 14, offset: const Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -1240,7 +1398,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 '• Leave requests exceeding 3 consecutive days require manager approval at least 48 hours prior.\n'
                 '• Unused Sick Leave and Casual Leave auto-reset at fiscal year-end.\n'
                 '• Session 1 represents morning hours (09:00 AM - 01:30 PM), Session 2 represents afternoon hours (01:30 PM - 06:00 PM).',
-                style: TextStyle(fontSize: 12, color: t.textSecondary, height: 1.5),
+                style: TextStyle(
+                    fontSize: 12, color: t.textSecondary, height: 1.5),
               ),
             ],
           ),
@@ -1249,7 +1408,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildHolidayItem(String name, String date, String tag, AppThemeConfig t) {
+  Widget _buildHolidayItem(
+      String name, String date, String tag, AppThemeConfig t) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1263,15 +1423,22 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: t.text)),
+              Text(name,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: t.text)),
               const SizedBox(height: 2),
-              Text(date, style: TextStyle(fontSize: 11, color: t.textSecondary)),
+              Text(date,
+                  style: TextStyle(fontSize: 11, color: t.textSecondary)),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: tag == 'Mandatory' ? const Color(0xFF10B981).withValues(alpha: 0.15) : const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+              color: tag == 'Mandatory'
+                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                  : const Color(0xFF8B5CF6).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -1279,7 +1446,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: tag == 'Mandatory' ? const Color(0xFF10B981) : const Color(0xFF8B5CF6),
+                color: tag == 'Mandatory'
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFF8B5CF6),
               ),
             ),
           ),
@@ -1308,19 +1477,27 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       'Pending Team Requests',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold, color: t.onBackgroundText),
+                      style: TextStyle(
+                          fontSize: isMobile ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: t.onBackgroundText),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: isMobile ? 4 : 6),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 10 : 12,
+                        vertical: isMobile ? 4 : 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF59E0B),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '${_pendingApprovals.length} Pending',
-                      style: TextStyle(color: Colors.white, fontSize: isMobile ? 11 : 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isMobile ? 11 : 12,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -1335,7 +1512,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                         itemBuilder: (context, index) {
                           final leave = _pendingApprovals[index];
                           return RepaintBoundary(
-                            child: _buildApprovalCard(leave, t, isMobile: isMobile),
+                            child: _buildApprovalCard(leave, t,
+                                isMobile: isMobile),
                           );
                         },
                       ),
@@ -1347,12 +1525,18 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildApprovalCard(dynamic leave, AppThemeConfig t, {bool isMobile = false}) {
+  Widget _buildApprovalCard(dynamic leave, AppThemeConfig t,
+      {bool isMobile = false}) {
     final empId = leave['employeeId'];
-    final empName = leave['employeeName'] ?? leave['employee']?['name'] ?? 'Employee #$empId';
-    final empEmail = leave['employeeEmail'] ?? leave['employee']?['email'] ?? '';
+    final empName = leave['employeeName'] ??
+        leave['employee']?['name'] ??
+        'Employee #$empId';
+    final empEmail =
+        leave['employeeEmail'] ?? leave['employee']?['email'] ?? '';
     final dept = leave['employeeDepartment'] ?? 'General';
-    final leaveType = (leave['leaveType'] ?? leave['type'] ?? 'Casual Leave').toString().replaceAll('_', ' ');
+    final leaveType = (leave['leaveType'] ?? leave['type'] ?? 'Casual Leave')
+        .toString()
+        .replaceAll('_', ' ');
     final totalDays = leave['totalDays'] ?? leave['days'] ?? 1.0;
     final startDate = leave['startDate'] ?? 'Today';
     final endDate = leave['endDate'] ?? 'Today';
@@ -1381,7 +1565,10 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   backgroundColor: t.primary.withValues(alpha: 0.15),
                   child: Text(
                     empName.isNotEmpty ? empName[0] : 'E',
-                    style: TextStyle(color: t.primary, fontWeight: FontWeight.bold, fontSize: isMobile ? 14 : 16),
+                    style: TextStyle(
+                        color: t.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 14 : 16),
                   ),
                 ),
                 SizedBox(width: isMobile ? 10 : 14),
@@ -1402,13 +1589,17 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                       const SizedBox(height: 1),
                       Text(
                         empEmail.isNotEmpty ? '$empEmail • $dept' : dept,
-                        style: TextStyle(fontSize: isMobile ? 11 : 12, color: t.textSecondary),
+                        style: TextStyle(
+                            fontSize: isMobile ? 11 : 12,
+                            color: t.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       SizedBox(height: isMobile ? 6 : 8),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 10, vertical: isMobile ? 3 : 4),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 8 : 10,
+                            vertical: isMobile ? 3 : 4),
                         decoration: BoxDecoration(
                           color: t.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -1432,10 +1623,16 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             SizedBox(height: isMobile ? 10 : 14),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: isMobile ? 14 : 16, color: t.textSecondary),
+                Icon(Icons.calendar_today_outlined,
+                    size: isMobile ? 14 : 16, color: t.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Dates: $startDate ➔ $endDate', style: TextStyle(fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.w600, color: t.text), overflow: TextOverflow.ellipsis),
+                  child: Text('Dates: $startDate ➔ $endDate',
+                      style: TextStyle(
+                          fontSize: isMobile ? 12 : 13,
+                          fontWeight: FontWeight.w600,
+                          color: t.text),
+                      overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
@@ -1443,19 +1640,26 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.notes_rounded, size: isMobile ? 14 : 16, color: t.textSecondary),
+                Icon(Icons.notes_rounded,
+                    size: isMobile ? 14 : 16, color: t.textSecondary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Reason: $reason', style: TextStyle(fontSize: isMobile ? 12 : 13, color: t.textSecondary)),
+                  child: Text('Reason: $reason',
+                      style: TextStyle(
+                          fontSize: isMobile ? 12 : 13,
+                          color: t.textSecondary)),
                 ),
               ],
             ),
             SizedBox(height: isMobile ? 12 : 18),
-            if (empId != null && AuthStorage.employeeId != null && empId.toString() == AuthStorage.employeeId.toString())
+            if (empId != null &&
+                AuthStorage.employeeId != null &&
+                empId.toString() == AuthStorage.employeeId.toString())
               Align(
                 alignment: Alignment.centerRight,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: t.cardSoft,
                     borderRadius: BorderRadius.circular(12),
@@ -1464,11 +1668,15 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shield_outlined, size: 14, color: t.textSecondary),
+                      Icon(Icons.shield_outlined,
+                          size: 14, color: t.textSecondary),
                       const SizedBox(width: 6),
                       Text(
                         'Self Request (Self-Approval Prohibited)',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: t.textSecondary),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: t.textSecondary),
                       ),
                     ],
                   ),
@@ -1481,25 +1689,39 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED', rejectionReason: 'Manager Rejected'),
+                    onPressed: () => _updateLeaveStatus(leave['id'], 'REJECTED',
+                        rejectionReason: 'Manager Rejected'),
                     icon: Icon(Icons.close_rounded, size: isMobile ? 14 : 16),
-                    label: Text('Reject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
+                    label: Text('Reject',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 12 : 13)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFEF4444),
                       side: const BorderSide(color: Color(0xFFEF4444)),
-                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: isMobile ? 8 : 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 14 : 20,
+                          vertical: isMobile ? 8 : 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _updateLeaveStatus(leave['id'], 'APPROVED'),
+                    onPressed: () =>
+                        _updateLeaveStatus(leave['id'], 'APPROVED'),
                     icon: Icon(Icons.check_rounded, size: isMobile ? 14 : 16),
-                    label: Text('Approve', style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13)),
+                    label: Text('Approve',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 12 : 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 8 : 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 16 : 24,
+                          vertical: isMobile ? 8 : 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                   ),
                 ],
@@ -1539,7 +1761,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: t.card,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -1547,8 +1770,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    AuthStorage.isHr ? 'Apply Request on Behalf of Employee' : 'Apply Request',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.text),
+                    AuthStorage.isHr
+                        ? 'Apply Request on Behalf of Employee'
+                        : 'Apply Request',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: t.text),
                   ),
                   const SizedBox(height: 16),
                   _buildApplyOptionTile(
@@ -1556,7 +1784,9 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
                     icon: Icons.luggage_outlined,
                     color: const Color(0xFF0284C7),
                     title: 'Apply Leave',
-                    subtitle: AuthStorage.isHr ? 'Full/half-day leave on behalf of employee' : 'Full day or half day leave',
+                    subtitle: AuthStorage.isHr
+                        ? 'Full/half-day leave on behalf of employee'
+                        : 'Full day or half day leave',
                     onTap: () {
                       Navigator.pop(context);
                       _openApplyDialog('Leave');
@@ -1610,7 +1840,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
     );
   }
 
-  Widget _buildApplyOptionTile({required AppThemeConfig t, required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _buildApplyOptionTile(
+      {required AppThemeConfig t,
+      required IconData icon,
+      required Color color,
+      required String title,
+      required String subtitle,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -1633,9 +1869,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: color)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: t.textSecondary)),
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 12, color: t.textSecondary)),
                 ],
               ),
             ),
@@ -1665,7 +1906,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       decoration: BoxDecoration(
         color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+        border:
+            Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
       ),
       child: const Row(
         children: [
@@ -1675,8 +1917,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Probation Active: Earned Leave Accrual = 0.0', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706))),
-                Text('Earned Leaves do not accrue during probation. Prorated balance will be evaluated according to the 15th-day rule upon completion.', style: TextStyle(fontSize: 11.5, color: Color(0xFFB45309))),
+                Text('Probation Active: Earned Leave Accrual = 0.0',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFFD97706))),
+                Text(
+                    'Earned Leaves do not accrue during probation. Prorated balance will be evaluated according to the 15th-day rule upon completion.',
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFFB45309))),
               ],
             ),
           ),
@@ -1692,7 +1940,8 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       decoration: BoxDecoration(
         color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
+        border:
+            Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.4)),
       ),
       child: const Row(
         children: [
@@ -1702,8 +1951,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Notice Period Active: Normal Leave Requests Locked', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF7C3AED))),
-                Text('Per company policy, Casual, Sick, and Earned leaves cannot be applied during notice period. Loss of Pay (LOP) remains permitted. Balances are preserved.', style: TextStyle(fontSize: 11.5, color: Color(0xFF6D28D9))),
+                Text('Notice Period Active: Normal Leave Requests Locked',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF7C3AED))),
+                Text(
+                    'Per company policy, Casual, Sick, and Earned leaves cannot be applied during notice period. Loss of Pay (LOP) remains permitted. Balances are preserved.',
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFF6D28D9))),
               ],
             ),
           ),
@@ -1711,7 +1966,6 @@ class _LeaveManagementPageState extends State<LeaveManagementPage> with SingleTi
       ),
     );
   }
-
 }
 
 class _QuotaCardTile extends StatefulWidget {
@@ -1741,7 +1995,10 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
     final rem = widget.remaining;
     final limit = widget.limit;
     final color = item.color;
-    final isDesktop = kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux;
+    final isDesktop = kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1752,8 +2009,11 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
-            padding: EdgeInsets.symmetric(horizontal: isCompact ? 10.0 : 18.0, vertical: isCompact ? 8.0 : 18.0),
+            transform: Matrix4.translationValues(
+                0.0, _isHovered && isDesktop ? -3.0 : 0.0, 0.0),
+            padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 10.0 : 18.0,
+                vertical: isCompact ? 8.0 : 18.0),
             decoration: BoxDecoration(
               color: t.card,
               borderRadius: BorderRadius.circular(isCompact ? 14 : 20),
@@ -1779,7 +2039,10 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
                     Expanded(
                       child: Text(
                         item.title,
-                        style: TextStyle(fontSize: isCompact ? 11.5 : 13, fontWeight: FontWeight.bold, color: color),
+                        style: TextStyle(
+                            fontSize: isCompact ? 11.5 : 13,
+                            fontWeight: FontWeight.bold,
+                            color: color),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1791,7 +2054,8 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(isCompact ? 8 : 10),
                       ),
-                      child: Icon(item.icon, color: color, size: isCompact ? 15 : 18),
+                      child: Icon(item.icon,
+                          color: color, size: isCompact ? 15 : 18),
                     ),
                   ],
                 ),
@@ -1813,17 +2077,23 @@ class _QuotaCardTileState extends State<_QuotaCardTile> {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      item.key == 'Work From Home' ? 'Remote Days' : 'Out of ${limit.toInt()} Allocated',
+                      item.key == 'Work From Home'
+                          ? 'Remote Days'
+                          : 'Out of ${limit.toInt()} Allocated',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: isCompact ? 9.5 : 11, color: t.textSecondary),
+                      style: TextStyle(
+                          fontSize: isCompact ? 9.5 : 11,
+                          color: t.textSecondary),
                     ),
                   ],
                 ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: item.key == 'Work From Home' ? 1.0 : (limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0),
+                    value: item.key == 'Work From Home'
+                        ? 1.0
+                        : (limit > 0 ? (rem / limit).clamp(0.0, 1.0) : 0),
                     backgroundColor: t.border,
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                     minHeight: isCompact ? 4 : 5,

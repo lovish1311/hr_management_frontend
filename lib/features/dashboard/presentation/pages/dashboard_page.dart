@@ -1,72 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/kpi_card.dart';
 import 'package:hr_management/core/widgets/leave_request_tile.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
-import 'package:hr_management/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:hr_management/features/dashboard/domain/entities/dashboard_stats.dart';
-import 'package:hr_management/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
+import 'package:hr_management/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:hr_management/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
 
-class DashboardPage extends StatefulWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
-  final DashboardRepository _repository = DashboardRepositoryImpl();
+class _DashboardPageState extends ConsumerState<DashboardPage> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  
-  DashboardStats? _stats;
-  List<LeaveRequest> _pendingLeaves = [];
-  bool _isLoading = true;
-  bool _isActionLoading = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    AuthStorage.permissionRevision.addListener(_onPermissionsChanged);
-    _fetchStats();
-  }
-
-  void _onPermissionsChanged() {
-    if (mounted) {
-      setState(() {});
-      _fetchStats();
-    }
-  }
-
-  @override
-  void dispose() {
-    AuthStorage.permissionRevision.removeListener(_onPermissionsChanged);
-    super.dispose();
-  }
-
-  Future<void> _fetchStats() async {
-    try {
-      final stats = await _repository.getDashboardStats();
-      if (mounted) {
-        setState(() {
-          _stats = stats;
-          _pendingLeaves = List.from(stats.pendingLeaves);
-          _isLoading = false;
-          _errorMessage = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   String _formatCurrentDate() {
     final now = DateTime.now();
@@ -95,75 +47,59 @@ class _DashboardPageState extends State<DashboardPage> {
     return 'HR Team';
   }
 
+  Widget _buildSlideOutTile(LeaveRequest item, Animation<double> animation) {
+    final slideLeftAnimation = Tween<Offset>(
+      begin: const Offset(-1.0, 0.0), // Exit to the left
+      end: const Offset(0.0, 0.0),
+    ).animate(CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOut,
+    ));
+    return SlideTransition(
+      position: slideLeftAnimation,
+      child: FadeTransition(
+        opacity: animation,
+        child: LeaveRequestTile(
+          employeeName: item.employeeName,
+          dates: item.dates,
+          reason: item.reason,
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleAction(LeaveRequest request, String status) async {
-    setState(() {
-      _isActionLoading = true;
-    });
+    final index = ref.read(dashboardProvider).pendingLeaves.indexWhere((element) => element.id == request.id);
 
-    try {
-      // 1. Send status update to backend API
-      await _repository.updateLeaveStatus(request.id, status);
+    final success = await ref.read(dashboardProvider.notifier).updateLeaveStatus(
+      leaveId: request.id,
+      status: status,
+      onBeforeRemove: () {
+        if (index != -1) {
+          _listKey.currentState?.removeItem(
+            index,
+            (context, animation) => _buildSlideOutTile(request, animation),
+            duration: const Duration(milliseconds: 350),
+          );
+        }
+      },
+    );
 
-      // 2. Animate item slide-out to the left and fade-out smoothly
-      final index = _pendingLeaves.indexWhere((element) => element.id == request.id);
-      if (index != -1) {
-        final removedItem = _pendingLeaves.removeAt(index);
-        _listKey.currentState?.removeItem(
-          index,
-          (context, animation) {
-            final slideLeftAnimation = Tween<Offset>(
-              begin: const Offset(-1.0, 0.0), // Exit to the left
-              end: const Offset(0.0, 0.0),
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ));
-            return SlideTransition(
-              position: slideLeftAnimation,
-              child: FadeTransition(
-                opacity: animation,
-                child: LeaveRequestTile(
-                  employeeName: removedItem.employeeName,
-                  dates: removedItem.dates,
-                  reason: removedItem.reason,
-                ),
-              ),
-            );
-          },
-          duration: const Duration(milliseconds: 350),
-        );
-      }
-
-      // 3. Silently fetch background stats to refresh KPI counts
-      final freshStats = await _repository.getDashboardStats();
-      if (mounted) {
-        setState(() {
-          _stats = freshStats;
-          // Keep local state in sync
-          _pendingLeaves = List.from(freshStats.pendingLeaves);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update request: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isActionLoading = false;
-        });
-      }
+    if (!success && mounted) {
+      final error = ref.read(dashboardProvider).actionErrorMessage ?? 'Failed to update request';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update request: $error'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = context.appTheme;
+    final state = ref.watch(dashboardProvider);
 
     return ResponsiveScaffold(
       appBar: AppBar(
@@ -218,8 +154,7 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
             tooltip: 'Refresh Dashboard',
             onPressed: () {
-              setState(() { _isLoading = true; });
-              _fetchStats();
+              ref.read(dashboardProvider.notifier).loadDashboard();
             },
           ),
           const SizedBox(width: 8),
@@ -228,9 +163,9 @@ class _DashboardPageState extends State<DashboardPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            _isLoading
+            state.isLoading
                 ? const DashboardSkeleton()
-                : _errorMessage != null
+                : state.errorMessage != null
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
@@ -241,13 +176,12 @@ class _DashboardPageState extends State<DashboardPage> {
                               const SizedBox(height: 16),
                               Text('Failed to load dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: t.danger)),
                               const SizedBox(height: 8),
-                              Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: t.textSecondary)),
+                              Text(state.errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: t.textSecondary)),
                               const SizedBox(height: 24),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: t.primary, foregroundColor: Colors.white),
                                 onPressed: () {
-                                  setState(() { _isLoading = true; });
-                                  _fetchStats();
+                                  ref.read(dashboardProvider.notifier).loadDashboard();
                                 },
                                 child: const Text('Try Again'),
                               )
@@ -336,7 +270,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                             children: [
                                               KpiCard(
                                                 title: 'Total Employees',
-                                                value: (_stats?.totalEmployees ?? 0).toString(),
+                                                value: (state.stats?.totalEmployees ?? 0).toString(),
                                                 icon: Icons.people_alt_rounded,
                                                 cardType: KpiCardType.primary,
                                                 trendText: '+12.4%',
@@ -345,7 +279,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                               const SizedBox(width: 10),
                                               KpiCard(
                                                 title: 'Present Today',
-                                                value: (_stats?.presentToday ?? 0).toString(),
+                                                value: (state.stats?.presentToday ?? 0).toString(),
                                                 icon: Icons.verified_user_rounded,
                                                 cardType: KpiCardType.success,
                                                 trendText: '96.2%',
@@ -358,10 +292,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                             children: [
                                               KpiCard(
                                                 title: 'On Leave Today',
-                                                value: (_stats?.onLeaveToday ?? 0).toString(),
+                                                value: (state.stats?.onLeaveToday ?? 0).toString(),
                                                 icon: Icons.event_busy_rounded,
                                                 cardType: KpiCardType.warning,
-                                                trendText: '${_pendingLeaves.length} pending',
+                                                trendText: '${state.pendingLeaves.length} pending',
                                                 isTrendPositive: false,
                                               ),
                                             ],
@@ -374,7 +308,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       children: [
                                         KpiCard(
                                           title: 'Total Employees',
-                                          value: (_stats?.totalEmployees ?? 0).toString(),
+                                          value: (state.stats?.totalEmployees ?? 0).toString(),
                                           icon: Icons.people_alt_rounded,
                                           cardType: KpiCardType.primary,
                                           trendText: '+12.4%',
@@ -383,7 +317,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                         const SizedBox(width: 16),
                                         KpiCard(
                                           title: 'Present Today',
-                                          value: (_stats?.presentToday ?? 0).toString(),
+                                          value: (state.stats?.presentToday ?? 0).toString(),
                                           icon: Icons.verified_user_rounded,
                                           cardType: KpiCardType.success,
                                           trendText: '96.2%',
@@ -392,10 +326,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                         const SizedBox(width: 16),
                                         KpiCard(
                                           title: 'On Leave Today',
-                                          value: (_stats?.onLeaveToday ?? 0).toString(),
+                                          value: (state.stats?.onLeaveToday ?? 0).toString(),
                                           icon: Icons.event_busy_rounded,
                                           cardType: KpiCardType.warning,
-                                          trendText: '${_pendingLeaves.length} pending',
+                                          trendText: '${state.pendingLeaves.length} pending',
                                           isTrendPositive: false,
                                         ),
                                       ],
@@ -431,40 +365,40 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ),
                                 SizedBox(height: isMobile ? 18 : 32),
 
-                            // Responsive Main Grid (Pending Leaves + Culture Events)
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final screenWidth = MediaQuery.of(context).size.width;
-                                final isWideScreen = screenWidth > 850;
+                                // Responsive Main Grid (Pending Leaves + Culture Events)
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final screenWidth = MediaQuery.of(context).size.width;
+                                    final isWideScreen = screenWidth > 850;
 
-                                if (isWideScreen) {
-                                  return Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(flex: 5, child: _buildPendingLeaveSection(context)),
-                                      const SizedBox(width: 24),
-                                      const Expanded(flex: 3, child: UpcomingEventsCard()),
-                                    ],
-                                  );
-                                } else {
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildPendingLeaveSection(context),
-                                      const SizedBox(height: 24),
-                                      const UpcomingEventsCard(),
-                                    ],
-                                  );
-                                }
-                              },
+                                    if (isWideScreen) {
+                                      return Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(flex: 5, child: _buildPendingLeaveSection(context, state)),
+                                          const SizedBox(width: 24),
+                                          const Expanded(flex: 3, child: UpcomingEventsCard()),
+                                        ],
+                                      );
+                                    } else {
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildPendingLeaveSection(context, state),
+                                          const SizedBox(height: 24),
+                                          const UpcomingEventsCard(),
+                                        ],
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
             // Centered Action Loading Spinner Overlay
-            if (_isActionLoading)
+            if (state.isActionLoading)
               Container(
                 color: Colors.black.withValues(alpha: 0.35),
                 child: Center(
@@ -477,7 +411,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildPendingLeaveSection(BuildContext context) {
+  Widget _buildPendingLeaveSection(BuildContext context, DashboardState state) {
     final t = context.appTheme;
     final isMobile = MediaQuery.of(context).size.width < 600;
     return Container(
@@ -514,7 +448,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text),
                           ),
                         ),
-                        if (_pendingLeaves.isNotEmpty) ...[
+                        if (state.pendingLeaves.isNotEmpty) ...[
                           const SizedBox(width: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -523,7 +457,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              '${_pendingLeaves.length}',
+                              '${state.pendingLeaves.length}',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: t.primary),
                             ),
                           ),
@@ -540,14 +474,14 @@ class _DashboardPageState extends State<DashboardPage> {
             },
           ),
           const SizedBox(height: 18),
-          _buildPendingLeavesList(),
+          _buildPendingLeavesList(state),
         ],
       ),
     );
   }
 
-  Widget _buildPendingLeavesList() {
-    if (_pendingLeaves.isEmpty) {
+  Widget _buildPendingLeavesList(DashboardState state) {
+    if (state.pendingLeaves.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 36.0),
         child: Center(
@@ -568,10 +502,10 @@ class _DashboardPageState extends State<DashboardPage> {
       key: _listKey,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      initialItemCount: _pendingLeaves.length,
+      initialItemCount: state.pendingLeaves.length,
       itemBuilder: (context, index, animation) {
-        if (index >= _pendingLeaves.length) return const SizedBox();
-        final leave = _pendingLeaves[index];
+        if (index >= state.pendingLeaves.length) return const SizedBox();
+        final leave = state.pendingLeaves[index];
         final slideInAnimation = Tween<Offset>(
           begin: const Offset(1.0, 0.0),
           end: const Offset(0.0, 0.0),

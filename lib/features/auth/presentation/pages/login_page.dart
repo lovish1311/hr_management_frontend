@@ -1,32 +1,19 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:hr_management/core/services/auth_storage.dart';
-import 'package:hr_management/core/services/permission_socket_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management/features/auth/data/auth_api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hr_management/features/auth/presentation/providers/login_provider.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: 'admin@company.com');
   final _passwordController = TextEditingController(text: 'admin123');
-
-  bool _obscurePassword = true;
-  bool _isLoading = false;
-  bool _rememberMe = true;
-  bool _isProductionMode = false;
-  String? _errorMessage;
-
-  // Real-time Account Status Lifecycle State
-  Timer? _emailDebounceTimer;
-  AccountStatus? _accountStatus;
-  bool _isCheckingStatus = false;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -35,7 +22,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _emailController.addListener(_onEmailChanged);
-    _loadModePreference();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -46,104 +32,33 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
     _animController.forward();
 
-    // Check prefilled email status after first frame
+    // Check prefilled email status after first frame via Riverpod notifier
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final email = _emailController.text.trim();
       if (email.isNotEmpty && email.contains('@')) {
-        _checkEmailStatus(email);
+        ref.read(loginProvider.notifier).checkAccountStatus(email);
       }
     });
   }
 
   void _onEmailChanged() {
-    final rawEmail = _emailController.text.trim();
-    _emailDebounceTimer?.cancel();
-
-    if (rawEmail.isEmpty || !rawEmail.contains('@') || !rawEmail.contains('.')) {
-      if (_accountStatus != null || _isCheckingStatus) {
-        setState(() {
-          _accountStatus = null;
-          _isCheckingStatus = false;
-        });
-      }
-      return;
-    }
-
-    // Debounce by 350ms to allow smooth typing without excessive network queries
-    _emailDebounceTimer = Timer(const Duration(milliseconds: 350), () {
-      _checkEmailStatus(rawEmail);
-    });
+    ref.read(loginProvider.notifier).onEmailChanged(_emailController.text);
   }
 
-  Future<void> _checkEmailStatus(String email) async {
-    if (!mounted) return;
-    setState(() {
-      _isCheckingStatus = true;
-    });
-
-    try {
-      final status = await AuthApiService.getAccountStatus(email);
-      if (!mounted) return;
-      if (_emailController.text.trim().toLowerCase() == email.toLowerCase()) {
-        setState(() {
-          _accountStatus = status;
-          _isCheckingStatus = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isCheckingStatus = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadModePreference() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final isProd = prefs.getBool('is_production_login_mode') ?? false;
-      if (mounted) {
-        setState(() {
-          _isProductionMode = isProd;
-          if (_isProductionMode) {
-            _emailController.clear();
-            _passwordController.clear();
-            _accountStatus = null;
-          }
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _toggleMode(bool value) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_production_login_mode', value);
-    } catch (_) {}
-    _emailDebounceTimer?.cancel();
-    setState(() {
-      _isProductionMode = value;
-      _accountStatus = null;
-      _isCheckingStatus = false;
-      if (_isProductionMode) {
-        _emailController.clear();
-        _passwordController.clear();
-        _errorMessage = null;
-      } else {
-        _emailController.text = 'admin@company.com';
-        _passwordController.text = 'admin123';
-        _errorMessage = null;
-      }
-    });
-    if (!_isProductionMode) {
-      _checkEmailStatus('admin@company.com');
+  void _toggleMode(bool value) {
+    ref.read(loginProvider.notifier).toggleMode(value);
+    if (value) {
+      _emailController.clear();
+      _passwordController.clear();
+    } else {
+      _emailController.text = 'admin@company.com';
+      _passwordController.text = 'admin123';
+      ref.read(loginProvider.notifier).checkAccountStatus('admin@company.com');
     }
   }
 
   @override
   void dispose() {
-    _emailDebounceTimer?.cancel();
     _emailController.removeListener(_onEmailChanged);
     _emailController.dispose();
     _passwordController.dispose();
@@ -152,13 +67,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   void _fillDemoCredentials(String email, String password) {
-    _emailDebounceTimer?.cancel();
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-      _errorMessage = null;
-    });
-    _checkEmailStatus(email);
+    _emailController.text = email;
+    _passwordController.text = password;
+    ref.read(loginProvider.notifier).clearError();
+    ref.read(loginProvider.notifier).checkAccountStatus(email);
   }
 
   void _showForgotPasswordDialog() {
@@ -620,21 +532,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 if (!context.mounted) return;
                                 Navigator.pop(dialogContext);
                                 final activatedEmail = result['email']?.toString() ?? initialEmail;
-                                setState(() {
-                                  if (activatedEmail != null && activatedEmail.isNotEmpty) {
-                                    _emailController.text = activatedEmail;
-                                  }
+                                if (activatedEmail != null && activatedEmail.isNotEmpty) {
+                                  _emailController.text = activatedEmail;
                                   _passwordController.text = pass;
-                                  _errorMessage = null;
-                                  if (activatedEmail != null) {
-                                    _accountStatus = AccountStatus(
-                                      email: activatedEmail,
-                                      status: 'ACTIVE',
-                                      isActivated: true,
-                                      message: 'Account is active.',
-                                    );
-                                  }
-                                });
+                                  ref.read(loginProvider.notifier).setAccountActivated(activatedEmail);
+                                }
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Row(
@@ -687,31 +589,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
     final email = _emailController.text.trim();
     try {
-      final response = await AuthApiService.login(
+      final response = await ref.read(loginProvider.notifier).login(
         email: email,
         password: _passwordController.text,
       );
-
-      if (response['token'] != null) {
-        final rawAuths = response['authorities'] as List<dynamic>?;
-        final authorities = rawAuths?.map((e) => e.toString()).toList();
-        await AuthStorage.setAuth(
-          token: response['token'],
-          email: response['email'],
-          role: response['role'],
-          systemRole: response['systemRole'],
-          employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
-          authorities: authorities,
-        );
-        PermissionSocketService.instance.init();
-      }
 
       if (!mounted) return;
 
@@ -737,49 +620,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       // Navigate to Dashboard
       Navigator.pushReplacementNamed(context, '/');
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      if (e.isPendingActivation) {
-        setState(() {
-          _accountStatus = AccountStatus(
-            email: email,
-            status: 'PENDING_ACTIVATION',
-            isActivated: false,
-            message: e.message,
-          );
-          _errorMessage = null;
-        });
-      } else if (e.isDeactivated) {
-        setState(() {
-          _accountStatus = AccountStatus(
-            email: email,
-            status: 'DEACTIVATED',
-            isActivated: true,
-            message: e.message,
-          );
-          _errorMessage = e.message;
-        });
-      } else {
-        setState(() {
-          _errorMessage = e.message;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } catch (_) {
+      // Error state is already stored reactively in loginProvider
     }
   }
 
-  Widget _buildAccountStatusBadge() {
-    if (_isCheckingStatus) {
+  Widget _buildAccountStatusBadge(LoginState loginState) {
+    if (loginState.isCheckingStatus) {
       return const Padding(
         padding: EdgeInsets.only(top: 8.0),
         child: Row(
@@ -802,9 +649,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
     }
 
-    if (_accountStatus == null) return const SizedBox.shrink();
+    final accountStatus = loginState.accountStatus;
+    if (accountStatus == null) return const SizedBox.shrink();
 
-    if (_accountStatus!.isPendingActivation) {
+    if (accountStatus.isPendingActivation) {
       return Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.all(12),
@@ -829,8 +677,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _accountStatus!.firstName != null
-                        ? 'Welcome ${_accountStatus!.firstName}! Action Needed'
+                    accountStatus.firstName != null
+                        ? 'Welcome ${accountStatus.firstName}! Action Needed'
                         : 'Account Pending Activation',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
                     overflow: TextOverflow.ellipsis,
@@ -852,8 +700,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             ),
             const SizedBox(height: 6),
             Text(
-              _accountStatus!.message.isNotEmpty
-                  ? _accountStatus!.message
+              accountStatus.message.isNotEmpty
+                  ? accountStatus.message
                   : 'Your account is pending first-time activation. Enter your activation key to set your password.',
               style: const TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), height: 1.3),
             ),
@@ -861,7 +709,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _showActivateAccountDialog(initialEmail: _accountStatus!.email),
+                onPressed: () => _showActivateAccountDialog(initialEmail: accountStatus.email),
                 icon: const Icon(Icons.key_rounded, size: 16),
                 label: const FittedBox(
                   fit: BoxFit.scaleDown,
@@ -881,7 +729,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
     }
 
-    if (_accountStatus!.isDeactivated) {
+    if (accountStatus.isDeactivated) {
       return Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.all(12),
@@ -896,8 +744,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                _accountStatus!.message.isNotEmpty
-                    ? _accountStatus!.message
+                accountStatus.message.isNotEmpty
+                    ? accountStatus.message
                     : 'This account has been deactivated. Please contact HR.',
                 style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
@@ -908,7 +756,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
     }
 
-    if (_accountStatus!.isActive) {
+    if (accountStatus.isActive) {
       return Padding(
         padding: const EdgeInsets.only(top: 6.0),
         child: Row(
@@ -917,8 +765,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                _accountStatus!.firstName != null
-                    ? 'Account active (${_accountStatus!.firstName})'
+                accountStatus.firstName != null
+                    ? 'Account active (${accountStatus.firstName})'
                     : 'Account active',
                 style: const TextStyle(color: Color(0xFF0D9488), fontSize: 12, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
@@ -929,7 +777,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
     }
 
-    if (_accountStatus!.isNotFound) {
+    if (accountStatus.isNotFound) {
       return const Padding(
         padding: EdgeInsets.only(top: 6.0),
         child: Row(
@@ -953,6 +801,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final loginState = ref.watch(loginProvider);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -1042,17 +892,17 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
                       // Production / Demo Switch Banner
                       GestureDetector(
-                        onTap: () => _toggleMode(!_isProductionMode),
+                        onTap: () => _toggleMode(!loginState.isProductionMode),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: _isProductionMode
+                            color: loginState.isProductionMode
                                 ? const Color(0xFF0F172A).withValues(alpha: 0.05)
                                 : const Color(0xFF0D9488).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: _isProductionMode
+                              color: loginState.isProductionMode
                                   ? const Color(0xFF0284C7).withValues(alpha: 0.4)
                                   : const Color(0xFF0D9488).withValues(alpha: 0.4),
                             ),
@@ -1060,9 +910,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           child: Row(
                             children: [
                               Icon(
-                                _isProductionMode ? Icons.security_rounded : Icons.flash_on_rounded,
+                                loginState.isProductionMode ? Icons.security_rounded : Icons.flash_on_rounded,
                                 size: 22,
-                                color: _isProductionMode ? const Color(0xFF0284C7) : const Color(0xFF0D9488),
+                                color: loginState.isProductionMode ? const Color(0xFF0284C7) : const Color(0xFF0D9488),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -1070,15 +920,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _isProductionMode ? 'Production Security Mode' : 'Developer Demo Mode',
+                                      loginState.isProductionMode ? 'Production Security Mode' : 'Developer Demo Mode',
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: _isProductionMode ? const Color(0xFF0F172A) : const Color(0xFF0D9488),
+                                        color: loginState.isProductionMode ? const Color(0xFF0F172A) : const Color(0xFF0D9488),
                                       ),
                                     ),
                                     Text(
-                                      _isProductionMode
+                                      loginState.isProductionMode
                                           ? 'Demo credentials hidden • Bank-grade OTP active'
                                           : '1-tap credentials enabled for quick testing',
                                       style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
@@ -1087,7 +937,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                               ),
                               Switch(
-                                value: _isProductionMode,
+                                value: loginState.isProductionMode,
                                 activeThumbColor: const Color(0xFF0284C7),
                                 activeTrackColor: const Color(0xFFBAE6FD),
                                 inactiveThumbColor: const Color(0xFF0D9488),
@@ -1100,7 +950,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
 
                       // Quick Demo Preset Chips - ONLY VISIBLE WHEN DEMO MODE IS ACTIVE
-                      if (!_isProductionMode) ...[
+                      if (!loginState.isProductionMode) ...[
                         Text(
                           'DEMO CREDENTIAL PRESETS',
                           style: TextStyle(
@@ -1154,7 +1004,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ],
 
                       // Error Alert Banner
-                      if (_errorMessage != null) ...[
+                      if (loginState.errorMessage != null) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -1168,7 +1018,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  _errorMessage!,
+                                  loginState.errorMessage!,
                                   style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13),
                                 ),
                               ),
@@ -1221,7 +1071,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           return null;
                         },
                       ),
-                      _buildAccountStatusBadge(),
+                      _buildAccountStatusBadge(loginState),
                       const SizedBox(height: 20),
 
                       // Password Field
@@ -1236,21 +1086,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _passwordController,
-                        obscureText: _obscurePassword,
+                        obscureText: loginState.obscurePassword,
                         style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15),
                         decoration: InputDecoration(
                           hintText: '••••••••',
                           prefixIcon: const Icon(Icons.lock_outline, size: 20, color: Color(0xFF0D9488)),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              loginState.obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                               color: Colors.grey.shade600,
                               size: 20,
                             ),
                             onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
+                              ref.read(loginProvider.notifier).togglePasswordVisibility();
                             },
                           ),
                           filled: true,
@@ -1286,7 +1134,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         runSpacing: 4,
                         children: [
                           InkWell(
-                            onTap: () => setState(() => _rememberMe = !_rememberMe),
+                            onTap: () => ref.read(loginProvider.notifier).toggleRememberMe(!loginState.rememberMe),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1294,13 +1142,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   height: 24,
                                   width: 24,
                                   child: Checkbox(
-                                    value: _rememberMe,
+                                    value: loginState.rememberMe,
                                     activeColor: const Color(0xFF0D9488),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     onChanged: (val) {
-                                      setState(() {
-                                        _rememberMe = val ?? false;
-                                      });
+                                      ref.read(loginProvider.notifier).toggleRememberMe(val ?? false);
                                     },
                                   ),
                                 ),
@@ -1347,13 +1193,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
+                          onPressed: loginState.isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: _isLoading
+                          child: loginState.isLoading
                               ? const SizedBox(
                                   height: 24,
                                   width: 24,

@@ -40,15 +40,19 @@ graph TD
 - **Networking:** [`lib/core/network/api_client.dart`](file:///d:/Projects/hr_management_frontend/lib/core/network/api_client.dart) (Centralized HTTP client with automatic JWT header injection, 401 interceptor & redirect, and automatic `Content-Type: application/json` enforcement on POST/PUT/PATCH)
 
 ### [Node: Auth] (`lib/features/auth/`)
-- **Pages:** [`login_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/auth/presentation/pages/login_page.dart) (Smart email-first status detection, debounced 350ms verification, inline pending activation callout with 1-tap onboarding launcher, deactivation notice, and responsive zero-overflow layout).
+- **Pages:** [`login_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/auth/presentation/pages/login_page.dart) (ConsumerStatefulWidget powered by Riverpod `loginProvider`; features smart email-first status detection, debounced 350ms verification, inline pending activation callout with 1-tap onboarding launcher, deactivation notice, and responsive zero-overflow layout).
+- **State Management & Providers:** [`login_provider.dart`](file:///d:/Projects/hr_management_frontend/lib/features/auth/presentation/providers/login_provider.dart)
+  - `LoginState`: Immutable state model encapsulating `isLoading`, `isProductionMode`, `obscurePassword`, `rememberMe`, `errorMessage`, `accountStatus`, and `isCheckingStatus`.
+  - `LoginNotifier`: Riverpod `Notifier<LoginState>` managing preferences persistence, 350ms debounced email verification, credentials submission, token & authority sync with `AuthStorage`, and WebSocket permission channel initialization.
+  - `loginProvider`: Global `NotifierProvider.autoDispose<LoginNotifier, LoginState>`.
 - **Service & Data:** [`auth_api_service.dart`](file:///d:/Projects/hr_management_frontend/lib/features/auth/data/auth_api_service.dart)
   - `AccountStatus` model (`ACTIVE`, `PENDING_ACTIVATION`, `DEACTIVATED`, `NOT_FOUND`).
   - `AuthException` with structured `isPendingActivation`, `isDeactivated`, and `isBadCredentials` flags.
   - In-memory `_statusCache` map eliminating redundant network roundtrips for repeated email checks.
   - Automatic cache clearing on successful account activation (`clearStatusCache`).
 - **Tests:**
-  - [`login_page_smart_flow_test.dart`](file:///d:/Projects/hr_management_frontend/test/features/auth/login_page_smart_flow_test.dart) (Debounced status detection, in-memory caching, pending activation card, dialog launcher, deactivation badge).
-  - [`auth_screens_test.dart`](file:///d:/Projects/hr_management_frontend/test/screens/auth_screens_test.dart) (Zero-overflow responsive audits from 320dp small phone to desktop).
+  - [`login_page_smart_flow_test.dart`](file:///d:/Projects/hr_management_frontend/test/features/auth/login_page_smart_flow_test.dart) (Debounced status detection, in-memory caching, pending activation card, dialog launcher, deactivation badge with `ProviderScope`).
+  - [`auth_screens_test.dart`](file:///d:/Projects/hr_management_frontend/test/screens/auth_screens_test.dart) (Zero-overflow responsive audits from 320dp small phone to desktop wrapped in `ProviderScope`).
 - **State & Identity Lifecycle:**
   - *Email-First Identity Resolution*: `GET /api/auth/account-status?email=...` ($O(1)$ indexed lookup returning `PENDING_ACTIVATION`, `ACTIVE`, `DEACTIVATED`, or `NOT_FOUND`).
   - *Zero-Redundant Query Login Fast-Path*: `UserPrincipal` pre-populates authenticated claims directly in memory, saving 3 redundant DB roundtrips per login request.
@@ -63,8 +67,20 @@ graph TD
 - **Capabilities:** Live sun position, greeting, pending manager approvals badge, latest payslip snapshot, upcoming holidays.
 
 ### [Node: Dashboard] (`lib/features/dashboard/`)
-- **Pages:** [`dashboard_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/presentation/pages/dashboard_page.dart)
+- **Pages:** [`dashboard_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/presentation/pages/dashboard_page.dart) (Refactored to `ConsumerStatefulWidget` powered by Riverpod `dashboardProvider`; reactive KPI counts, responsive mobile/tablet/desktop layouts, animated leave approval slide-out with non-blocking action spinner, pull/button refresh, zero-overflow safeguards).
+- **State Management & Providers:** [`dashboard_provider.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/presentation/providers/dashboard_provider.dart)
+  - `DashboardState`: Immutable state model encapsulating `isLoading`, `isActionLoading`, `stats`, `pendingLeaves`, `errorMessage`, and `actionErrorMessage`.
+  - `DashboardNotifier`: Riverpod `Notifier<DashboardState>` managing dashboard lifecycle, silent and hard refreshes, background WebSocket/permission sync via `AuthStorage.permissionRevision`, and leave status mutations (`APPROVED`, `REJECTED`) with `onBeforeRemove` UI exit coordination.
+  - `dashboardProvider`: Global `NotifierProvider.autoDispose<DashboardNotifier, DashboardState>`.
+  - `dashboardRepositoryProvider`: Dependency Injection `Provider<DashboardRepository>` facilitating headless testing and mock injection.
+- **Domain & Data:**
+  - Entity: [`dashboard_stats.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/domain/entities/dashboard_stats.dart) (`DashboardStats` with immutable `copyWith` and `LeaveRequest`).
+  - Repository Contract: [`dashboard_repository.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/domain/repositories/dashboard_repository.dart).
+  - Implementation: [`dashboard_repository_impl.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/data/repositories/dashboard_repository_impl.dart).
 - **Widgets:** [`dashboard_skeleton.dart`](file:///d:/Projects/hr_management_frontend/lib/features/dashboard/presentation/widgets/dashboard_skeleton.dart)
+- **Tests:**
+  - [`dashboard_provider_test.dart`](file:///d:/Projects/hr_management_frontend/test/features/dashboard/dashboard_provider_test.dart) (100% passing unit & widget suite: DI repo mock, async error retry, leave approval animated exit, action loading spinner).
+  - [`dashboard_test.dart`](file:///d:/Projects/hr_management_frontend/test/screens/dashboard_test.dart) (Responsive zero-overflow verification across 320dp small phone to desktop under 1.0x-2.0x font scaling).
 
 ### [Node: People & Directory] (`lib/features/people/`)
 - **Pages:** [`people_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/people/presentation/pages/people_page.dart)
@@ -155,3 +171,8 @@ graph TD
   - Zero-overflow wrapped rows and text clipping (`Flexible`, `FittedBox`)
   - Scroll-safe empty state columns (`SliverFillRemaining(hasScrollBody: false)`)
   - O(1) attendance date lookups and RepaintBoundaries on dynamic grids
+
+### [Node: Session Logs & Agent Handoffs] (`chats/`)
+- **Index Directory**: [`chats/`](file:///d:/Projects/hr_management_frontend/chats)
+- **Active Agent 2 Log**: [`chat_30af0c29-0f2b-454f-93e4-29e66050e21c.md`](file:///d:/Projects/hr_management_frontend/chats/chat_30af0c29-0f2b-454f-93e4-29e66050e21c.md) (Frontend Specialist session recording context handoff from `af189a5f-048a-4222-82e6-9de84e2ca8d4`).
+

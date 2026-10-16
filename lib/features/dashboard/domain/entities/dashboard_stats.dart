@@ -27,6 +27,20 @@ class DashboardStats {
           : [],
     );
   }
+
+  DashboardStats copyWith({
+    int? totalEmployees,
+    int? presentToday,
+    int? onLeaveToday,
+    List<LeaveRequest>? pendingLeaves,
+  }) {
+    return DashboardStats(
+      totalEmployees: totalEmployees ?? this.totalEmployees,
+      presentToday: presentToday ?? this.presentToday,
+      onLeaveToday: onLeaveToday ?? this.onLeaveToday,
+      pendingLeaves: pendingLeaves ?? this.pendingLeaves,
+    );
+  }
 }
 
 class LeaveRequest {

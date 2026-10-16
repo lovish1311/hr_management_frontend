@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management/app/theme.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
@@ -27,19 +28,21 @@ class TestAppWrapper {
     ThemeMode themeMode = ThemeMode.dark,
     Map<String, WidgetBuilder>? routes,
   }) {
-    return MediaQuery(
-      data: MediaQueryData(
-        size: size,
-        textScaler: TextScaler.linear(textScale),
-        padding: const EdgeInsets.only(top: 24, bottom: 24),
-      ),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
-        routes: routes ?? {},
-        home: Material(child: child),
+    return ProviderScope(
+      child: MediaQuery(
+        data: MediaQueryData(
+          size: size,
+          textScaler: TextScaler.linear(textScale),
+          padding: const EdgeInsets.only(top: 24, bottom: 24),
+        ),
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          routes: routes ?? {},
+          home: Material(child: child),
+        ),
       ),
     );
   }

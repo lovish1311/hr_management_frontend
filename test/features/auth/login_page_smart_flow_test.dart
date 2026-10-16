@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/features/auth/data/auth_api_service.dart';
@@ -66,8 +67,10 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: LoginPage(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginPage(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -106,8 +109,10 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: LoginPage(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginPage(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
