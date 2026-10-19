@@ -937,6 +937,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 ),
                               ),
                               Switch(
+                                key: const Key('production_mode_switch'),
                                 value: loginState.isProductionMode,
                                 activeThumbColor: const Color(0xFF0284C7),
                                 activeTrackColor: const Color(0xFFBAE6FD),
@@ -965,6 +966,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           children: [
                             Expanded(
                               child: OutlinedButton(
+                                key: const Key('preset_manager_btn'),
                                 onPressed: () => _fillDemoCredentials('harsh.kaushal@company.com', 'manager123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -977,6 +979,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
+                                key: const Key('preset_admin_btn'),
                                 onPressed: () => _fillDemoCredentials('admin@company.com', 'admin123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -989,6 +992,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
+                                key: const Key('preset_employee_btn'),
                                 onPressed: () => _fillDemoCredentials('lovish@company.com', 'user123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -996,6 +1000,36 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                                 child: FittedBox(fit: BoxFit.scaleDown, child: Text('Lovish (Emp)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade700))),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                key: const Key('preset_probation_btn'),
+                                onPressed: () => _fillDemoCredentials('aarav.sharma@company.com', 'user123'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(color: const Color(0xFFD97706).withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Probation (Aarav)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)))),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                key: const Key('preset_peer_btn'),
+                                onPressed: () => _fillDemoCredentials('priya.patel@company.com', 'user123'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(color: const Color(0xFF6366F1).withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Peer (Priya)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)))),
                               ),
                             ),
                           ],
@@ -1039,6 +1073,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('login_email_input'),
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15),
@@ -1085,6 +1120,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('login_password_input'),
                         controller: _passwordController,
                         obscureText: loginState.obscurePassword,
                         style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15),
@@ -1193,6 +1229,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ],
                         ),
                         child: ElevatedButton(
+                          key: const Key('login_submit_btn'),
                           onPressed: loginState.isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -1255,3 +1292,4 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
     );
   }
 }
+

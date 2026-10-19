@@ -623,12 +623,12 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
         ),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 1.25,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
+              childAspectRatio: 1.05,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
             ),
             itemCount: leaveOptions.length,
             itemBuilder: (context, index) {
@@ -642,6 +642,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
               final isBlocked = isEarnedBlocked || isNoticeBlocked;
 
               return InkWell(
+                key: Key('leave_type_${item.type}'),
                 onTap: () {
                   if (isEarnedBlocked) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -665,7 +666,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E293B) : item.color,
                     borderRadius: BorderRadius.circular(16),
@@ -690,7 +691,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                                   child: Text(
                                     item.type,
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     ),
@@ -712,17 +713,21 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                                   ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.type == 'Work From Home'
-                                  ? (item.balance <= 0 ? '' : '-')
-                                  : (item.type == 'Loss Of Pay'
-                                      ? 'Uncapped'
-                                      : ''),
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                item.type == 'Work From Home'
+                                    ? (item.balance <= 0 ? '${item.balance.abs().toStringAsFixed(1)} Availed' : item.balance.toStringAsFixed(1))
+                                    : (item.type == 'Loss Of Pay'
+                                        ? 'Uncapped'
+                                        : item.balance.toStringAsFixed(1)),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
                               ),
                             ),
                           ],
@@ -730,12 +735,12 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                         Align(
                           alignment: Alignment.bottomRight,
                           child: Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(7),
                             decoration: BoxDecoration(
                               color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.8),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(item.icon, color: item.iconColor, size: 24),
+                            child: Icon(item.icon, color: item.iconColor, size: 20),
                           ),
                         ),
                       ],
@@ -1003,6 +1008,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 Text('Reason', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : const Color(0xFF475569))),
                 const SizedBox(height: 8),
                 TextField(
+                  key: const Key('leave_reason_input'),
                   controller: _reasonController,
                   maxLines: 3,
                   decoration: const InputDecoration(
@@ -1095,6 +1101,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton(
+              key: const Key('apply_leave_submit_btn'),
               onPressed: _submitForm,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),

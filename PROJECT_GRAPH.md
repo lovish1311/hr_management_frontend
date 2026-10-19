@@ -2,6 +2,7 @@
 
 ## 1. Graph Overview & Node Navigation
 This graph indexes all architectural nodes, dependency graphs, and features in `hr_management_frontend`. Searches can reference node identifiers to minimize token consumption and traversal time.
+- **Screen & Dialog Shortest Traversal Graph**: [`Screen_shortest_cover.md`](file:///d:/Projects/hr_management_frontend/Screen_shortest_cover.md) (Complete 25-screen and 14-dialog Eulerian traversal for phone & tablet verification).
 
 ```mermaid
 graph TD
@@ -177,7 +178,12 @@ graph TD
   - Scroll-safe empty state columns (`SliverFillRemaining(hasScrollBody: false)`)
   - O(1) attendance date lookups and RepaintBoundaries on dynamic grids
 
+### [Node: Integration Tests] (`integration_test/`)
+- **Suite**: [`leave_workflow_test.dart`](file:///d:/Projects/hr_management_frontend/integration_test/leave_workflow_test.dart) (Real-life visual UI workflow test running directly on Android emulator: 1-Tap preset login, navigation, leaves bottom nav, FAB, category & leave type selection, form fill, and submission verification).
+- **Automation Keys**: Standardized Key tokens (`preset_employee_btn`, `preset_manager_btn`, `preset_probation_btn`, `login_email_input`, `login_password_input`, `login_submit_btn`, `leaves_fab_apply`, `apply_leave_option_tile`, `leave_reason_input`, `apply_leave_submit_btn`).
+
 ### [Node: Session Logs & Agent Handoffs] (`chats/`)
 - **Index Directory**: [`chats/`](file:///d:/Projects/hr_management_frontend/chats)
 - **Active Agent 2 Log**: [`chat_30af0c29-0f2b-454f-93e4-29e66050e21c.md`](file:///d:/Projects/hr_management_frontend/chats/chat_30af0c29-0f2b-454f-93e4-29e66050e21c.md) (Frontend Specialist session recording context handoff from `af189a5f-048a-4222-82e6-9de84e2ca8d4`).
+
 

@@ -764,6 +764,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
               ],
             ),
             child: FloatingActionButton.extended(
+              key: const Key('leaves_fab_apply'),
               elevation: 0,
               highlightElevation: 0,
               backgroundColor: Colors.transparent,
@@ -2183,6 +2184,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                   ),
                   const SizedBox(height: 16),
                   _buildApplyOptionTile(
+                    key: const Key('apply_leave_option_tile'),
                     t: t,
                     icon: Icons.luggage_outlined,
                     color: const Color(0xFF0284C7),
@@ -2244,13 +2246,15 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
   }
 
   Widget _buildApplyOptionTile(
-      {required AppThemeConfig t,
+      {Key? key,
+      required AppThemeConfig t,
       required IconData icon,
       required Color color,
       required String title,
       required String subtitle,
       required VoidCallback onTap}) {
     return InkWell(
+      key: key,
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(

@@ -364,16 +364,53 @@ class _MockHttpClientResponse extends Stream<List<int>> implements HttpClientRes
           'description': 'National Holiday'
         }
       ]);
+    } else if (path.contains('/api/v1/leaves/balance')) {
+      jsonStr = json.encode({
+        'casualLeaveRemaining': 5.0,
+        'sickLeaveRemaining': 7.0,
+        'earnedLeaveRemaining': 12.0,
+        'workFromHomeRemaining': 2.0,
+        'compOffRemaining': 2.0,
+        'birthdayLeaveRemaining': 1.0,
+        'bereavementLeaveRemaining': 3.0,
+        'paternityLeaveRemaining': 5.0,
+        'lossOfPayRemaining': 0.0,
+      });
+    } else if (path.contains('/api/v1/leaves/apply') || path.contains('/apply-on-behalf')) {
+      jsonStr = json.encode({
+        'id': 202,
+        'status': 'PENDING',
+        'message': 'Applied for leave successfully!'
+      });
+    } else if (path.contains('/cancel') || path.contains('/status')) {
+      jsonStr = json.encode({
+        'id': 201,
+        'status': 'CANCEL_REQUESTED',
+        'message': 'Status updated successfully'
+      });
     } else if (path.contains('/api/v1/leaves')) {
       jsonStr = json.encode([
         {
           'id': 201,
-          'employeeName': 'Rahul Sharma',
+          'employeeName': 'Lovish',
           'leaveType': 'CASUAL_LEAVE',
-          'startDate': '2026-09-28',
-          'endDate': '2026-09-29',
-          'reason': 'Attending sibling wedding ceremony in home town',
+          'startDate': '2026-10-20',
+          'endDate': '2026-10-21',
+          'fromSession': 'Session 1',
+          'toSession': 'Session 2',
+          'reason': 'Personal errand and family time',
           'status': 'PENDING'
+        },
+        {
+          'id': 202,
+          'employeeName': 'Lovish',
+          'leaveType': 'EARNED_LEAVE',
+          'startDate': '2026-10-10',
+          'endDate': '2026-10-12',
+          'fromSession': 'Session 1',
+          'toSession': 'Session 2',
+          'reason': 'Vacation trip',
+          'status': 'APPROVED'
         }
       ]);
     } else if (path.contains('/api/v1/attendance')) {
