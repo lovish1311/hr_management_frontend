@@ -184,6 +184,14 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
         final List<dynamic> decoded = json.decode(myLeavesRes.body);
         _myLeaves = decoded.map((item) {
           final rawType = (item['leaveType'] as String? ?? 'Casual Leave');
+          final isTimeBased = item['isTimeBased'] == true ||
+              rawType == 'SHORT_BREAK' ||
+              rawType == 'EARLY_OUT' ||
+              rawType == 'LATE_ARRIVAL';
+          final startTime = item['startTime']?.toString();
+          final endTime = item['endTime']?.toString();
+          final cancellationReason = item['cancellationReason']?.toString();
+
           final formattedType = rawType
               .replaceAll('_', ' ')
               .toLowerCase()
@@ -193,18 +201,22 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
               .join(' ');
           final leaveTitle = formattedType.contains('Leave')
               ? formattedType
-              : '$formattedType Leave';
+              : (isTimeBased ? formattedType : '$formattedType Leave');
 
           return {
             'id': item['id'],
             'leaveType': leaveTitle,
-            'category': 'Leave',
-            'totalDays': (item['totalDays'] as num?)?.toDouble() ?? 1.0,
+            'category': isTimeBased ? 'Permission' : 'Leave',
+            'isTimeBased': isTimeBased,
+            'startTime': startTime,
+            'endTime': endTime,
+            'cancellationReason': cancellationReason,
+            'totalDays': (item['totalDays'] as num?)?.toDouble() ?? (isTimeBased ? 0.0 : 1.0),
             'appliedOn': item['startDate'] ?? 'Today',
             'startDate': item['startDate'] ?? 'Today',
-            'startSession': 'Session 1',
+            'startSession': item['startSession'] ?? 'Session 1',
             'endDate': item['endDate'] ?? 'Today',
-            'endSession': 'Session 2',
+            'endSession': item['endSession'] ?? 'Session 2',
             'reason': item['reason'] ?? 'Leave Request',
             'status': item['status'] ?? 'PENDING',
           };
@@ -302,9 +314,17 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
         // Refetch all data from backend for authoritative state
         await _fetchLeaveData();
         if (!mounted) return;
+        final isTimePass = data['isTimeBased'] == true ||
+            data['startTime'] != null ||
+            type == 'SHORT_BREAK' ||
+            type == 'EARLY_OUT' ||
+            type == 'LATE_ARRIVAL';
+        final successMsg = isTimePass && data['startTime'] != null && data['endTime'] != null
+            ? 'Applied for $type (${data['startTime']} - ${data['endTime']}) successfully!'
+            : 'Applied for $days day(s) of $type successfully!';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Applied for $days day(s) of $type successfully!'),
+            content: Text(successMsg),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
@@ -1282,6 +1302,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
     final endSession = leave['endSession'] ?? 'Session 2';
     final status = (leave['status'] ?? 'PENDING').toString().toUpperCase();
 
+    final bool isTimeBased = leave['isTimeBased'] == true;
+    final String? startTime = leave['startTime'];
+    final String? endTime = leave['endTime'];
+    final String durationLabel = isTimeBased && startTime != null && endTime != null
+        ? '$startTime - $endTime'
+        : '$totalDays day(s)';
+
     final isPending = status == 'PENDING' || status == 'IN_REVIEW';
     final isApproved = status == 'APPROVED';
     final isCancelRequested = status == 'CANCEL_REQUESTED';
@@ -1347,7 +1374,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
               children: [
                 Expanded(
                   child: Text(
-                    '$leaveType - $totalDays day(s)',
+                    '$leaveType - $durationLabel',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1475,7 +1502,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: t.text)),
-                                Text(startSession,
+                                Text(isTimeBased && startTime != null ? startTime : startSession,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -1508,7 +1535,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: t.text)),
-                                Text(endSession,
+                                Text(isTimeBased && endTime != null ? endTime : endSession,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(

@@ -165,10 +165,35 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           }
           _isLoadingEmployees = false;
         });
+        if (_employees.isNotEmpty) {
+          _fetchEmployeeBalances(_employees.first);
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _isLoadingEmployees = false);
     }
+  }
+
+  Future<void> _fetchEmployeeBalances(Employee emp) async {
+    final empId = int.tryParse(emp.id) ?? 1;
+    try {
+      final t = DateTime.now().millisecondsSinceEpoch;
+      final res = await http.get(
+        Uri.parse('$_baseUrl/api/v1/leaves/balance/$empId?t=$t'),
+        headers: AuthStorage.authHeaders,
+      );
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> b = json.decode(res.body);
+        if (mounted) {
+          setState(() {
+            _selectedEmployeeQuotas['Casual Leave'] = (b['casualLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+            _selectedEmployeeQuotas['Sick Leave'] = (b['sickLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+            _selectedEmployeeQuotas['Earned Leave'] = (b['earnedLeaveRemaining'] as num?)?.toDouble() ?? 0.0;
+            _selectedEmployeeQuotas['Work From Home'] = (b['workFromHomeRemaining'] as num?)?.toDouble() ?? 0.0;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -181,7 +206,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
   Future<void> _executeBulkGrant() async {
     final payload = {
       'leaveType': _selectedLeaveType.toUpperCase().replaceAll(' ', '_'),
-      'grantDays': _grantDays.toInt(),
+      'grantDays': _grantDays,
       'frequency': _selectedCycle,
       'excludedEmployeeIds': _excludedEmployees.map((e) => int.tryParse(e.id) ?? 0).toList(),
     };
@@ -423,7 +448,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
           body: json.encode({
             'employeeId': empId,
             'leaveType': type.toUpperCase().replaceAll(' ', '_'),
-            'adjustmentDays': delta.toInt(),
+            'adjustmentDays': delta,
           }),
         );
       } catch (_) {}
@@ -432,6 +457,8 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     setState(() {
       _pendingQuotaDeltas.clear();
     });
+
+    await _fetchEmployeeBalances(_selectedEmployee!);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -832,6 +859,7 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
                             _selectedEmployee = emp;
                             _pendingQuotaDeltas.clear();
                           });
+                          _fetchEmployeeBalances(emp);
                         },
                         ),
                       );

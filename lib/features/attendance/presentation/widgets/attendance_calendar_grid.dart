@@ -481,6 +481,8 @@ class AttendanceCalendarGrid extends StatelessWidget {
           return isNarrow ? 'Break' : 'Break (P)';
         } else if (normType.contains('EARLYOUT') || normType.contains('EARLYLEAVE')) {
           return isNarrow ? 'Early' : 'Early Out';
+        } else if (normType.contains('LATEARRIVAL') || normType.contains('LATEPASS')) {
+          return isNarrow ? 'Late' : 'Late (P)';
         }
         return isNarrow ? 'Pres' : 'Present';
       case 'LATE':

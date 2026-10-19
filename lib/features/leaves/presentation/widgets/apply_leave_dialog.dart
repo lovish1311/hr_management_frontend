@@ -83,6 +83,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
 
   final Map<String, double> _liveBalances = {};
 
+  bool get _isTimeBasedCategory =>
+      _selectedCategory == 'Short Break' ||
+      _selectedCategory == 'Early Out' ||
+      _selectedCategory == 'Late Arrival';
+
   Future<void> _fetchLiveBalance([int? targetEmpId]) async {
     final empId = targetEmpId ??
         (widget.targetEmployee != null
@@ -442,7 +447,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                         icon: const Icon(Icons.arrow_back_rounded, size: 20),
                         onPressed: () {
                           setState(() {
-                            _currentStep--;
+                            if (_isTimeBasedCategory && _currentStep == 2) {
+                              _currentStep = 0;
+                            } else {
+                              _currentStep--;
+                            }
                           });
                         },
                       ),
@@ -815,7 +824,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 ),
               ),
             ),
-          ] else ...[
+          ] else if (!_isTimeBasedCategory) ...[
             // Leave Balance Top Card
             Container(
               padding: const EdgeInsets.all(14),
@@ -841,6 +850,37 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                       const Text('Leave Balance', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 2),
                       Text('$_leaveBalanceDays days', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Time-Off Permission Allowance Info Card
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.timer_outlined, color: Color(0xFF3B82F6), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$_selectedCategory Allowance', style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text('Max 2 hrs / pass', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: isDark ? Colors.white : const Color(0xFF0F172A))),
                     ],
                   ),
                 ],
@@ -1335,7 +1375,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   }
 
   void _submitForm() {
-    if (_selectedCategory != 'Leave') {
+    if (_isTimeBasedCategory) {
       final startMins = _fromTime.hour * 60 + _fromTime.minute;
       final endMins = _toTime.hour * 60 + _toTime.minute;
       final durationMins = endMins - startMins;
@@ -1361,13 +1401,14 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
 
     final leaveData = {
       'category': _selectedCategory,
+      'isTimeBased': _isTimeBasedCategory,
       'leaveType': _selectedCategory == 'Leave' ? _selectedLeaveType : _selectedCategory,
       'fromDate': _fromDate.toIso8601String().split('T')[0],
       'fromSession': _fromSession,
-      'toDate': _selectedCategory == 'Leave' ? _toDate.toIso8601String().split('T')[0] : _fromDate.toIso8601String().split('T')[0],
+      'toDate': _isTimeBasedCategory ? _fromDate.toIso8601String().split('T')[0] : _toDate.toIso8601String().split('T')[0],
       'toSession': _toSession,
-      'startTime': _selectedCategory != 'Leave' ? '${_fromTime.hour.toString().padLeft(2, '0')}:${_fromTime.minute.toString().padLeft(2, '0')}' : null,
-      'endTime': _selectedCategory != 'Leave' ? '${_toTime.hour.toString().padLeft(2, '0')}:${_toTime.minute.toString().padLeft(2, '0')}' : null,
+      'startTime': _isTimeBasedCategory ? '${_fromTime.hour.toString().padLeft(2, '0')}:${_fromTime.minute.toString().padLeft(2, '0')}' : null,
+      'endTime': _isTimeBasedCategory ? '${_toTime.hour.toString().padLeft(2, '0')}:${_toTime.minute.toString().padLeft(2, '0')}' : null,
       'reason': _reasonController.text,
       'contactDetails': _contactController.text,
       'ccEmployees': _selectedCcEmployees.map((e) => e.name).toList(),
