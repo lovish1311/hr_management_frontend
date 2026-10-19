@@ -358,25 +358,35 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
     return msg;
   }
 
-  Future<void> _withdrawLeave(dynamic leave) async {
+  Future<void> _withdrawLeave(dynamic leave, {String? reason}) async {
     final leaveId = leave['id'];
     final type = leave['leaveType'] as String? ?? 'Leave';
+    final currentStatus =
+        (leave['status'] ?? 'PENDING').toString().toUpperCase();
 
     try {
       final res = await _http.put(
         Uri.parse('$_baseUrl/$leaveId/cancel'),
         headers: AuthStorage.authHeaders,
-        body:
-            json.encode({'actorId': (AuthStorage.employeeId ?? 1).toString()}),
+        body: json.encode({
+          'actorId': (AuthStorage.employeeId ?? 1).toString(),
+          'cancellationReason': reason ?? 'Employee requested cancellation',
+          'reason': reason ?? 'Employee requested cancellation',
+        }),
       );
       if (res.statusCode == 200) {
         // Refetch FRESH balance and leave history from backend — never trust local state
         await _fetchLeaveData();
         if (!mounted) return;
+        final isApprovedWithdraw = currentStatus == 'APPROVED';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$type request withdrawn successfully.'),
-            backgroundColor: const Color(0xFF10B981),
+            content: Text(isApprovedWithdraw
+                ? 'Cancellation request for $type submitted for manager approval.'
+                : '$type request withdrawn successfully.'),
+            backgroundColor: isApprovedWithdraw
+                ? const Color(0xFF8B5CF6)
+                : const Color(0xFF10B981),
           ),
         );
       } else {
@@ -399,6 +409,188 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
     }
   }
 
+  void _showWithdrawDialog(dynamic leave, AppThemeConfig t) {
+    final type = leave['leaveType'] as String? ?? 'Leave';
+    final startDate = leave['startDate'] ?? '';
+    final endDate = leave['endDate'] ?? '';
+    final totalDays = leave['totalDays'] ?? 1.0;
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: t.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: t.border),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.assignment_return_outlined,
+                    color: Color(0xFF8B5CF6), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Withdraw Approved Leave',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: t.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: t.cardSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: t.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$type • $totalDays day(s)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: t.text,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Dates: $startDate ➔ $endDate',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: t.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.25)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          size: 16, color: Color(0xFF8B5CF6)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Because this leave has already been approved, your cancellation request will be submitted to your manager for review. Used leave days will be refunded once approved.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF8B5CF6),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Reason for Cancellation',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: t.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 2,
+                  style: TextStyle(fontSize: 13, color: t.text),
+                  decoration: InputDecoration(
+                    hintText:
+                        'e.g. Vacation rescheduled, project requirement...',
+                    hintStyle:
+                        TextStyle(fontSize: 12, color: t.textSecondary),
+                    filled: true,
+                    fillColor: t.cardSoft,
+                    contentPadding: const EdgeInsets.all(12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: t.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: t.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: t.primary, width: 1.5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                'Keep Leave',
+                style: TextStyle(color: t.textSecondary, fontSize: 13),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final reason = reasonController.text.trim();
+                Navigator.of(ctx).pop();
+                _withdrawLeave(leave,
+                    reason: reason.isNotEmpty
+                        ? reason
+                        : 'Employee requested cancellation of approved leave');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B5CF6),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Submit Withdrawal',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _updateLeaveStatus(int leaveId, String status,
       {String? rejectionReason}) async {
     final approverId = AuthStorage.employeeId ?? 1;
@@ -417,11 +609,23 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
       if (res.statusCode == 200) {
         await _fetchLeaveData();
         if (!mounted) return;
+        String message;
+        if (status == 'CANCELLED') {
+          message = 'Leave cancellation approved and quota refunded.';
+        } else if (status == 'APPROVED') {
+          message = (rejectionReason != null &&
+                  rejectionReason.contains('Rejected'))
+              ? 'Cancellation rejected — leave remains approved.'
+              : 'Leave request approved successfully!';
+        } else {
+          message = 'Leave request $status successfully!';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Leave request $status successfully!'),
-            backgroundColor:
-                status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
+            content: Text(message),
+            backgroundColor: (status == 'APPROVED' || status == 'CANCELLED')
+                ? const Color(0xFF10B981)
+                : Colors.red,
           ),
         );
       } else {
@@ -968,8 +1172,11 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
   Widget _buildHistorySection(AppThemeConfig t) {
     final filtered = _myLeaves.where((leave) {
       if (_selectedStatusFilter == 'All') return true;
-      return (leave['status']?.toString() ?? '').toLowerCase() ==
-          _selectedStatusFilter.toLowerCase();
+      final s = (leave['status']?.toString() ?? '').toUpperCase();
+      if (_selectedStatusFilter == 'Cancel Requested') {
+        return s == 'CANCEL_REQUESTED';
+      }
+      return s == _selectedStatusFilter.toUpperCase();
     }).toList();
 
     return Container(
@@ -1019,8 +1226,13 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children:
-                  ['All', 'Pending', 'Approved', 'Rejected'].map((status) {
+              children: [
+                'All',
+                'Pending',
+                'Approved',
+                'Cancel Requested',
+                'Rejected'
+              ].map((status) {
                 final isSelected = _selectedStatusFilter == status;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -1069,16 +1281,25 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
     final endSession = leave['endSession'] ?? 'Session 2';
     final status = (leave['status'] ?? 'PENDING').toString().toUpperCase();
 
-    final canWithdraw = status == 'PENDING' || status == 'IN_REVIEW';
+    final isPending = status == 'PENDING' || status == 'IN_REVIEW';
+    final isApproved = status == 'APPROVED';
+    final isCancelRequested = status == 'CANCEL_REQUESTED';
+    final canWithdraw = isPending || isApproved;
 
     Color statusBgColor;
     Color statusTextColor;
     IconData statusIcon;
+    String statusDisplay = status;
 
     if (status == 'APPROVED') {
       statusBgColor = const Color(0xFF10B981).withValues(alpha: 0.15);
       statusTextColor = const Color(0xFF10B981);
       statusIcon = Icons.check_circle_rounded;
+    } else if (status == 'CANCEL_REQUESTED') {
+      statusBgColor = const Color(0xFF8B5CF6).withValues(alpha: 0.15);
+      statusTextColor = const Color(0xFF8B5CF6);
+      statusIcon = Icons.hourglass_top_rounded;
+      statusDisplay = 'CANCEL REQUESTED';
     } else if (status == 'REJECTED') {
       statusBgColor = const Color(0xFFEF4444).withValues(alpha: 0.15);
       statusTextColor = const Color(0xFFEF4444);
@@ -1151,7 +1372,7 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                           Icon(statusIcon, size: 12, color: statusTextColor),
                           const SizedBox(width: 4),
                           Text(
-                            status,
+                            statusDisplay,
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.bold,
@@ -1236,76 +1457,146 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                     Expanded(
                       child: Row(
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('From',
-                                  style: TextStyle(
-                                      fontSize: 9.5,
-                                      color: t.textSecondary,
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 1),
-                              Text(startDate,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: t.text)),
-                              Text(startSession,
-                                  style: TextStyle(
-                                      fontSize: 9.5, color: t.textSecondary)),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('From',
+                                    style: TextStyle(
+                                        fontSize: 9.5,
+                                        color: t.textSecondary,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 1),
+                                Text(startDate,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: t.text)),
+                                Text(startSession,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 9.5, color: t.textSecondary)),
+                              ],
+                            ),
                           ),
                           Padding(
                             padding:
-                                const EdgeInsets.symmetric(horizontal: 12.0),
+                                const EdgeInsets.symmetric(horizontal: 8.0),
                             child: Text('—',
                                 style: TextStyle(
                                     color: t.textSecondary,
                                     fontWeight: FontWeight.bold)),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('To',
-                                  style: TextStyle(
-                                      fontSize: 9.5,
-                                      color: t.textSecondary,
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 1),
-                              Text(endDate,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: t.text)),
-                              Text(endSession,
-                                  style: TextStyle(
-                                      fontSize: 9.5, color: t.textSecondary)),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('To',
+                                    style: TextStyle(
+                                        fontSize: 9.5,
+                                        color: t.textSecondary,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 1),
+                                Text(endDate,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: t.text)),
+                                Text(endSession,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 9.5, color: t.textSecondary)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
+                if (isCancelRequested) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.hourglass_top_rounded,
+                            size: 14, color: Color(0xFF8B5CF6)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            leave['cancellationReason'] != null &&
+                                    leave['cancellationReason']
+                                        .toString()
+                                        .trim()
+                                        .isNotEmpty
+                                ? 'Withdrawal requested: "${leave['cancellationReason']}" (under review)'
+                                : 'Withdrawal request under manager review.',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF8B5CF6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (canWithdraw) ...[
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _withdrawLeave(leave),
-                      icon: const Icon(Icons.undo_rounded, size: 14),
-                      label: const Text('Withdraw',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: t.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                    ),
+                    child: isApproved
+                        ? OutlinedButton.icon(
+                            onPressed: () => _showWithdrawDialog(leave, t),
+                            icon: const Icon(Icons.assignment_return_outlined,
+                                size: 14),
+                            label: const Text('Request Withdrawal',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFEF4444),
+                              side: BorderSide(
+                                  color: const Color(0xFFEF4444)
+                                      .withValues(alpha: 0.6)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () => _withdrawLeave(leave),
+                            icon: const Icon(Icons.undo_rounded, size: 14),
+                            label: const Text('Withdraw',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: t.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                            ),
+                          ),
                   ),
                 ],
               ],
@@ -1541,15 +1832,28 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
     final startDate = leave['startDate'] ?? 'Today';
     final endDate = leave['endDate'] ?? 'Today';
     final reason = leave['reason'] ?? 'None provided';
+    final status = (leave['status'] ?? 'PENDING').toString().toUpperCase();
+    final isCancelRequest = status == 'CANCEL_REQUESTED';
+    final cancellationReason = leave['cancellationReason'] ?? '';
 
     return Container(
       margin: EdgeInsets.only(bottom: isMobile ? 10 : 14),
       decoration: BoxDecoration(
         color: t.card,
         borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
-        border: Border.all(color: t.border),
+        border: Border.all(
+          color: isCancelRequest
+              ? const Color(0xFF8B5CF6).withValues(alpha: 0.5)
+              : t.border,
+        ),
         boxShadow: [
-          BoxShadow(color: t.glow, blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: isCancelRequest
+                ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                : t.glow,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Padding(
@@ -1562,11 +1866,15 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
               children: [
                 CircleAvatar(
                   radius: isMobile ? 17 : 20,
-                  backgroundColor: t.primary.withValues(alpha: 0.15),
+                  backgroundColor: isCancelRequest
+                      ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                      : t.primary.withValues(alpha: 0.15),
                   child: Text(
                     empName.isNotEmpty ? empName[0] : 'E',
                     style: TextStyle(
-                        color: t.primary,
+                        color: isCancelRequest
+                            ? const Color(0xFF8B5CF6)
+                            : t.primary,
                         fontWeight: FontWeight.bold,
                         fontSize: isMobile ? 14 : 16),
                   ),
@@ -1601,16 +1909,41 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                             horizontal: isMobile ? 8 : 10,
                             vertical: isMobile ? 3 : 4),
                         decoration: BoxDecoration(
-                          color: t.primary.withValues(alpha: 0.12),
+                          color: isCancelRequest
+                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                              : t.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
+                          border: isCancelRequest
+                              ? Border.all(
+                                  color: const Color(0xFF8B5CF6)
+                                      .withValues(alpha: 0.4))
+                              : null,
                         ),
-                        child: Text(
-                          '$leaveType ($totalDays Days)',
-                          style: TextStyle(
-                            color: t.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: isMobile ? 10 : 11,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isCancelRequest) ...[
+                              const Icon(Icons.assignment_return_outlined,
+                                  size: 12, color: Color(0xFF8B5CF6)),
+                              const SizedBox(width: 4),
+                            ],
+                            Flexible(
+                              child: Text(
+                                isCancelRequest
+                                    ? '$leaveType ($totalDays Days) • CANCELLATION REQUEST'
+                                    : '$leaveType ($totalDays Days)',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isCancelRequest
+                                      ? const Color(0xFF8B5CF6)
+                                      : t.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isMobile ? 10 : 11,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -1651,6 +1984,28 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                 ),
               ],
             ),
+            if (isCancelRequest &&
+                cancellationReason.toString().trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.assignment_return_outlined,
+                      size: 14, color: Color(0xFF8B5CF6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Cancellation Reason: $cancellationReason',
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF8B5CF6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             SizedBox(height: isMobile ? 12 : 18),
             if (empId != null &&
                 AuthStorage.employeeId != null &&
@@ -1681,6 +2036,54 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
                     ],
                   ),
                 ),
+              )
+            else if (isCancelRequest)
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _updateLeaveStatus(leave['id'], 'APPROVED',
+                        rejectionReason:
+                            'Cancellation Request Rejected - Leave Remains Approved'),
+                    icon: Icon(Icons.close_rounded, size: isMobile ? 14 : 16),
+                    label: Text(
+                        isMobile ? 'Reject Cancel' : 'Reject Cancellation',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 12 : 13)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                      side: const BorderSide(color: Color(0xFFEF4444)),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 12 : 18,
+                          vertical: isMobile ? 8 : 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _updateLeaveStatus(
+                        leave['id'], 'CANCELLED',
+                        rejectionReason: 'Cancellation Approved by Manager'),
+                    icon: Icon(Icons.check_rounded, size: isMobile ? 14 : 16),
+                    label: Text(
+                        isMobile ? 'Approve Cancel' : 'Approve Cancellation',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: isMobile ? 12 : 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 14 : 20,
+                          vertical: isMobile ? 8 : 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ],
               )
             else
               Wrap(

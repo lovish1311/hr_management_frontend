@@ -102,7 +102,12 @@ graph TD
 ### [Node: Leaves] (`lib/features/leaves/`)
 - **Pages:** [`leave_management_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/leaves/presentation/pages/leave_management_page.dart)
 - **Widgets:** [`apply_leave_dialog.dart`](file:///d:/Projects/hr_management_frontend/lib/features/leaves/presentation/widgets/apply_leave_dialog.dart)
-- **Capabilities:** Quotas balances, Team Approvals (Manager view with live Accept/Reject), Quota policies.
+- **Capabilities:**
+  - Quotas balances, Team Approvals, Quota policies.
+  - **Two-Phase Approved Leave Withdrawal**: Approved leaves expose a 'Request Withdrawal' button that triggers `_showWithdrawDialog`, allowing employees to submit cancellation requests with optional reasons without premature quota refunds.
+  - **Cancel Requested State Handling**: Dedicated `CANCEL_REQUESTED` badge in purple with real-time status banners and filter chips.
+  - **Manager Two-Phase Adjudication**: Distinguishes standard applications from cancellation requests with dedicated 'Approve Cancellation' (`CANCELLED`) and 'Reject Cancellation' (`APPROVED`) actions.
+  - **Zero-Overflow Layouts**: Responsive `SingleChildScrollView` dialog containers, `Flexible` chips, and `Expanded` date session columns ensuring immunity from horizontal or vertical RenderFlex errors on all viewports.
 
 ### [Node: Holidays] (`lib/features/holidays/`)
 - **Pages:**
