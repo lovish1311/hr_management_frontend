@@ -16,6 +16,7 @@ import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/attendance/presentation/widgets/attendance_calendar_skeleton.dart';
+import 'package:hr_management/features/attendance/presentation/widgets/today_attendance_card.dart';
 
 class AttendanceCalendarPage extends StatefulWidget {
   final String currentEmployeeId;
@@ -38,6 +39,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
   DateTime _activeMonth = DateTime.now();
   List<AttendanceCalendarDay> _days = [];
+  AttendanceCalendarDay? _todayAttendance;
   bool _isLoading = true;
 
   int presentCount = 0;
@@ -45,6 +47,8 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   int lopCount = 0;
   int holidayCount = 0;
   int weeklyWorkingMinutes = 0;
+
+  bool get canManageAttendance => AuthStorage.isSuperAdmin || AuthStorage.isHr || AuthStorage.isAdmin;
 
   final ScrollController _dropdownScrollController = ScrollController();
   final EmployeeRepository _employeeRepo = EmployeeRepositoryImpl();
@@ -60,7 +64,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   @override
   void initState() {
     super.initState();
-    if (AuthStorage.isSuperAdmin) {
+    if (canManageAttendance) {
       _isLoading = false;
       _dropdownScrollController.addListener(() {
         if (!_dropdownScrollController.hasClients) return;
@@ -73,8 +77,13 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       });
       _loadDropdownPage(reset: true).then((_) {
         if (_dropdownEmployees.isNotEmpty) {
+          final myId = AuthStorage.employeeId?.toString();
+          final me = _dropdownEmployees.firstWhere(
+            (e) => e.id.toString() == myId,
+            orElse: () => _dropdownEmployees.first,
+          );
           setState(() {
-            _selectedEmployee = _dropdownEmployees.first;
+            _selectedEmployee = me;
           });
           _fetchCalendarData();
         }
@@ -92,8 +101,8 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   Future<void> _fetchCalendarData() async {
-    final empId = AuthStorage.isSuperAdmin
-        ? (_selectedEmployee?.id ?? '')
+    final empId = canManageAttendance
+        ? (_selectedEmployee?.id ?? (AuthStorage.employeeId != null ? AuthStorage.employeeId.toString() : ''))
         : (AuthStorage.employeeId != null ? AuthStorage.employeeId.toString() : widget.currentEmployeeId);
 
     if (empId.isEmpty) {
@@ -116,24 +125,36 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       int weeklyMins = 0;
 
       final now = DateTime.now();
+      final todayMidnight = DateTime(now.year, now.month, now.day);
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
       final endOfWeek = startOfWeek.add(const Duration(days: 6));
+      AttendanceCalendarDay? matchedToday;
 
       for (var d in days) {
-        if (d.status == 'PRESENT' || d.status == 'LATE') present++;
-        if (d.status == 'PAID_LEAVE') paidLeave++;
-        if (d.status == 'LOP_LEAVE' || d.status == 'UNEXCUSED_ABSENT') lop++;
-        if (d.status == 'HOLIDAY') holiday++;
+        final st = d.status.toUpperCase();
+        if (st == 'PRESENT' || st == 'LATE') present++;
+        if (st == 'HALF_DAY') { present++; lop++; }
+        if (st == 'HALF_DAY_LEAVE') paidLeave++;
+        if (st == 'PAID_LEAVE') paidLeave++;
+        if (st == 'LOP_LEAVE' || st == 'UNEXCUSED_ABSENT' || st == 'ABSENT') lop++;
+        if (st == 'HOLIDAY') holiday++;
         
         if (d.date.isAfter(startOfWeek.subtract(const Duration(days: 1))) && 
             d.date.isBefore(endOfWeek.add(const Duration(days: 1)))) {
           weeklyMins += d.totalWorkingMinutes;
+        }
+
+        if (d.date.year == todayMidnight.year &&
+            d.date.month == todayMidnight.month &&
+            d.date.day == todayMidnight.day) {
+          matchedToday = d;
         }
       }
 
       if (mounted) {
         setState(() {
           _days = days;
+          _todayAttendance = matchedToday;
           presentCount = present;
           paidLeaveCount = paidLeave;
           lopCount = lop;
@@ -510,6 +531,51 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     }
   }
 
+  Future<void> _clearAttendanceData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Clear Attendance'),
+        content: const Text(
+          'Are you sure you want to permanently clear all attendance records? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Clear All Attendance', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _repository.clearAllAttendance();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All attendance records successfully cleared!'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+      _fetchCalendarData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to clear attendance: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _showApplyRequestOptionsForDate(AttendanceCalendarDay day) {
     showModalBottomSheet(
       context: context,
@@ -739,11 +805,12 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   Widget build(BuildContext context) {
     
     final t = context.appTheme;
-    final isAdmin = AuthStorage.isSuperAdmin;
+    final isAdmin = canManageAttendance;
+    final isSelf = !canManageAttendance || _selectedEmployee == null || _selectedEmployee?.id == AuthStorage.employeeId?.toString();
 
     // KPI Metrics calculation
-    final paidLeaveCount = _days.where((d) => d.status == 'PAID_LEAVE').length;
-    final lopCount = _days.where((d) => d.status == 'LOP_LEAVE' || d.status == 'UNEXCUSED_ABSENT').length;
+    final paidLeaveCount = _days.where((d) => d.status == 'PAID_LEAVE' || d.status == 'HALF_DAY_LEAVE').length;
+    final lopCount = _days.where((d) => d.status == 'LOP_LEAVE' || d.status == 'UNEXCUSED_ABSENT' || d.status == 'ABSENT' || d.status == 'HALF_DAY').length;
     final holidayCount = _days.where((d) => d.status == 'HOLIDAY').length;
     final String weeklyHoursStr = '${weeklyWorkingMinutes ~/ 60}h ${weeklyWorkingMinutes % 60}m';
 
@@ -780,7 +847,14 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                // HR Biometric Sheet Upload Header Card (Visible ONLY for Super Admin)
+                // Today's Live Attendance Punch Card
+                TodayAttendanceCard(
+                  todayAttendance: _todayAttendance,
+                  onPunchCompleted: _fetchCalendarData,
+                  isSelf: isSelf,
+                ),
+
+                // HR Biometric Sheet Upload Header Card (Visible for Super Admin, Admin, and HR)
                 if (isAdmin) ...[
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -799,15 +873,27 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                       builder: (context, constraints) {
                         final isCompact = constraints.maxWidth < 720;
                         final clearDataBtn = PopupMenuButton<String>(
-                          tooltip: 'Clear Leave Data Options',
+                          tooltip: 'Clear Data Options',
                           onSelected: (val) {
-                            if (val == 'selected') {
+                            if (val == 'attendance') {
+                              _clearAttendanceData();
+                            } else if (val == 'selected') {
                               _clearLeaveData(clearAll: false);
                             } else if (val == 'all') {
                               _clearLeaveData(clearAll: true);
                             }
                           },
                           itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'attendance',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.history_toggle_off_rounded, color: Colors.orange, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Clear All Attendance Records', style: TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
                             PopupMenuItem(
                               value: 'selected',
                               enabled: _selectedEmployee != null,
@@ -817,8 +903,8 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
                                   const SizedBox(width: 8),
                                   Text(
                                     _selectedEmployee != null
-                                        ? 'Clear \'s Leave Data'
-                                        : 'Select an employee to clear',
+                                        ? 'Clear ${_selectedEmployee!.name}\'s Leave Data'
+                                        : 'Select an employee to clear leaves',
                                     style: const TextStyle(fontSize: 13, color: Colors.red),
                                   ),
                                 ],

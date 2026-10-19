@@ -12,4 +12,12 @@ abstract class AttendanceRepository {
     required String fileName,
     required DateTime targetDate,
   });
+
+  Future<Map<String, dynamic>> checkIn({String? employeeId});
+
+  Future<Map<String, dynamic>> checkOut({String? employeeId});
+
+  Future<List<Map<String, dynamic>>> getAttendanceHistory(String employeeId);
+
+  Future<void> clearAllAttendance();
 }

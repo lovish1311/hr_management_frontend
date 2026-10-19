@@ -27,12 +27,16 @@ class AttendanceCalendarGrid extends StatelessWidget {
         return const Color(0xFF10B981); // Emerald Green
       case 'LATE':
         return const Color(0xFFF59E0B); // Warm Amber
+      case 'HALF_DAY':
+      case 'HALF_DAY_LEAVE':
+        return const Color(0xFFF97316); // Vibrant Tangerine
       case 'PAID_LEAVE':
         return const Color(0xFF6366F1); // Royal Indigo
       case 'PENDING_LEAVE':
         return const Color(0xFFFF9800); // Orange
       case 'LOP_LEAVE':
       case 'UNEXCUSED_ABSENT':
+      case 'ABSENT':
         return const Color(0xFFEF4444); // Crimson Rose
       case 'HOLIDAY':
         return const Color(0xFF06B6D4); // Cyan Blue
@@ -488,6 +492,9 @@ class AttendanceCalendarGrid extends StatelessWidget {
       case 'LOP_LEAVE':
       case 'UNEXCUSED_ABSENT':
         return 'LOP';
+      case 'HALF_DAY':
+      case 'HALF_DAY_LEAVE':
+        return isNarrow ? 'Half' : 'Half Day';
       case 'HOLIDAY':
         return isNarrow ? 'Holi' : 'Holiday';
       default:

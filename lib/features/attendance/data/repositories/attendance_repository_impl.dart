@@ -68,5 +68,62 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     return null;
   }
 
+  @override
+  Future<Map<String, dynamic>> checkIn({String? employeeId}) async {
+    final query = (employeeId != null && employeeId.isNotEmpty) ? '?employeeId=$employeeId' : '';
+    final url = Uri.parse('$_baseUrl/api/v1/attendance/check-in$query');
+    final response = await ApiClient.post(url, headers: AuthStorage.authHeaders);
 
+    if (response.statusCode == 200) {
+      return json.decode(response.body) as Map<String, dynamic>;
+    } else {
+      String errorMsg = 'Failed to check in (${response.statusCode})';
+      try {
+        final body = json.decode(response.body);
+        if (body is Map && body.containsKey('message')) errorMsg = body['message'];
+      } catch (_) {}
+      throw Exception(errorMsg);
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> checkOut({String? employeeId}) async {
+    final query = (employeeId != null && employeeId.isNotEmpty) ? '?employeeId=$employeeId' : '';
+    final url = Uri.parse('$_baseUrl/api/v1/attendance/check-out$query');
+    final response = await ApiClient.post(url, headers: AuthStorage.authHeaders);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body) as Map<String, dynamic>;
+    } else {
+      String errorMsg = 'Failed to check out (${response.statusCode})';
+      try {
+        final body = json.decode(response.body);
+        if (body is Map && body.containsKey('message')) errorMsg = body['message'];
+      } catch (_) {}
+      throw Exception(errorMsg);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAttendanceHistory(String employeeId) async {
+    final url = Uri.parse('$_baseUrl/api/v1/attendance/employee/$employeeId');
+    final response = await ApiClient.get(url, headers: AuthStorage.authHeaders);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> list = json.decode(response.body);
+      return list.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load attendance history (${response.statusCode})');
+    }
+  }
+
+  @override
+  Future<void> clearAllAttendance() async {
+    final url = Uri.parse('$_baseUrl/api/v1/attendance/clear-all');
+    final response = await ApiClient.delete(url, headers: AuthStorage.authHeaders);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to clear attendance data (${response.statusCode}): ${response.body}');
+    }
+  }
 }

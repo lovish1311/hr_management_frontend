@@ -7,6 +7,7 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/theme/app_responsive.dart';
 import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/features/attendance/data/repositories/attendance_repository_impl.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
@@ -229,7 +230,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
 
       final absentDays = days.where((d) {
         final isPastOrToday = d.date.isBefore(now.add(const Duration(days: 1)));
-        return isPastOrToday && (d.status == 'ABSENT' || d.status == 'LOP_LEAVE');
+        return isPastOrToday && (d.status == 'UNEXCUSED_ABSENT' || d.status == 'ABSENT' || d.status == 'LOP_LEAVE');
       }).toList();
 
 
@@ -296,7 +297,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         : 'EM';
 
     final t = context.appTheme;
-    final isNarrow = MediaQuery.of(context).size.width < 400;
 
     return ResponsiveScaffold(
       backgroundColor: Colors.transparent,
@@ -352,8 +352,8 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
             constraints: const BoxConstraints(maxWidth: 850), // Responsive Max Width for Desktop Web
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
-                horizontal: isNarrow ? 14.0 : 20.0,
-                vertical: isNarrow ? 10.0 : 12.0,
+                horizontal: context.r.pageMargin,
+                vertical: context.r.isSmallPhone ? 10.0 : 16.0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +362,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   Text(
                     'Good ${_getGreeting()}, $formattedName! 👋',
                     style: TextStyle(
-                      fontSize: isNarrow ? 20 : 22,
+                      fontSize: context.r.font(21),
                       fontWeight: FontWeight.w800,
                       color: t.onBackgroundText,
                     ),
@@ -371,11 +371,11 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   Text(
                     'Have a productive and joyful day at work',
                     style: TextStyle(
-                      fontSize: isNarrow ? 12 : 13,
+                      fontSize: context.r.font(13),
                       color: t.onBackgroundTextSecondary,
                     ),
                   ),
-                  SizedBox(height: isNarrow ? 12 : 16),
+                  SizedBox(height: context.r.itemGap),
 
 
                   // Isolated Sun Clock Shift Card (0 parent rebuilds, self-contained time ticker)

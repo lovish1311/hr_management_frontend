@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/hr_drawer.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
+import 'package:hr_management/core/theme/app_responsive.dart';
 
 class ResponsiveScaffold extends StatefulWidget {
   final Widget body;
@@ -197,6 +198,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
   Widget? _buildBottomNav(BuildContext context, AppThemeConfig t) {
     final currentRoute = ModalRoute.of(context)?.settings.name ?? '/';
+    final r = context.r;
 
     final List<_NavItem> items = AuthStorage.isHr
         ? [
@@ -217,6 +219,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     int currentIndex = items.indexWhere((item) => item.route == currentRoute);
     if (currentIndex == -1) currentIndex = 0;
 
+    final navHeight = r.isSmallPhone ? 52.0 : 58.0;
+    final iconSize = r.isSmallPhone ? 19.0 : 21.0;
+    final fontSize = r.isSmallPhone ? 10.0 : 11.5;
+
     return Container(
       decoration: BoxDecoration(
         color: t.card,
@@ -225,7 +231,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 56,
+          height: navHeight,
           child: BottomNavigationBar(
             currentIndex: currentIndex >= 0 && currentIndex < items.length ? currentIndex : 0,
             type: BottomNavigationBarType.fixed,
@@ -233,8 +239,8 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
             elevation: 0,
             selectedItemColor: t.primary,
             unselectedItemColor: t.textSecondary.withValues(alpha: 0.8),
-            selectedFontSize: 11,
-            unselectedFontSize: 11,
+            selectedFontSize: fontSize,
+            unselectedFontSize: fontSize,
             selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
             onTap: (index) {
               final item = items[index];
@@ -245,7 +251,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               }
             },
             items: items.map((item) {
-              return BottomNavigationBarItem(icon: Icon(item.icon, size: 20), label: item.title);
+              return BottomNavigationBarItem(icon: Icon(item.icon, size: iconSize), label: item.title);
             }).toList(),
           ),
         ),

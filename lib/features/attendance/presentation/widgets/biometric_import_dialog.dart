@@ -303,7 +303,7 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
                         ),
                         _buildDetailedList(
                           (_importSummary!['rows'] as List).cast<Map<String, dynamic>>(),
-                          'ABSENT',
+                          'UNEXCUSED_ABSENT',
                           'Absent Employees',
                           const Color(0xFFEF4444),
                           isDark,
@@ -375,7 +375,13 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
   }
 
   Widget _buildDetailedList(List<Map<String, dynamic>> rows, String status, String title, Color color, bool isDark) {
-    final filtered = rows.where((r) => r['status'] == status).toList();
+    final filtered = rows.where((r) {
+      final s = (r['status'] ?? '').toString().toUpperCase();
+      if (status == 'UNEXCUSED_ABSENT') {
+        return s == 'UNEXCUSED_ABSENT' || s == 'ABSENT';
+      }
+      return s == status.toUpperCase();
+    }).toList();
     if (filtered.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -406,15 +412,31 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
               itemBuilder: (context, index) {
                 final row = filtered[index];
                 final name = row['employeeName'] ?? 'Unknown Employee';
-                final time = status == 'LATE' ? (row['checkInTime'] ?? 'No punch') : 'No punch';
+                final inTime = row['firstInTime'] ?? row['checkInTime'];
+                final outTime = row['lastOutTime'] ?? row['checkOutTime'];
+                final label = row['statusLabel']?.toString() ?? '';
+                
+                String timeDisplay = 'No punch';
+                if (inTime != null) {
+                  timeDisplay = outTime != null ? '$inTime – $outTime' : '$inTime';
+                } else if (label.isNotEmpty) {
+                  timeDisplay = label;
+                }
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(name, style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
-                      if (status == 'LATE')
-                        Text(time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(timeDisplay, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
                     ],
                   ),
                 );

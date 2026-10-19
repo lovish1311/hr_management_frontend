@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
+import 'package:hr_management/core/theme/app_responsive.dart';
 
 class LeaveCategoryItem {
   final String title;
@@ -408,21 +409,28 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final r = context.r;
 
     final screenHeight = MediaQuery.of(context).size.height;
     return Dialog(
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-      insetPadding: const EdgeInsets.all(16.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: r.isSmallPhone ? 10.0 : 20.0,
+        vertical: r.isSmallPhone ? 12.0 : 20.0,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(r.radius(20.0))),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 680, maxHeight: screenHeight * 0.88),
+        constraints: BoxConstraints(maxWidth: r.maxDialogWidth, maxHeight: screenHeight * 0.90),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24.0),
+          borderRadius: BorderRadius.circular(r.radius(20.0)),
           child: Column(
             children: [
               // Header Bar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: EdgeInsets.symmetric(
+                  horizontal: r.isSmallPhone ? 14 : 20,
+                  vertical: r.isSmallPhone ? 12 : 16,
+                ),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
                   border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))),
@@ -622,19 +630,29 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
           ),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.05,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: leaveOptions.length,
-            itemBuilder: (context, index) {
-              final item = leaveOptions[index];
-              final currentEmp = widget.targetEmployee ?? _selectedOnBehalfEmployee;
-              final isEmpProbation = currentEmp != null && (currentEmp.isProbation || currentEmp.status == 'PROBATION');
+          child: LayoutBuilder(
+            builder: (context, gridConstraints) {
+              final isSmall = gridConstraints.maxWidth < 360;
+              final isTablet = gridConstraints.maxWidth >= 550;
+              final columns = isTablet ? 3 : 2;
+              final ratio = isSmall ? 1.05 : (isTablet ? 1.25 : 1.15);
+
+              return GridView.builder(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmall ? 12 : 18,
+                  vertical: 12,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  childAspectRatio: ratio,
+                  crossAxisSpacing: isSmall ? 10 : 14,
+                  mainAxisSpacing: isSmall ? 10 : 14,
+                ),
+                itemCount: leaveOptions.length,
+                itemBuilder: (context, index) {
+                  final item = leaveOptions[index];
+                  final currentEmp = widget.targetEmployee ?? _selectedOnBehalfEmployee;
+                  final isEmpProbation = currentEmp != null && (currentEmp.isProbation || currentEmp.status == 'PROBATION');
               final isEmpNotice = currentEmp != null && (currentEmp.isNoticePeriod || currentEmp.status == 'NOTICE_PERIOD' || currentEmp.status == 'NOTICE');
               
               final isEarnedBlocked = isEmpProbation && item.type == 'Earned Leave';
@@ -749,11 +767,13 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 ),
               );
             },
-          ),
-        ),
-      ],
-    );
-  }
+          );
+        },
+      ),
+    ),
+  ],
+);
+}
 
   // Step 2: Form Details
   Widget _buildStep2Form(bool isDark) {

@@ -105,13 +105,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           _employee = emp;
           _isLoading = false;
           
-          _attendanceRecords = [
-            ProfileAttendanceRecord(date: 'Jul 17, 2026', clockIn: '09:00 AM', clockOut: '05:30 PM', totalHours: '8.5 hrs', status: 'On Time'),
-            ProfileAttendanceRecord(date: 'Jul 16, 2026', clockIn: '09:15 AM', clockOut: '07:00 PM', totalHours: '8.75 hrs', status: 'Late'),
-            ProfileAttendanceRecord(date: 'Jul 15, 2026', clockIn: '08:55 AM', clockOut: '05:00 PM', totalHours: '8.0 hrs', status: 'On Time'),
-            ProfileAttendanceRecord(date: 'Jul 14, 2026', clockIn: '09:05 AM', clockOut: '05:30 PM', totalHours: '8.4 hrs', status: 'On Time'),
-            ProfileAttendanceRecord(date: 'Jul 13, 2026', clockIn: '--:--', clockOut: '--:--', totalHours: '0.0 hrs', status: 'Absent'),
-          ];
+          _attendanceRecords = [];
           
           _leaveBalances = [
             LeaveBalanceItem(type: 'Annual Leave', taken: emp != null ? emp.leaveBalance : 5, total: 14),
@@ -128,12 +122,64 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         });
 
         _fetchAttendanceCalendar();
+        _fetchAttendanceHistory(id);
       }
     } catch (_) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _fetchAttendanceHistory(String empId) async {
+    try {
+      final rawList = await _attendanceRepository.getAttendanceHistory(empId);
+      if (!mounted) return;
+      if (rawList.isNotEmpty) {
+        setState(() {
+          _attendanceRecords = rawList.map((m) {
+            final rawDate = m['date']?.toString() ?? '';
+            String formattedDate = rawDate;
+            try {
+              if (rawDate.isNotEmpty) {
+                final d = DateTime.parse(rawDate);
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                formattedDate = '${months[d.month - 1]} ${d.day.toString().padLeft(2, '0')}, ${d.year}';
+              }
+            } catch (_) {}
+
+            final clockInRaw = m['checkInTime']?.toString();
+            final clockOutRaw = m['checkOutTime']?.toString();
+            final clockIn = _formatTimeDisplay(clockInRaw, '--:--');
+            final clockOut = _formatTimeDisplay(clockOutRaw, '--:--');
+
+            final totalMin = m['totalWorkingMinutes'] is num ? (m['totalWorkingMinutes'] as num).toInt() : 0;
+            final hours = (totalMin / 60.0).toStringAsFixed(1);
+            final totalHours = totalMin > 0 ? '$hours hrs' : '--';
+
+            final statusRaw = m['status']?.toString().toUpperCase() ?? 'PRESENT';
+            String displayStatus = 'Present';
+            if (statusRaw == 'LATE') {
+              displayStatus = 'Late';
+            } else if (statusRaw == 'HALF_DAY' || statusRaw == 'HALF_DAY_LEAVE') {
+              displayStatus = 'Half Day';
+            } else if (statusRaw == 'LOP_LEAVE' || statusRaw == 'UNEXCUSED_ABSENT') {
+              displayStatus = 'Absent';
+            } else if (statusRaw.contains('LEAVE')) {
+              displayStatus = 'On Leave';
+            }
+
+            return ProfileAttendanceRecord(
+              date: formattedDate,
+              clockIn: clockIn,
+              clockOut: clockOut,
+              totalHours: totalHours,
+              status: displayStatus,
+            );
+          }).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _handleSendCredentials(Employee emp) async {
