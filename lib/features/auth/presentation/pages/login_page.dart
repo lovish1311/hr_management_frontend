@@ -75,7 +75,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
   void _showForgotPasswordDialog() {
     FocusScope.of(context).unfocus();
-    final emailCtrl = TextEditingController(text: 'lovish13331@gmail.com');
+    final emailCtrl = TextEditingController(text: _emailController.text.trim());
     final otpCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
     final confirmPassCtrl = TextEditingController();
@@ -1119,153 +1119,192 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         ),
                       ),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        key: const Key('login_password_input'),
-                        controller: _passwordController,
-                        obscureText: loginState.obscurePassword,
-                        style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15),
-                        decoration: InputDecoration(
-                          hintText: '••••••••',
-                          prefixIcon: const Icon(Icons.lock_outline, size: 20, color: Color(0xFF0D9488)),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              loginState.obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              color: Colors.grey.shade600,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              ref.read(loginProvider.notifier).togglePasswordVisibility();
-                            },
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
+                      Builder(builder: (context) {
+                        final isDeactivated = loginState.accountStatus?.isDeactivated == true;
+                        final isPendingActivation = loginState.accountStatus?.isPendingActivation == true;
+                        final isInputBlocked = isDeactivated || isPendingActivation;
 
-                      // Remember Me & Forgot Password
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          InkWell(
-                            onTap: () => ref.read(loginProvider.notifier).toggleRememberMe(!loginState.rememberMe),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              key: const Key('login_password_input'),
+                              controller: _passwordController,
+                              enabled: !isInputBlocked,
+                              obscureText: loginState.obscurePassword,
+                              style: TextStyle(
+                                color: isInputBlocked ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                                fontSize: 15,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: isDeactivated
+                                    ? 'Account Deactivated'
+                                    : (isPendingActivation ? 'Activation Key Required' : '••••••••'),
+                                prefixIcon: Icon(
+                                  isDeactivated ? Icons.block_rounded : Icons.lock_outline,
+                                  size: 20,
+                                  color: isDeactivated ? const Color(0xFFDC2626) : const Color(0xFF0D9488),
+                                ),
+                                suffixIcon: isInputBlocked
+                                    ? null
+                                    : IconButton(
+                                        icon: Icon(
+                                          loginState.obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                          color: Colors.grey.shade600,
+                                          size: 20,
+                                        ),
+                                        onPressed: () {
+                                          ref.read(loginProvider.notifier).togglePasswordVisibility();
+                                        },
+                                      ),
+                                filled: true,
+                                fillColor: isInputBlocked ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (!isInputBlocked && (value == null || value.isEmpty)) {
+                                  return 'Please enter your password';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Remember Me & Forgot Password
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
-                                SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: Checkbox(
-                                    value: loginState.rememberMe,
-                                    activeColor: const Color(0xFF0D9488),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    onChanged: (val) {
-                                      ref.read(loginProvider.notifier).toggleRememberMe(val ?? false);
-                                    },
+                                InkWell(
+                                  onTap: isInputBlocked ? null : () => ref.read(loginProvider.notifier).toggleRememberMe(!loginState.rememberMe),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: Checkbox(
+                                          value: loginState.rememberMe,
+                                          activeColor: const Color(0xFF0D9488),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                          onChanged: isInputBlocked
+                                              ? null
+                                              : (val) {
+                                                  ref.read(loginProvider.notifier).toggleRememberMe(val ?? false);
+                                                },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          'Remember me',
+                                          style: TextStyle(fontSize: 13, color: isInputBlocked ? Colors.grey.shade400 : Colors.grey.shade700),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Flexible(
+                                TextButton(
+                                  onPressed: isDeactivated ? null : _showForgotPasswordDialog,
                                   child: Text(
-                                    'Remember me',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                                    overflow: TextOverflow.ellipsis,
+                                    'Forgot Password?',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDeactivated ? Colors.grey.shade400 : const Color(0xFF0D9488),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          TextButton(
-                            onPressed: _showForgotPasswordDialog,
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0D9488),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                      // Submit Button
-                      Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0D9488), Color(0xFF0284C7)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0D9488).withValues(alpha: 0.35),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          key: const Key('login_submit_btn'),
-                          onPressed: loginState.isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: loginState.isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
-                              : const FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Sign In',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                            // Submit Button
+                            Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                gradient: isInputBlocked
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFF94A3B8), Color(0xFF64748B)],
+                                      )
+                                    : const LinearGradient(
+                                        colors: [Color(0xFF0D9488), Color(0xFF0284C7)],
+                                      ),
+                                boxShadow: isInputBlocked
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color: const Color(0xFF0D9488).withValues(alpha: 0.35),
+                                          blurRadius: 14,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                              ),
+                              child: ElevatedButton(
+                                key: const Key('login_submit_btn'),
+                                onPressed: (loginState.isLoading || isInputBlocked) ? null : _handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: loginState.isLoading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
                                           color: Colors.white,
-                                          letterSpacing: 0.5,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              isDeactivated
+                                                  ? 'Account Deactivated'
+                                                  : (isPendingActivation ? 'Activation Key Required' : 'Sign In'),
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Icon(
+                                              isDeactivated
+                                                  ? Icons.block_rounded
+                                                  : (isPendingActivation ? Icons.key_rounded : Icons.arrow_forward_rounded),
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      SizedBox(width: 8),
-                                      Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                                    ],
-                                  ),
-                                ),
-                        ),
-                      ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                       const SizedBox(height: 18),
                       Center(
                         child: TextButton.icon(

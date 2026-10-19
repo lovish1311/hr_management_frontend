@@ -104,6 +104,45 @@ class PermissionSocketService {
 
   Future<void> _handleEvent(Map<String, dynamic> event) async {
     final type = event['type']?.toString().toUpperCase();
+
+    if (type == 'ACCOUNT_DEACTIVATED') {
+      debugPrint('🚫 Real-time ACCOUNT_DEACTIVATED event received: $event');
+      await AuthStorage.clear();
+      disconnect();
+
+      final nav = navigatorKey.currentState;
+      if (nav != null) {
+        nav.pushNamedAndRemoveUntil('/login', (route) => false);
+
+        Future.delayed(const Duration(milliseconds: 300), () {
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.block_rounded, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Your account has been deactivated by an administrator. You have been logged out.',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFFDC2626),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                duration: const Duration(seconds: 6),
+              ),
+            );
+          }
+        });
+      }
+      return;
+    }
+
     if (type == 'PERMISSIONS_UPDATED') {
       debugPrint('⚡ Real-time permission update received via WebSocket: $event');
 

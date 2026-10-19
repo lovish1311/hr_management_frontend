@@ -50,6 +50,10 @@ class Employee {
   final int? noticeDurationDays;
   final String? noticeEndDate;
 
+  // Activation & Account State
+  final bool isActivated;
+  final String accountStatus;
+
   Employee({
     required this.id,
     this.employeeCode = '',
@@ -87,6 +91,8 @@ class Employee {
     this.noticeStartDate,
     this.noticeDurationDays,
     this.noticeEndDate,
+    this.isActivated = false,
+    this.accountStatus = 'PENDING_ACTIVATION',
     this.authorities = const [],
   });
 
@@ -127,6 +133,8 @@ class Employee {
     String? noticeStartDate,
     int? noticeDurationDays,
     String? noticeEndDate,
+    bool? isActivated,
+    String? accountStatus,
     List<String>? authorities,
   }) {
     return Employee(
@@ -166,6 +174,8 @@ class Employee {
       noticeStartDate: noticeStartDate ?? this.noticeStartDate,
       noticeDurationDays: noticeDurationDays ?? this.noticeDurationDays,
       noticeEndDate: noticeEndDate ?? this.noticeEndDate,
+      isActivated: isActivated ?? this.isActivated,
+      accountStatus: accountStatus ?? this.accountStatus,
       authorities: authorities ?? this.authorities,
     );
   }
@@ -185,6 +195,14 @@ class Employee {
                 : 'NONE'))
         .toString()
         .toUpperCase();
+
+    final dynamic rawActivated = json['isActivated'];
+    final dynamic rawAccountStatus = json['accountStatus'];
+    final bool parsedActivated = rawActivated is bool
+        ? rawActivated
+        : (rawAccountStatus != null && rawAccountStatus.toString().toUpperCase() == 'ACTIVE');
+    final String parsedAccountStatus = rawAccountStatus?.toString() ??
+        (parsedActivated ? 'ACTIVE' : 'PENDING_ACTIVATION');
 
     return Employee(
       id: (json['id'] ?? '').toString(),
@@ -223,6 +241,8 @@ class Employee {
       noticeStartDate: json['noticeStartDate']?.toString(),
       noticeDurationDays: json['noticeDurationDays'] != null ? (json['noticeDurationDays'] as num).toInt() : null,
       noticeEndDate: json['noticeEndDate']?.toString(),
+      isActivated: parsedActivated,
+      accountStatus: parsedAccountStatus,
       authorities: (json['authorities'] as List<dynamic>?)
               ?.map((e) => e.toString().toUpperCase())
               .toList() ??
