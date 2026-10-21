@@ -203,6 +203,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     super.dispose();
   }
 
+  String _extractErrorMessage(http.Response res) {
+    try {
+      final data = json.decode(res.body);
+      if (data is Map && data.containsKey('message')) return data['message'].toString();
+      if (data is Map && data.containsKey('error')) return data['error'].toString();
+    } catch (_) {}
+    return 'Status ${res.statusCode}: ${res.reasonPhrase ?? "Unknown error"}';
+  }
+
   Future<void> _executeBulkGrant() async {
     final payload = {
       'leaveType': _selectedLeaveType.toUpperCase().replaceAll(' ', '_'),
@@ -212,20 +221,38 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     };
 
     try {
-      await http.post(
+      final res = await http.post(
         Uri.parse('$_baseUrl/api/v1/leaves/admin/bulk-grant'),
         headers: AuthStorage.authHeaders,
         body: json.encode(payload),
       );
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Successfully granted $_grantDays day(s) of $_selectedLeaveType to all employees (${_excludedEmployees.length} excluded).'),
-        backgroundColor: context.appTheme.primary,
-      ),
-    );
+      if (!mounted) return;
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully granted $_grantDays day(s) of $_selectedLeaveType to all employees (${_excludedEmployees.length} excluded).'),
+            backgroundColor: context.appTheme.success,
+          ),
+        );
+      } else {
+        final errorMsg = _extractErrorMessage(res);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed bulk grant: $errorMsg'),
+            backgroundColor: context.appTheme.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network error executing bulk grant: $e'),
+          backgroundColor: context.appTheme.danger,
+        ),
+      );
+    }
   }
 
   Future<void> _applyOnBehalf() async {
@@ -243,21 +270,39 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     };
 
     try {
-      await http.post(
+      final res = await http.post(
         Uri.parse('$_baseUrl/api/v1/leaves/admin/apply-on-behalf'),
         headers: AuthStorage.authHeaders,
         body: json.encode(payload),
       );
-    } catch (_) {}
 
-    if (!mounted) return;
-    _onBehalfReasonController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Leave applied on behalf of ${_selectedEmployee!.name}! Date check bypassed.'),
-        backgroundColor: context.appTheme.primary,
-      ),
-    );
+      if (!mounted) return;
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        _onBehalfReasonController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Leave applied on behalf of ${_selectedEmployee!.name} successfully!'),
+            backgroundColor: context.appTheme.success,
+          ),
+        );
+      } else {
+        final errorMsg = _extractErrorMessage(res);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to apply on behalf: $errorMsg'),
+            backgroundColor: context.appTheme.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network error applying on behalf: $e'),
+          backgroundColor: context.appTheme.danger,
+        ),
+      );
+    }
   }
 
   // Stages quota adjustment locally (+ / -) to prevent accidental misclicks
@@ -431,18 +476,15 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     if (_selectedEmployee == null || _pendingQuotaDeltas.isEmpty) return;
 
     final empId = int.tryParse(_selectedEmployee!.id) ?? 1;
+    bool hasFailure = false;
+    String lastError = '';
 
     for (var entry in _pendingQuotaDeltas.entries) {
       final type = entry.key;
       final delta = entry.value;
 
-      setState(() {
-        final current = _selectedEmployeeQuotas[type] ?? 10.0;
-        _selectedEmployeeQuotas[type] = (current + delta).clamp(0.0, 999.0);
-      });
-
       try {
-        await http.post(
+        final res = await http.post(
           Uri.parse('$_baseUrl/api/v1/leaves/admin/adjust-balance'),
           headers: AuthStorage.authHeaders,
           body: json.encode({
@@ -451,7 +493,19 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
             'adjustmentDays': delta,
           }),
         );
-      } catch (_) {}
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          setState(() {
+            final current = _selectedEmployeeQuotas[type] ?? 10.0;
+            _selectedEmployeeQuotas[type] = (current + delta).clamp(0.0, 999.0);
+          });
+        } else {
+          hasFailure = true;
+          lastError = _extractErrorMessage(res);
+        }
+      } catch (e) {
+        hasFailure = true;
+        lastError = e.toString();
+      }
     }
 
     setState(() {
@@ -461,12 +515,21 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
     await _fetchEmployeeBalances(_selectedEmployee!);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully updated leave balances for ${_selectedEmployee!.name}!'),
-          backgroundColor: context.appTheme.success,
-        ),
-      );
+      if (!hasFailure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully updated leave balances for ${_selectedEmployee!.name}!'),
+            backgroundColor: context.appTheme.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating leave balances: $lastError'),
+            backgroundColor: context.appTheme.danger,
+          ),
+        );
+      }
     }
   }
 

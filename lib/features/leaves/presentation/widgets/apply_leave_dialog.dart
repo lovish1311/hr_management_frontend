@@ -1378,11 +1378,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     if (_isTimeBasedCategory) {
       final startMins = _fromTime.hour * 60 + _fromTime.minute;
       final endMins = _toTime.hour * 60 + _toTime.minute;
-      final durationMins = endMins - startMins;
-      if (durationMins <= 0) {
+      final durationMins = endMins >= startMins ? (endMins - startMins) : ((1440 - startMins) + endMins);
+      if (durationMins == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('End time must be after start time.'),
+            content: Text('Start and end time cannot be identical.'),
             backgroundColor: Color(0xFFDC2626),
           ),
         );
