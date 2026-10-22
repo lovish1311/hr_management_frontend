@@ -9,6 +9,9 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/upcoming_events_card.dart';
 import 'package:hr_management/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:hr_management/features/dashboard/presentation/widgets/dashboard_skeleton.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -20,19 +23,7 @@ class DashboardPage extends ConsumerStatefulWidget {
 class _DashboardPageState extends ConsumerState<DashboardPage> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
-  String _formatCurrentDate() {
-    final now = DateTime.now();
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
-  }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Morning';
-    if (hour < 17) return 'Afternoon';
-    return 'Evening';
-  }
 
   String _getDisplayName() {
     final user = AuthStorage.userName;
@@ -86,13 +77,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
 
     if (!success && mounted) {
-      final error = ref.read(dashboardProvider).actionErrorMessage ?? 'Failed to update request';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update request: $error'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      final error = ref.read(dashboardProvider).actionErrorMessage;
+      AppToast.error(context, error ?? 'Could not update request. Please try again.');
     }
   }
 
@@ -122,7 +108,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    _formatCurrentDate(),
+                    TextFormatter.formatDate(DateTime.now()),
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -137,18 +123,24 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               clipBehavior: Clip.none,
               children: [
                 Icon(Icons.notifications_outlined, color: t.onBackgroundText),
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(color: t.danger, shape: BoxShape.circle),
-                    child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                if ((state.stats?.pendingLeaves.length ?? 0) > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(color: t.danger, borderRadius: BorderRadius.circular(10)),
+                      child: Text(
+                        '${state.stats!.pendingLeaves.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).pushNamed('/leaves');
+            },
           ),
           IconButton(
             icon: Icon(Icons.refresh_rounded, color: t.onBackgroundText),
@@ -230,15 +222,34 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.15),
+                                                color: Colors.white.withValues(alpha: 0.18),
                                                 borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.centerLeft,
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      TextFormatter.formatDate(DateTime.now()),
+                                                      style: const TextStyle(
+                                                        fontSize: 11.5,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                             SizedBox(height: isMobile ? 8 : 12),
                                             Text(
-                                              'Good ${_getGreeting()}, ${_getDisplayName()} 👋',
+                                              TextFormatter.formatGreeting(_getDisplayName()),
                                               style: TextStyle(
                                                 fontSize: bannerTitleSize,
                                                 fontWeight: FontWeight.w800,
@@ -248,7 +259,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                             ),
                                             SizedBox(height: isMobile ? 4 : 6),
                                             Text(
-                                              'Here is what is happening across your organization today.',
+                                              'Here is what is happening across ${Environment.companyName} today.',
                                               style: TextStyle(fontSize: bannerSubtitleSize, color: Colors.white.withValues(alpha: 0.85)),
                                             ),
                                           ],

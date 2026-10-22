@@ -7,6 +7,7 @@ import 'package:hr_management/features/employees/presentation/widgets/employee_c
 import 'package:hr_management/features/employees/presentation/pages/employee_form_page.dart';
 import 'package:hr_management/core/services/data_cache.dart';
 import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class EmployeeDirectoryPage extends StatefulWidget {
   const EmployeeDirectoryPage({super.key});
@@ -167,24 +168,11 @@ class _EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
       DataCache.instance.invalidatePrefix('employees_dept_');
       _fetchEmployees(forceRefresh: true);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  newStatus == 'INACTIVE' ? Icons.block_rounded : Icons.check_circle_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text('${employee.name} status updated to $newStatus'),
-              ],
-            ),
-            backgroundColor: newStatus == 'INACTIVE' ? Colors.red.shade700 : const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        if (newStatus == 'INACTIVE') {
+          AppToast.warning(context, '${employee.name} deactivated.');
+        } else {
+          AppToast.success(context, '${employee.name} marked as $newStatus.');
+        }
       }
     }
   }

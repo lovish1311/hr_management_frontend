@@ -4,6 +4,9 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import '../../data/models/tambola_models.dart';
 import '../../data/services/tambola_api_service.dart';
 import 'tambola_game_room_page.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class TambolaLobbyPage extends StatefulWidget {
   const TambolaLobbyPage({super.key});
@@ -19,10 +22,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
   bool _isActionLoading = false;
   String? _errorMessage;
 
-  String _currentWeekday() {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return days[DateTime.now().weekday - 1];
-  }
+
   Timer? _refreshTimer;
 
   @override
@@ -65,9 +65,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
   Future<void> _handleJoinGame([String? code]) async {
     final roomCode = (code ?? _roomCodeController.text).trim().toUpperCase();
     if (roomCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a 6-character room code')),
-      );
+      AppToast.warning(context, 'Please enter a 6-character room code.');
       return;
     }
 
@@ -86,12 +84,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isActionLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red.shade700,
-            content: Text(e.toString().replaceAll('Exception:', '').trim()),
-          ),
-        );
+        AppToast.error(context, 'Failed to join game', rawError: e);
       }
     }
   }
@@ -126,7 +119,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                       controller: titleController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'e.g. ${_currentWeekday()} Fun Tambola',
+                        hintText: 'e.g. ${TextFormatter.currentWeekday()} Fun Tambola',
                         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                         filled: true,
                         fillColor: const Color(0xFF0F172A),
@@ -200,9 +193,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _isActionLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: Colors.red.shade700, content: Text(e.toString())),
-        );
+        AppToast.error(context, 'Failed to enter game room', rawError: e);
       }
     }
   }
@@ -287,7 +278,7 @@ class _TambolaLobbyPageState extends State<TambolaLobbyPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '${AuthStorage.userName?.split(' ').first ?? 'TeamJoy'} Tambola Lounge 🎉',
+                        '${AuthStorage.userName?.split(' ').first ?? Environment.companyName} Tambola Lounge 🎉',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: MediaQuery.of(context).size.width < 500 ? 20 : 24,

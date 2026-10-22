@@ -11,6 +11,8 @@ import 'package:hr_management/core/widgets/animated_gradient_border.dart';
 
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class PeoplePage extends StatefulWidget {
   const PeoplePage({super.key});
@@ -523,7 +525,7 @@ class _PeoplePageState extends State<PeoplePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Hey, you haven\'t starred any peers!',
+                'Hey ${AuthStorage.firstName}, you haven\'t starred any peers yet!',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.text),
               ),
               const SizedBox(height: 6),
@@ -678,9 +680,7 @@ class _PeoplePageState extends State<PeoplePage> {
                           icon: Icons.email_rounded,
                           label: 'Send Email',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Opening mail client for ${emp.email}...')),
-                            );
+                            AppToast.info(context, 'Opening mail client for ${emp.email}...');
                           },
                         ),
                       ),
@@ -690,9 +690,7 @@ class _PeoplePageState extends State<PeoplePage> {
                           icon: Icons.phone_rounded,
                           label: 'Call Direct',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Calling ${emp.phone.isNotEmpty ? emp.phone : "extension"}...')),
-                            );
+                            AppToast.info(context, 'Calling ${emp.phone.isNotEmpty ? emp.phone : "extension"}...');
                           },
                         ),
                       ),
@@ -718,7 +716,7 @@ class _PeoplePageState extends State<PeoplePage> {
               icon: Icons.business_center_rounded,
               title: 'CATEGORY & ORGANIZATION',
               children: [
-                _buildInfoTile(t, 'Work Location', emp.location.isNotEmpty ? emp.location : 'Headquarters'),
+                _buildInfoTile(t, 'Work Location', emp.location.isNotEmpty ? emp.location : Environment.defaultLocation),
                 _buildInfoTile(t, 'Department', emp.department),
                 _buildInfoTile(t, 'Designation', emp.designation),
               ],

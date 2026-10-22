@@ -62,16 +62,29 @@ class EntitySelectorCard extends StatelessWidget {
         const SizedBox(height: 14),
         LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 450;
-            final isUltraNarrow = constraints.maxWidth < 350;
+            final width = constraints.maxWidth;
+            final int crossAxisCount;
+            final double childAspectRatio;
+
+            if (width < 340) {
+              crossAxisCount = 2;
+              childAspectRatio = 1.05;
+            } else if (width < 580) {
+              crossAxisCount = 2;
+              childAspectRatio = 1.85;
+            } else {
+              crossAxisCount = 4;
+              childAspectRatio = 1.25;
+            }
+
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isNarrow ? 2 : 4,
+                crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: isUltraNarrow ? 1.05 : (isNarrow ? 1.2 : 1.4),
+                childAspectRatio: childAspectRatio,
               ),
               itemCount: entities.length,
               itemBuilder: (context, index) {
@@ -125,38 +138,37 @@ class EntitySelectorCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  entity.displayName,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected ? t.primary : t.text,
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    entity.displayName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? t.primary : t.text,
+                                    ),
+                                    maxLines: 1,
                                   ),
-                                  maxLines: 1,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  '${entity.fields.length} available fields',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: t.textSecondary,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${entity.fields.length} available fields',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: t.textSecondary,
+                                    ),
+                                    maxLines: 1,
                                   ),
-                                  maxLines: 1,
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],

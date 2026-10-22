@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:hr_management/core/network/api_config.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/services/permission_socket_service.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 /// Centralized HTTP client and request dispatcher for the entire application.
 /// 
@@ -137,20 +138,7 @@ class ApiClient {
 
       final context = PermissionSocketService.navigatorKey.currentContext;
       if (context != null) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.lock_clock_outlined, color: Colors.white, size: 20),
-                SizedBox(width: 10),
-                Expanded(child: Text('Your session has expired. Please sign in again.')),
-              ],
-            ),
-            backgroundColor: Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 4),
-          ),
-        );
+        AppToast.warning(context, 'Your session has expired. Please sign in again.');
       }
     }
 

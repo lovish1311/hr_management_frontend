@@ -5,8 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
-import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
+import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class HrLeaveSettingsPage extends StatefulWidget {
   const HrLeaveSettingsPage({super.key});
@@ -127,29 +128,14 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
       if (res.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Time-off permission rules & limits updated successfully!'),
-            backgroundColor: context.appTheme.success,
-          ),
-        );
+        AppToast.success(context, 'Time-off permission rules & limits updated successfully!');
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save settings: ${res.body}'),
-            backgroundColor: context.appTheme.danger,
-          ),
-        );
+        AppToast.error(context, 'Failed to save settings: ${res.body}');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving settings: $e'),
-          backgroundColor: context.appTheme.danger,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -229,29 +215,17 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
       if (!mounted) return;
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully granted $_grantDays day(s) of $_selectedLeaveType to all employees (${_excludedEmployees.length} excluded).'),
-            backgroundColor: context.appTheme.success,
-          ),
+        AppToast.success(
+          context,
+          'Successfully granted $_grantDays day(s) of $_selectedLeaveType to all employees (${_excludedEmployees.length} excluded).',
         );
       } else {
         final errorMsg = _extractErrorMessage(res);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed bulk grant: $errorMsg'),
-            backgroundColor: context.appTheme.danger,
-          ),
-        );
+        AppToast.error(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error executing bulk grant: $e'),
-          backgroundColor: context.appTheme.danger,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -279,29 +253,14 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
       if (!mounted) return;
       if (res.statusCode >= 200 && res.statusCode < 300) {
         _onBehalfReasonController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Leave applied on behalf of ${_selectedEmployee!.name} successfully!'),
-            backgroundColor: context.appTheme.success,
-          ),
-        );
+        AppToast.success(context, 'Leave applied on behalf of ${_selectedEmployee!.name} successfully!');
       } else {
         final errorMsg = _extractErrorMessage(res);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to apply on behalf: $errorMsg'),
-            backgroundColor: context.appTheme.danger,
-          ),
-        );
+        AppToast.error(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error applying on behalf: $e'),
-          backgroundColor: context.appTheme.danger,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -516,19 +475,9 @@ class _HrLeaveSettingsPageState extends State<HrLeaveSettingsPage> with SingleTi
 
     if (mounted) {
       if (!hasFailure) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully updated leave balances for ${_selectedEmployee!.name}!'),
-            backgroundColor: context.appTheme.success,
-          ),
-        );
+        AppToast.success(context, 'Successfully updated leave balances for ${_selectedEmployee!.name}!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating leave balances: $lastError'),
-            backgroundColor: context.appTheme.danger,
-          ),
-        );
+        AppToast.error(context, lastError.isNotEmpty ? lastError : 'Failed to update leave balances.');
       }
     }
   }

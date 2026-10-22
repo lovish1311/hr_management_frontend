@@ -16,6 +16,8 @@ import '../widgets/data_preview_table.dart';
 import '../widgets/report_gallery_card.dart';
 import '../widgets/template_management_dialog.dart';
 import '../widgets/query_builder_skeleton.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class QueryBuilderPage extends ConsumerStatefulWidget {
   const QueryBuilderPage({super.key});
@@ -47,7 +49,8 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
           : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       final now = DateTime.now();
       final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-      final fileName = 'TeamJoy_Report_${state.rootEntity.toLowerCase()}_$dateStr.$ext';
+      final companyPrefix = Environment.companyName.replaceAll(RegExp(r'\s+'), '_');
+      final fileName = '${companyPrefix}_Report_${state.rootEntity.toLowerCase()}_$dateStr.$ext';
 
       final savedPath = await FileDownloader.downloadBytes(
         bytes: bytes,
@@ -57,49 +60,14 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
 
       if (mounted) {
         if (savedPath != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Report saved successfully!\n$savedPath'),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.green.shade700,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          AppToast.success(context, 'Report saved successfully: $savedPath');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Report export cancelled or storage location not accessible.'),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.amber.shade900,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppToast.warning(context, 'Report export cancelled or storage location not accessible.');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Export failed: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error(context, 'Report export failed', rawError: e);
       }
     } finally {
       if (mounted) {
@@ -117,15 +85,177 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
         currentRequest: state.toRequest(),
         onLoadTemplate: (tmpl) {
           ref.read(queryBuilderNotifierProvider.notifier).loadTemplate(tmpl);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Loaded template: "${tmpl.name}"'),
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          AppToast.success(context, 'Loaded template: "${tmpl.name}"');
         },
       ),
+    );
+  }
+
+  void _openDataPreviewModal(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final t = context.appTheme;
+            final queryState = ref.watch(queryBuilderNotifierProvider);
+            final notifier = ref.read(queryBuilderNotifierProvider.notifier);
+            final previewAsync = ref.watch(queryPreviewProvider);
+
+            return Dialog(
+              backgroundColor: t.card,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.96,
+                height: MediaQuery.of(context).size.height * 0.92,
+                constraints: const BoxConstraints(
+                  maxWidth: 1280,
+                  maxHeight: 850,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Dialog Header (Fully responsive for mobile & desktop)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: t.cardSoft,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        border: Border(bottom: BorderSide(color: t.border)),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, headerConstraints) {
+                          final isCompact = headerConstraints.maxWidth < 560;
+
+                          return Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.table_view_rounded, color: Color(0xFF0D9488), size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            'Report Data & Excel Preview',
+                                            style: TextStyle(
+                                              fontSize: isCompact ? 14 : 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: t.text,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: t.primary.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: t.primary.withValues(alpha: 0.3)),
+                                          ),
+                                          child: Text(
+                                            queryState.rootEntity,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: t.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Live SQL compilation • ${queryState.selectedFieldIds.length} columns active',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: t.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Export (.xlsx) button directly inside modal
+                              if (isCompact)
+                                IconButton(
+                                  icon: queryState.isExporting
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+                                        )
+                                      : const Icon(Icons.download_rounded, color: Color(0xFF0D9488), size: 22),
+                                  tooltip: 'Export Excel (.xlsx)',
+                                  onPressed: queryState.isExporting ? null : () => _handleExport('XLSX'),
+                                )
+                              else
+                                ElevatedButton.icon(
+                                  icon: queryState.isExporting
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.download_rounded, size: 16),
+                                  label: Text(queryState.isExporting ? 'Exporting...' : 'Export (.xlsx)'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0D9488),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  ),
+                                  onPressed: queryState.isExporting ? null : () => _handleExport('XLSX'),
+                                ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 20),
+                                tooltip: 'Close Preview',
+                                onPressed: () => Navigator.of(dialogCtx).pop(),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Dialog Body: Full-width spacious preview pane
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: _buildPreviewPane(
+                            t: t,
+                            queryState: queryState,
+                            notifier: notifier,
+                            previewAsync: previewAsync,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -146,6 +276,11 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
           child: Text('Enterprise Report & Query Builder'),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_rounded),
+            tooltip: 'Preview Data / Excel',
+            onPressed: () => _openDataPreviewModal(context),
+          ),
           IconButton(
             icon: const Icon(Icons.bookmark_add_rounded),
             tooltip: 'Manage Templates',
@@ -224,101 +359,130 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                       child: Icon(Icons.analytics_rounded, color: t.primary, size: 22),
                     ),
                     const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Enterprise Report & Query Builder',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: t.onBackgroundText,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Enterprise Report & Query Builder',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: t.onBackgroundText,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Visually filter workforce datasets, preview aggregates, and stream Excel reports.',
-                          style: TextStyle(fontSize: 12, color: t.textSecondary),
-                        ),
-                      ],
+                          Text(
+                            'Visually filter workforce datasets, preview aggregates, and stream Excel reports.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: t.textSecondary),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
-                    countAsync.when(
-                      data: (cnt) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: t.cardSoft,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: t.border),
-                        ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.filter_list_rounded, size: 14, color: t.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${cnt.estimatedCount} records',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: t.surfaceText,
+                            countAsync.when(
+                              data: (cnt) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: t.cardSoft,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: t.border),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.filter_list_rounded, size: 14, color: t.primary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${cnt.estimatedCount} records',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: t.surfaceText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              loading: () => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: t.cardSoft,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: t.border),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: t.primary),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Counting...',
+                                      style: TextStyle(fontSize: 11, color: t.surfaceTextSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                            const SizedBox(width: 10),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.bookmark_add_rounded, size: 16),
+                              label: const Text('Templates'),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: t.border),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              onPressed: () {
+                                metadataAsync.whenData((catalog) => _openTemplateDialog(catalog));
+                              },
+                            ),
+                            const SizedBox(width: 10),
+                            ElevatedButton.icon(
+                              key: const Key('btn_preview_excel_top'),
+                              icon: const Icon(Icons.table_view_rounded, size: 16),
+                              label: const Text('Preview Data / Excel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9488),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              ),
+                              onPressed: () => _openDataPreviewModal(context),
+                            ),
+                            const SizedBox(width: 10),
+                            ElevatedButton.icon(
+                              icon: queryState.isExporting
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.download_rounded, size: 16),
+                              label: Text(queryState.isExporting ? 'Exporting...' : 'Export (.xlsx)'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: t.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              ),
+                              onPressed: queryState.isExporting ? null : () => _handleExport('XLSX'),
                             ),
                           ],
                         ),
                       ),
-                      loading: () => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: t.cardSoft,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: t.border),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: t.primary),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Counting...',
-                              style: TextStyle(fontSize: 11, color: t.surfaceTextSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.bookmark_add_rounded, size: 16),
-                      label: const Text('Templates'),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: t.border),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      onPressed: () {
-                        metadataAsync.whenData((catalog) => _openTemplateDialog(catalog));
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      icon: queryState.isExporting
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.download_rounded, size: 16),
-                      label: Text(queryState.isExporting ? 'Exporting...' : 'Export (.xlsx)'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: t.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      ),
-                      onPressed: queryState.isExporting ? null : () => _handleExport('XLSX'),
                     ),
                   ],
                 ),
@@ -365,8 +529,8 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                   countAsync,
                   previewAsync,
                 );
-              } else if (width < 1100) {
-                // Tablet View: Two-Column Split (650 - 1099dp)
+              } else if (width < 950) {
+                // Tablet View: Two-Column Split (650 - 949dp)
                 return _buildTabletSplitLayout(
                   context,
                   t,
@@ -665,7 +829,7 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Column: Configuration Controls (Domain, Fields, Filters)
+          // Left Column: Domain & Column Fields (Flex 5)
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
@@ -673,8 +837,6 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ReportGalleryCard(onSelectTemplate: (tmpl) => notifier.loadTemplate(tmpl)),
-                  const SizedBox(height: 14),
                   EntitySelectorCard(
                     entities: catalog.entities,
                     selectedEntityId: queryState.rootEntity,
@@ -688,6 +850,21 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                     onToggleField: (f) => notifier.toggleField(f),
                     onReorderFields: (oldIdx, newIdx) => notifier.reorderFields(oldIdx, newIdx),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Right Column: Templates, Filters, AST Rules & Preview CTA (Flex 6)
+          Expanded(
+            flex: 6,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ReportGalleryCard(onSelectTemplate: (tmpl) => notifier.loadTemplate(tmpl)),
                   const SizedBox(height: 14),
                   QuickFilterBar(
                     selectedDepartment: queryState.quickDepartment,
@@ -705,22 +882,14 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                     filterGroup: queryState.filterGroup,
                     onGroupChanged: (g) => notifier.updateFilterGroup(g),
                   ),
+                  const SizedBox(height: 14),
+                  _buildPreviewSummaryCtaCard(
+                    context,
+                    t,
+                    queryState,
+                    previewAsync,
+                  ),
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Right Column: Live Preview & KPIs
-          Expanded(
-            flex: 6,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: _buildPreviewPane(
-                t: t,
-                queryState: queryState,
-                notifier: notifier,
-                previewAsync: previewAsync,
               ),
             ),
           ),
@@ -730,7 +899,7 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. DESKTOP UNIFIED THREE-COLUMN CANVAS (>= 1100 dp)
+  // 3. DESKTOP UNIFIED TWO-COLUMN CANVAS (>= 1100 dp)
   // ---------------------------------------------------------------------------
   Widget _buildDesktopCanvasLayout(
     BuildContext context,
@@ -760,14 +929,14 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
           ),
           const SizedBox(height: 14),
 
-          // Three-Column Split Canvas
+          // Two-Column Split Canvas
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Col 1: Entity & Field Catalog
+                // Col 1: Entity & Field Catalog (Flex 5)
                 Expanded(
-                  flex: 3,
+                  flex: 5,
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
@@ -790,15 +959,15 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
 
-                // Col 2: Recursive AST Rule Builder
+                // Col 2: Recursive AST Rule Builder & Live Query Summary Banner (Flex 7)
                 Expanded(
-                  flex: 4,
+                  flex: 7,
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
@@ -817,22 +986,14 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
                           filterGroup: queryState.filterGroup,
                           onGroupChanged: (g) => notifier.updateFilterGroup(g),
                         ),
+                        const SizedBox(height: 16),
+                        _buildPreviewSummaryCtaCard(
+                          context,
+                          t,
+                          queryState,
+                          previewAsync,
+                        ),
                       ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-
-                // Col 3: Live 2D Pinned Preview Grid & Live KPIs
-                Expanded(
-                  flex: 5,
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: _buildPreviewPane(
-                      t: t,
-                      queryState: queryState,
-                      notifier: notifier,
-                      previewAsync: previewAsync,
                     ),
                   ),
                 ),
@@ -840,6 +1001,157 @@ class _QueryBuilderPageState extends ConsumerState<QueryBuilderPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewSummaryCtaCard(
+    BuildContext context,
+    dynamic t,
+    QueryBuilderState queryState,
+    AsyncValue<QueryPreviewResult> previewAsync,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: t.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: t.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isStacked = constraints.maxWidth < 480;
+
+          if (isStacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.table_view_rounded, color: Color(0xFF0D9488), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Live Query Result Preview',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: t.text,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          previewAsync.when(
+                            data: (res) => Text(
+                              '${res.totalMatchingRecords} records • Latency: ${res.executionTimeMs}ms • ${queryState.selectedFieldIds.length} cols',
+                              style: TextStyle(fontSize: 11.5, color: t.textSecondary),
+                            ),
+                            loading: () => Text(
+                              'Compiling AST query...',
+                              style: TextStyle(fontSize: 11.5, color: t.textSecondary),
+                            ),
+                            error: (err, _) => Text(
+                              'Query error: $err',
+                              style: const TextStyle(fontSize: 11.5, color: Colors.redAccent),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  key: const Key('btn_open_excel_preview'),
+                  icon: const Icon(Icons.fullscreen_rounded, size: 18),
+                  label: const Text('Preview Data / Excel'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                    elevation: 1,
+                  ),
+                  onPressed: () => _openDataPreviewModal(context),
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.table_view_rounded, color: Color(0xFF0D9488), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live Query Result Preview',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: t.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    previewAsync.when(
+                      data: (res) => Text(
+                        '${res.totalMatchingRecords} matched records • Latency: ${res.executionTimeMs}ms • ${queryState.selectedFieldIds.length} columns active',
+                        style: TextStyle(fontSize: 12, color: t.textSecondary),
+                      ),
+                      loading: () => Text(
+                        'Compiling AST query and fetching metrics...',
+                        style: TextStyle(fontSize: 12, color: t.textSecondary),
+                      ),
+                      error: (err, _) => Text(
+                        'Query error: $err',
+                        style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              ElevatedButton.icon(
+                key: const Key('btn_open_excel_preview'),
+                icon: const Icon(Icons.fullscreen_rounded, size: 18),
+                label: const Text('Preview Data / Excel'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                  elevation: 1,
+                ),
+                onPressed: () => _openDataPreviewModal(context),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

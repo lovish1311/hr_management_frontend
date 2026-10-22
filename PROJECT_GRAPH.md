@@ -27,6 +27,9 @@ graph TD
     Core --> Sockets[Core: WebSockets & Permissions]
     Core --> Drawer[Core: HrDrawer]
     Core --> Network[Core: Network & Error Boundary]
+    Core --> Toast[Core: AppToast Notification System]
+    Core --> Formatter[Core: TextFormatter & Enum Sanitizer]
+    Core --> Environment[Core: Environment Configuration & Security]
 ```
 
 ---
@@ -34,10 +37,13 @@ graph TD
 ## 2. Architectural Nodes
 
 ### [Node: Core]
+- **Environment & Security Config:** [`lib/core/config/environment.dart`](file:///d:/Projects/hr_management_frontend/lib/core/config/environment.dart) (Compile-time environment flags, branding, master admin email, release mode detection, and demo preset security gating)
 - **Storage & State:** [`lib/core/services/auth_storage.dart`](file:///d:/Projects/hr_management_frontend/lib/core/services/auth_storage.dart) (JWT, roles, permissions, `userName`, `managerName`, `permissionRevision`)
 - **Theme & Responsiveness:** [`lib/core/theme/theme_manager.dart`](file:///d:/Projects/hr_management_frontend/lib/core/theme/theme_manager.dart), [`lib/core/theme/app_theme_config.dart`](file:///d:/Projects/hr_management_frontend/lib/core/theme/app_theme_config.dart)
 - **Sockets & Realtime:** [`lib/core/services/permission_socket_service.dart`](file:///d:/Projects/hr_management_frontend/lib/core/services/permission_socket_service.dart), [`lib/core/services/stomp_service.dart`](file:///d:/Projects/hr_management_frontend/lib/core/services/stomp_service.dart)
 - **Navigation Components:** [`lib/core/widgets/hr_drawer.dart`](file:///d:/Projects/hr_management_frontend/lib/core/widgets/hr_drawer.dart), [`lib/core/widgets/responsive_scaffold.dart`](file:///d:/Projects/hr_management_frontend/lib/core/widgets/responsive_scaffold.dart)
+- **UI Notifications:** [`lib/core/widgets/app_toast.dart`](file:///d:/Projects/hr_management_frontend/lib/core/widgets/app_toast.dart) (Unified production notification system; floating card geometry, semantic badge styling for success/error/warning/info, auto-dismiss intervals, and defensive exception/PII sanitization)
+- **Text & Enum Sanitization:** [`lib/core/utils/text_formatters.dart`](file:///d:/Projects/hr_management_frontend/lib/core/utils/text_formatters.dart) (Centralized memoized formatter transforming uppercase DB enums into clean Title Case, generating dynamic localized greetings and dates)
 - **Networking:** [`lib/core/network/api_client.dart`](file:///d:/Projects/hr_management_frontend/lib/core/network/api_client.dart) (Centralized HTTP client with automatic JWT header injection, 401 interceptor & redirect, and automatic `Content-Type: application/json` enforcement on POST/PUT/PATCH)
 
 ### [Node: Auth] (`lib/features/auth/`)
@@ -137,7 +143,7 @@ graph TD
   - Models: [`query_metadata.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/data/models/query_metadata.dart), [`query_ast.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/data/models/query_ast.dart), [`query_template.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/data/models/query_template.dart)
   - API Client: [`query_builder_api_client.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/data/services/query_builder_api_client.dart)
 - **Pages**:
-  - [`query_builder_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/pages/query_builder_page.dart) (Adaptive LayoutBuilder: 4-step wizard for mobile <650dp, two-column split for tablet, unified 3-column canvas for desktop)
+  - [`query_builder_page.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/pages/query_builder_page.dart) (Adaptive LayoutBuilder: 4-step wizard for mobile <650dp; spacious unified 2-column canvas for tablet and desktop >=950dp where Col 1 is Domain & Fields, Col 2 is AST Filter Tree + Live Query Results summary card; prominent "Preview Data / Excel" top-bar button and in-modal table dialog `_openDataPreviewModal` delivering full-width Excel preview with sorting, pagination, and direct export).
 - **Widgets**:
   - [`entity_selector_card.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/widgets/entity_selector_card.dart) (Domain cards)
   - [`field_transfer_list.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/widgets/field_transfer_list.dart) (Domain-scoped column selector with drag-and-drop reordering; primary entity prioritized followed by employee dimensions)
@@ -149,11 +155,12 @@ graph TD
   - [`template_management_dialog.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/widgets/template_management_dialog.dart) (Reactive ConsumerStatefulWidget modal with inline saving & deletion spinners, empty placeholder, and live template management)
   - [`query_builder_skeleton.dart`](file:///d:/Projects/hr_management_frontend/lib/features/query_builder/presentation/widgets/query_builder_skeleton.dart) (`QueryShimmerBox` 1400ms pulse animations, `QueryPreviewSkeleton` with horizontally scrollable placeholder table, and `QueryBuilderPageSkeleton` for full-page catalog loading)
 - **Loading, Placeholder & UX Hardening**:
+  - *Full-Width Modal Preview*: Eliminated cramped 3rd-column table on laptop/desktop viewports. Replaced with dedicated "Preview Data / Excel" modal dialog (`_openDataPreviewModal`) allowing users to inspect compile results in an unconstrained full-screen table dialog with sorting, pagination, and instant export.
   - *Non-destructive Data Refreshing*: Configured `skipLoadingOnReload: true` on `previewAsync.when(...)` paired with a sticky top `LinearProgressIndicator` (minHeight 2.5) and 0.65 `AnimatedOpacity` in `DataPreviewTable`. Scroll position and table structure are preserved while debounced queries execute in the background.
   - *Empty State Placeholders*: Added empty placeholder cards in `FieldTransferList` (guiding column selection) and `DataPreviewTable` (informing zero-record filter matches).
   - *Live Header Record Counter*: Added live pill badge in `QueryBuilderPage` top bar displaying debounced query count with real-time `Counting...` pulse.
 - **Automated Responsive Test Suite**:
-  - [`query_builder_responsive_test.dart`](file:///d:/Projects/hr_management_frontend/test/features/query_builder/query_builder_responsive_test.dart) (All 8 tests passing: TC-QB-01 through TC-QB-08, zero RenderFlex overflow verified on 320dp small-phone viewports under 1.0x to 2.0x font scaling)
+  - [`query_builder_responsive_test.dart`](file:///d:/Projects/hr_management_frontend/test/features/query_builder/query_builder_responsive_test.dart) (All 10 tests passing: TC-QB-01 through TC-QB-10, zero RenderFlex overflow verified on 320dp/360dp phone viewports, mobile modal preview dialog, and 1280dp desktop 2-column canvas)
 - **UI Button Hardening**:
   - Replaced awkward Material 3 pill shape (`StadiumBorder`) with modern corporate rectangular buttons (`BorderRadius.circular(10)`).
   - Defined explicit `elevatedButtonTheme` and `outlinedButtonTheme` in [`theme.dart`](file:///d:/Projects/hr_management_frontend/lib/app/theme.dart) and [`theme_manager.dart`](file:///d:/Projects/hr_management_frontend/lib/core/theme/theme_manager.dart).

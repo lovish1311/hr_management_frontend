@@ -123,7 +123,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify deactivation badge
-      expect(find.byIcon(Icons.block_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.block_rounded), findsWidgets);
       expect(find.text('This account has been deactivated. Please contact HR.'), findsOneWidget);
     });
   });

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
@@ -5,6 +6,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/monthly_payroll_input_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class MonthlyPayrollInputsScreen extends StatefulWidget {
   const MonthlyPayrollInputsScreen({super.key});
@@ -100,20 +102,15 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         _localEdits.clear();
         _isSyncing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Auto-synced LOP days and attendance records. All fields remain editable.'),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 3),
-        ),
+      AppToast.success(
+        context,
+        'Auto-synced LOP days and attendance records. All fields remain editable.',
       );
     } catch (e) {
       if (!mounted) return;
       debugPrint('[PAYROLL] Error syncing inputs from attendance: $e');
       setState(() => _isSyncing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error syncing: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Error syncing attendance inputs', rawError: e);
     }
   }
 
@@ -126,18 +123,13 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
         if (idx != -1) _inputs[idx] = saved;
         _localEdits.remove(item.employeeId);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Saved adjustments for ${item.employeeName.isNotEmpty ? item.employeeName : 'Employee #${item.employeeId}'}.'),
-          backgroundColor: const Color(0xFF10B981),
-          duration: const Duration(seconds: 1),
-        ),
+      AppToast.success(
+        context,
+        'Saved adjustments for ${item.employeeName.isNotEmpty ? item.employeeName : 'Employee #${item.employeeId}'}.',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Error saving adjustments', rawError: e);
     }
   }
 
@@ -153,18 +145,14 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
       }
       await _fetchInputs();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Saved variables for $count employees successfully.'),
-          backgroundColor: const Color(0xFF10B981),
-        ),
+      AppToast.success(
+        context,
+        'Saved variables for $count employees successfully.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving batch edits: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Error saving batch edits', rawError: e);
     }
   }
 
@@ -198,8 +186,10 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
               ),
             ],
           ),
-          content: SizedBox(
-            width: 500,
+          content: Container(
+            constraints: BoxConstraints(
+              maxWidth: math.min(500.0, MediaQuery.of(context).size.width - 32),
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -412,9 +402,7 @@ class _MonthlyPayrollInputsScreenState extends State<MonthlyPayrollInputsScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLocking = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating lock status: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Error updating lock status', rawError: e);
     }
   }
 

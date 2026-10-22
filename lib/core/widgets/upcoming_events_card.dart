@@ -107,7 +107,7 @@ class UpcomingEventsCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Celebrate 3 team birthdays & work anniversaries this week!',
+                    'Celebrate upcoming team birthdays & work anniversaries this week!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: isNarrow ? 11.5 : 13,

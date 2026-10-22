@@ -8,6 +8,7 @@ import 'package:hr_management/features/payroll/domain/entities/payroll_reconcili
 import 'package:hr_management/features/payroll/domain/entities/payroll_summary_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 import 'package:hr_management/features/payroll/presentation/widgets/payslip_detail_modal.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class PayrollProcessingScreen extends StatefulWidget {
   const PayrollProcessingScreen({super.key});
@@ -29,7 +30,6 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
   bool _isLoadingReconciliation = false;
   bool _isExportingBankFile = false;
   int _reconciliationSubTab = 0; // 0: Variance Audit, 1: Processed Drafts
-  String? _errorMessage;
 
   PayrollSummaryEntity? _summary;
   PayrollReconciliationReportEntity? _reconciliationReport;
@@ -116,17 +116,13 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
       final fileName = 'bank_payout_${_selectedMonth}_$_selectedYear.csv';
       FileDownloader.downloadBytes(bytes: csvBytes, fileName: fileName, mimeType: 'text/csv');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Bank payout file ($fileName) downloaded successfully!'),
-          backgroundColor: const Color(0xFF10B981),
-        ),
+      AppToast.success(
+        context,
+        'Bank payout file ($fileName) downloaded successfully.',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to export bank payout file: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Failed to export bank payout file', rawError: e);
     } finally {
       if (mounted) setState(() => _isExportingBankFile = false);
     }
@@ -135,7 +131,6 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
   Future<void> _executeBatchPayroll() async {
     setState(() {
       _isProcessing = true;
-      _errorMessage = null;
     });
 
     try {
@@ -151,21 +146,17 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
       });
       _loadReconciliationReport();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully calculated batch payroll for ${records.length} employees.'),
-          backgroundColor: const Color(0xFF10B981),
-        ),
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      AppToast.success(
+        context,
+        'Successfully calculated batch payroll for ${records.length} employees.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
-        _errorMessage = e.toString().replaceAll('Exception:', '').trim();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Calculation failed: $_errorMessage'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Payroll calculation failed', rawError: e);
     }
   }
 
@@ -175,17 +166,13 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
       await _loadCurrentMonthState();
       setState(() => _currentStep = 3);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payroll marked as VERIFIED. Proceed to publishing.'),
-          backgroundColor: Color(0xFF10B981),
-        ),
+      AppToast.success(
+        context,
+        'Payroll marked as verified. Ready for publishing.',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Verification error: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Verification error', rawError: e);
     }
   }
 
@@ -217,18 +204,14 @@ class _PayrollProcessingScreenState extends State<PayrollProcessingScreen> {
       await _loadCurrentMonthState();
       if (!mounted) return;
       setState(() => _isPublishing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payslips PUBLISHED successfully! Employees can view them in their portals.'),
-          backgroundColor: Color(0xFF10B981),
-        ),
+      AppToast.success(
+        context,
+        'Payslips published successfully. Employees can view them in ESS.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPublishing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Publishing error: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Publishing error', rawError: e);
     }
   }
 

@@ -6,6 +6,8 @@ import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/core/theme/app_responsive.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
 
 class LeaveCategoryItem {
   final String title;
@@ -157,7 +159,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
 
       if (mounted) {
         setState(() {
-          _allEmployees = nonAdmin.isNotEmpty ? nonAdmin : _getMockNonAdminEmployees();
+          _allEmployees = nonAdmin;
           if (widget.targetEmployee != null) {
             final matchIndex = _allEmployees.indexWhere((e) => e.id == widget.targetEmployee!.id);
             if (matchIndex != -1) {
@@ -175,118 +177,14 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _allEmployees = _getMockNonAdminEmployees();
+          _allEmployees = widget.targetEmployee != null ? [widget.targetEmployee!] : [];
           if (widget.targetEmployee != null) {
-            final matchIndex = _allEmployees.indexWhere((e) => e.id == widget.targetEmployee!.id);
-            if (matchIndex != -1) {
-              _selectedOnBehalfEmployee = _allEmployees[matchIndex];
-            } else {
-              _allEmployees.insert(0, widget.targetEmployee!);
-              _selectedOnBehalfEmployee = widget.targetEmployee;
-            }
-          } else if (_allEmployees.isNotEmpty && AuthStorage.isHr) {
-            _selectedOnBehalfEmployee = _allEmployees.first;
+            _selectedOnBehalfEmployee = widget.targetEmployee;
           }
           _isLoadingEmployees = false;
         });
       }
     }
-  }
-
-  List<Employee> _getMockNonAdminEmployees() {
-    return [
-      Employee(
-        id: '2',
-        name: 'Aarav Sharma',
-        email: 'aarav.sharma@company.com',
-        role: 'Senior Software Engineer',
-        department: 'Engineering',
-        phone: '+1 555-0102',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1992-05-14',
-        emergencyContactName: 'Rita Sharma',
-        emergencyContactPhone: '+1 555-9902',
-      ),
-      Employee(
-        id: '3',
-        name: 'Priya Patel',
-        email: 'priya.patel@company.com',
-        role: 'UI/UX Designer',
-        department: 'Design',
-        phone: '+1 555-0103',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1994-08-22',
-        emergencyContactName: 'Kunal Patel',
-        emergencyContactPhone: '+1 555-9903',
-      ),
-      Employee(
-        id: '14',
-        name: 'Rohan Gupta',
-        email: 'rohan.gupta@company.com',
-        role: 'Product Manager',
-        department: 'Product',
-        phone: '+1 555-0114',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1990-11-10',
-        emergencyContactName: 'Sunita Gupta',
-        emergencyContactPhone: '+1 555-9914',
-      ),
-      Employee(
-        id: '15',
-        name: 'Neha Verma',
-        email: 'neha.verma@company.com',
-        role: 'QA Lead',
-        department: 'Quality Assurance',
-        phone: '+1 555-0115',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1993-02-18',
-        emergencyContactName: 'Amit Verma',
-        emergencyContactPhone: '+1 555-9915',
-      ),
-      Employee(
-        id: '16',
-        name: 'Vikram Singh',
-        email: 'vikram.singh@company.com',
-        role: 'Backend Engineer',
-        department: 'Engineering',
-        phone: '+1 555-0116',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1991-07-04',
-        emergencyContactName: 'Meena Singh',
-        emergencyContactPhone: '+1 555-9916',
-      ),
-      Employee(
-        id: '17',
-        name: 'Ananya Roy',
-        email: 'ananya.roy@company.com',
-        role: 'HR Specialist',
-        department: 'Human Resources',
-        phone: '+1 555-0117',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1995-12-01',
-        emergencyContactName: 'Sanjay Roy',
-        emergencyContactPhone: '+1 555-9917',
-      ),
-      Employee(
-        id: '18',
-        name: 'Karan Mehta',
-        email: 'karan.mehta@company.com',
-        role: 'DevOps Specialist',
-        department: 'Infrastructure',
-        phone: '+1 555-0118',
-        status: 'Active',
-        managerName: 'Harsh Kaushal',
-        dateOfBirth: '1989-09-30',
-        emergencyContactName: 'Pooja Mehta',
-        emergencyContactPhone: '+1 555-9918',
-      ),
-    ];
   }
 
   static const List<LeaveCategoryItem> _categories = [
@@ -672,21 +570,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                 key: Key('leave_type_${item.type}'),
                 onTap: () {
                   if (isEarnedBlocked) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Earned Leave does not accrue during probation (Accrual = 0.0).'),
-                        backgroundColor: Color(0xFFD97706),
-                      ),
-                    );
+                    AppToast.warning(context, 'Earned Leave does not accrue during probation.');
                     return;
                   }
                   if (isNoticeBlocked) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Normal leave is blocked during notice period. Only Loss Of Pay (LOP) is permitted.'),
-                        backgroundColor: Color(0xFFDC2626),
-                      ),
-                    );
+                    AppToast.warning(context, 'Normal leave is blocked during notice period. Only Loss Of Pay (LOP) is permitted.');
                     return;
                   }
                   _selectLeaveType(item);
@@ -1087,9 +975,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
               setState(() {
                 _attachedFileName = 'medical_document.pdf';
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Attached medical_document.pdf'), backgroundColor: Color(0xFF0D9488)),
-              );
+              AppToast.info(context, 'medical_document.pdf attached successfully.');
             },
             borderRadius: BorderRadius.circular(16),
             child: Container(
@@ -1333,7 +1219,7 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
                               ),
                             ),
                             title: Text(emp.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: Text('${emp.email}\n${emp.role} • ${emp.department}', style: const TextStyle(fontSize: 11, height: 1.3)),
+                            subtitle: Text('${emp.email}\n${TextFormatter.formatRole(emp.role)} • ${emp.department}', style: const TextStyle(fontSize: 11, height: 1.3)),
                             isThreeLine: true,
                             value: isSelected,
                             activeColor: const Color(0xFF3B82F6),
@@ -1380,21 +1266,11 @@ class _ApplyLeaveDialogState extends State<ApplyLeaveDialog> {
       final endMins = _toTime.hour * 60 + _toTime.minute;
       final durationMins = endMins >= startMins ? (endMins - startMins) : ((1440 - startMins) + endMins);
       if (durationMins == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Start and end time cannot be identical.'),
-            backgroundColor: Color(0xFFDC2626),
-          ),
-        );
+        AppToast.warning(context, 'Start time and end time cannot be identical.');
         return;
       }
       if (durationMins > 120) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Intra-day permissions / short breaks are allowed up to 2 hours maximum (120 minutes).'),
-            backgroundColor: Color(0xFFDC2626),
-          ),
-        );
+        AppToast.warning(context, 'Intra-day permissions and short breaks are allowed up to 2 hours maximum (120 minutes).');
         return;
       }
     }

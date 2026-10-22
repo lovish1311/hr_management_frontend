@@ -11,6 +11,11 @@ import 'package:hr_management/features/attendance/domain/entities/attendance_cal
 import 'package:hr_management/features/attendance/domain/repositories/attendance_repository.dart';
 import 'package:hr_management/features/attendance/presentation/widgets/attendance_calendar_grid.dart';
 import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
+import 'package:hr_management/core/config/environment.dart';
+import 'package:hr_management/core/network/api_client.dart';
+import 'dart:convert';
 
 class EmployeeProfilePage extends StatefulWidget {
   const EmployeeProfilePage({super.key});
@@ -97,6 +102,43 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     return timeStr;
   }
 
+  String get _attendanceRateDisplay {
+    if (_employee == null) return '--%';
+    if (!_employee!.isAttendanceTracked) {
+      return '100% (Exempt)';
+    }
+    if (_attendanceCalendarDays.isEmpty) {
+      return '${_employee!.attendanceRate}%';
+    }
+
+    final today = DateTime.now();
+    int workingDaysElapsed = 0;
+    int attendedDays = 0;
+
+    for (final day in _attendanceCalendarDays) {
+      // Only count days in current month that have already arrived or elapsed
+      final isFuture = day.date.year == today.year &&
+          day.date.month == today.month &&
+          day.date.day > today.day;
+      final st = day.status.toUpperCase();
+      if (isFuture || st == 'UPCOMING' || st == 'PRE_JOINING' || st == 'RELIEVED') continue;
+
+      if (!day.isWeekend && !day.isHoliday) {
+        workingDaysElapsed++;
+        if (day.status == 'PRESENT' || day.status == 'LATE' || day.status == 'PAID_LEAVE' || day.status == 'HALF_DAY') {
+          attendedDays++;
+        }
+      }
+    }
+
+    if (workingDaysElapsed == 0) {
+      return '${_employee!.attendanceRate}%';
+    }
+
+    final calculated = ((attendedDays / workingDaysElapsed) * 100).round();
+    return '$calculated%';
+  }
+
   Future<void> _fetchEmployee(String id) async {
     try {
       final emp = await _repository.getEmployeeById(id);
@@ -104,31 +146,84 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
         setState(() {
           _employee = emp;
           _isLoading = false;
-          
           _attendanceRecords = [];
-          
-          _leaveBalances = [
-            LeaveBalanceItem(type: 'Annual Leave', taken: emp != null ? emp.leaveBalance : 5, total: 14),
-            LeaveBalanceItem(type: 'Sick Leave', taken: 2, total: 10),
-            LeaveBalanceItem(type: 'Unpaid Leave', taken: 0, total: 5),
-          ];
-          
-          _leaveRequests = [
-            ProfileLeaveRequestRecord(leaveType: 'Annual Leave', startDate: 'Jul 26, 2026', endDate: 'Jul 28, 2026', reason: 'Doctor appointment', status: 'Pending'),
-            ProfileLeaveRequestRecord(leaveType: 'Annual Leave', startDate: 'Aug 10, 2026', endDate: 'Aug 15, 2026', reason: 'Family vacation', status: 'Approved'),
-            ProfileLeaveRequestRecord(leaveType: 'Sick Leave', startDate: 'Jun 05, 2026', endDate: 'Jun 06, 2026', reason: 'Fever', status: 'Approved'),
-            ProfileLeaveRequestRecord(leaveType: 'Annual Leave', startDate: 'May 02, 2026', endDate: 'May 04, 2026', reason: 'Personal work', status: 'Rejected'),
-          ];
         });
 
         _fetchAttendanceCalendar();
         _fetchAttendanceHistory(id);
+        _fetchLeaveBalances(id);
+        _fetchLeaveRequests(id);
       }
     } catch (_) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _fetchLeaveBalances(String empId) async {
+    try {
+      final response = await ApiClient.get('/api/leaves/balance/$empId');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is Map<String, dynamic> && mounted) {
+          final casualQuota = (data['casualLeaveQuota'] as num?)?.toDouble() ?? 6.0;
+          final casualUsed = (data['casualLeaveUsed'] as num?)?.toDouble() ?? 0.0;
+          final sickQuota = (data['sickLeaveQuota'] as num?)?.toDouble() ?? 6.0;
+          final sickUsed = (data['sickLeaveUsed'] as num?)?.toDouble() ?? 0.0;
+          final earnedQuota = (data['earnedLeaveQuota'] as num?)?.toDouble() ?? 6.0;
+          final earnedUsed = (data['earnedLeaveUsed'] as num?)?.toDouble() ?? 0.0;
+          final wfhQuota = (data['workFromHomeQuota'] as num?)?.toDouble() ?? 0.0;
+          final wfhUsed = (data['workFromHomeUsed'] as num?)?.toDouble() ?? 0.0;
+
+          final balances = <LeaveBalanceItem>[
+            LeaveBalanceItem(type: 'Casual Leave', taken: casualUsed, total: casualQuota),
+            LeaveBalanceItem(type: 'Sick Leave', taken: sickUsed, total: sickQuota),
+            LeaveBalanceItem(type: 'Earned Leave', taken: earnedUsed, total: earnedQuota),
+          ];
+
+          if (wfhQuota > 0 || wfhUsed > 0) {
+            balances.add(LeaveBalanceItem(type: 'Work From Home', taken: wfhUsed, total: wfhQuota));
+          }
+
+          setState(() {
+            _leaveBalances = balances;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchLeaveRequests(String empId) async {
+    try {
+      final response = await ApiClient.get('/api/leaves/employee/$empId');
+      if (response.statusCode == 200) {
+        final list = json.decode(response.body);
+        if (list is List && mounted) {
+          final items = list.map((item) {
+            final rawType = item['leaveType']?.toString() ?? 'CASUAL';
+            final formattedType = TextFormatter.formatRole(rawType.replaceAll('_', ' '));
+            final startDate = item['startDate']?.toString() ?? '--';
+            final endDate = item['endDate']?.toString() ?? '--';
+            final reason = item['reason']?.toString() ?? 'No reason provided';
+            final rawStatus = item['status']?.toString() ?? 'PENDING';
+            final statusFormatted = TextFormatter.formatStatus(rawStatus);
+
+            return ProfileLeaveRequestRecord(
+              leaveType: formattedType,
+              startDate: startDate,
+              endDate: endDate,
+              reason: reason,
+              status: statusFormatted,
+            );
+          }).toList();
+
+          setState(() {
+            _leaveRequests = items;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchAttendanceHistory(String empId) async {
@@ -223,28 +318,10 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     try {
       await AuthApiService.sendEmployeeCredentials(emp.id, token: AuthStorage.token);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Activation credentials successfully queued and dispatched to ${emp.email}!')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0D9488),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Login credentials sent to ${emp.email}.');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed: ${e.toString().replaceAll("Exception: ", "")}'),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -457,7 +534,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${emp.designation.isNotEmpty ? emp.designation : emp.role} • ${emp.department}',
+                        '${emp.designation.isNotEmpty ? emp.designation : TextFormatter.formatRole(emp.role)} • ${emp.department}',
                         style: const TextStyle(
                           color: Color(0xFF0D9488),
                           fontSize: 12,
@@ -664,13 +741,13 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 const SizedBox(height: 10),
                 _buildContactRow(context, 'Phone', emp.phone, Icons.phone_outlined),
                 const SizedBox(height: 16),
-                // Connected Outlook Account Section
+                // Enterprise Account & System Status Card
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF0FDF4),
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFBBF7D0)),
+                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,94 +757,106 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0078D4).withValues(alpha: 0.15),
+                              color: const Color(0xFF0D9488).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Icon(Icons.email_rounded, color: Color(0xFF0078D4), size: 16),
+                            child: const Icon(Icons.shield_outlined, color: Color(0xFF0D9488), size: 16),
                           ),
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
-                              'Connected Outlook',
+                              'Account & System Status',
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                              color: emp.isActivated
+                                  ? const Color(0xFF16A34A).withValues(alpha: 0.15)
+                                  : const Color(0xFFEAB308).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.check_circle, size: 10, color: Color(0xFF16A34A)),
-                                SizedBox(width: 3),
-                                Text('Active', style: TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.bold)),
+                                Icon(
+                                  emp.isActivated ? Icons.check_circle : Icons.pending_rounded,
+                                  size: 10,
+                                  color: emp.isActivated ? const Color(0xFF16A34A) : const Color(0xFFCA8A04),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  emp.isActivated ? 'Activated' : 'Pending Activation',
+                                  style: TextStyle(
+                                    color: emp.isActivated ? const Color(0xFF16A34A) : const Color(0xFFCA8A04),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        emp.email,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white70 : const Color(0xFF334155),
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Text(
-                              'Calendar & Out-of-Office sync enabled',
-                              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-                            ),
+                          Text('Employee Code', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                          Text(
+                            emp.employeeCode.isNotEmpty ? emp.employeeCode : 'EMP-${emp.id}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                           ),
-                          InkWell(
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: const Color(0xFF0078D4),
-                                  content: Row(
-                                    children: [
-                                      const Icon(Icons.sync_rounded, color: Colors.white, size: 16),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text('Synchronized Microsoft 365 / Outlook calendar for ${emp.email}.'),
-                                      ),
-                                    ],
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.sync_rounded, size: 12, color: isDark ? Colors.blue.shade300 : const Color(0xFF0078D4)),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Sync Now',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.blue.shade300 : const Color(0xFF0078D4),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Biometric Alias', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                          Text(
+                            (emp.biometricName != null && emp.biometricName!.isNotEmpty)
+                                ? emp.biometricName!
+                                : 'Not Configured',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: (emp.biometricName != null && emp.biometricName!.isNotEmpty)
+                                  ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                  : Colors.grey,
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Attendance Policy', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                          Text(
+                            emp.isAttendanceTracked ? 'Tracked (Biometric)' : 'Exempt / Untracked',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: emp.isAttendanceTracked ? const Color(0xFF0D9488) : const Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (emp.systemRole != 'NONE') ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('System Tier', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                            Text(
+                              TextFormatter.formatRole(emp.systemRole),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1192,7 +1281,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              '${candidate.email} • ${candidate.role} • ${candidate.department}',
+                                              '${candidate.email} • ${TextFormatter.formatRole(candidate.role)} • ${candidate.department}',
                                               style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -1236,7 +1325,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                             Expanded(
                               child: Text(
                                 selectedManager != null
-                                    ? 'Assigned Approver: ${selectedManager!.name} (${selectedManager!.role} • ${selectedManager!.department})'
+                                    ? 'Assigned Approver: ${selectedManager!.name} (${TextFormatter.formatRole(selectedManager!.role)} • ${selectedManager!.department})'
                                     : 'Assigned Approver: None (Reports to HR)',
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                                 overflow: TextOverflow.ellipsis,
@@ -1270,15 +1359,11 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               }
                               if (context.mounted) {
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      selectedManager != null
-                                          ? 'Assigned ${selectedManager!.name} as Leave Approver for ${emp.name}!'
-                                          : 'Removed manager for ${emp.name}!',
-                                    ),
-                                    backgroundColor: const Color(0xFF0D9488),
-                                  ),
+                                AppToast.success(
+                                  context,
+                                  selectedManager != null
+                                      ? 'Assigned ${selectedManager!.name} as manager.'
+                                      : 'Removed manager for ${emp.name}.',
                                 );
                                 _fetchEmployee(emp.id);
                               }
@@ -1605,12 +1690,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               );
                               if (context.mounted) {
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Updated permissions and standing exemptions for ${emp.name}!'),
-                                    backgroundColor: const Color(0xFF0D9488),
-                                  ),
-                                );
+                                AppToast.success(context, 'Updated permissions and standing exemptions for ${emp.name}.');
                                 _fetchEmployee(emp.id);
                               }
                             },
@@ -1639,14 +1719,14 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   void _showElevateRoleDialog(Employee emp) {
     final bool isActorSuperAdmin = AuthStorage.isSuperAdmin;
-    final bool isTargetSuperAdmin = emp.isSuperAdmin || emp.email.toLowerCase() == 'admin@company.com';
+    final bool isTargetSuperAdmin = emp.isSuperAdmin || emp.email.toLowerCase() == Environment.masterAdminEmail.toLowerCase();
     final bool isTargetAdmin = emp.isAdmin;
 
     // Strict Permission Security Guard:
     // Only Super Admin can modify Admins or Super Admins.
-    // The master Super Admin account (admin@company.com) cannot be modified or demoted.
+    // The master Super Admin account cannot be modified or demoted.
     final bool isLocked = (!isActorSuperAdmin && (isTargetAdmin || isTargetSuperAdmin)) ||
-        (isTargetSuperAdmin && emp.email.toLowerCase() == 'admin@company.com');
+        (isTargetSuperAdmin && emp.email.toLowerCase() == Environment.masterAdminEmail.toLowerCase());
 
     String currentRole = emp.role.toUpperCase().replaceAll('ROLE_', '');
     String selectedRole = currentRole.contains('SUPER_ADMIN')
@@ -1743,7 +1823,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                 child: Text(
                                   isTargetSuperAdmin
                                       ? 'Super Administrator account is root protected and cannot be modified.'
-                                      : 'Admins cannot modify, demote, or reassign roles for existing Admins or Super Admins. Only Super Admin has demotion privileges.',
+                                      : 'You don\'t have permission to modify administrator accounts. Contact your Super Admin for assistance.',
                                   style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -1907,8 +1987,8 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                     const SizedBox(height: 6),
                                     Text(
                                       isActorSuperAdmin
-                                          ? 'Super Admin holds root control: can grant or revoke Admin status.'
-                                          : 'Co-leader model: Admins can promote employees to Admin. Note: Demoting an Admin requires Super Admin login.',
+                                          ? 'Super Admin can manage all administrative permissions.'
+                                          : 'You can promote employees to Admin. To remove Admin permissions, a Super Admin must do it.',
                                       style: const TextStyle(fontSize: 10.5, color: Color(0xFF6366F1), fontWeight: FontWeight.w600),
                                     ),
                                   ],
@@ -2192,7 +2272,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                 ? null
                                 : () async {
                                     setDialogState(() => isSaving = true);
-                                    final messenger = ScaffoldMessenger.of(context);
                                     final List<String> targetAuthorities = [];
                                     if (hasPayrollManage || effectiveAdmin) {
                                       targetAuthorities.add('PAYROLL_MANAGE');
@@ -2216,15 +2295,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                     }
                                     if (!mounted) return;
                                     if (success) {
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Successfully updated role and permissions for ${emp.name}!',
-                                            style: const TextStyle(fontWeight: FontWeight.bold),
-                                          ),
-                                          backgroundColor: const Color(0xFF0D9488),
-                                        ),
-                                      );
+                                      AppToast.success(context, 'Successfully updated role and permissions for ${emp.name}.');
                                       // If the elevated user is the currently logged in user, refresh AuthStorage
                                       if (AuthStorage.employeeId != null &&
                                           AuthStorage.employeeId.toString() == emp.id) {
@@ -2239,12 +2310,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                       }
                                       _fetchEmployee(emp.id);
                                     } else {
-                                      messenger.showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Failed to update employee role and permissions. Please try again.'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
+                                      AppToast.error(context, 'Failed to update employee role and permissions.');
                                     }
                                   },
                             icon: isSaving
@@ -2501,7 +2567,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                             _buildStatCard(
                               context,
                               title: 'Attendance Rate',
-                              value: '${emp.attendanceRate}%',
+                              value: _attendanceRateDisplay,
                               color: Colors.green.shade100,
                               textColor: Colors.green.shade900,
                               icon: Icons.bar_chart,
@@ -2523,7 +2589,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                               child: _buildStatCard(
                                 context,
                                 title: 'Attendance Rate',
-                                value: '${emp.attendanceRate}%',
+                                value: _attendanceRateDisplay,
                                 color: Colors.green.shade100,
                                 textColor: Colors.green.shade900,
                                 icon: Icons.bar_chart,
@@ -2914,7 +2980,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${b.taken} / ${b.total} Days',
+                    '${b.takenFormatted} / ${b.totalFormatted} Days',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2953,6 +3019,18 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   Widget _buildLeavesHistoryTable(BuildContext context, List<ProfileLeaveRequestRecord> records) {
     final theme = Theme.of(context);
+    if (records.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(color: theme.brightness == Brightness.dark ? Colors.white12 : Colors.grey.shade200, width: 1.0),
+        ),
+        child: const Text('No leave request history available.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth > 600;
@@ -3343,14 +3421,17 @@ class ProfileAttendanceRecord {
 
 class LeaveBalanceItem {
   final String type;
-  final int taken;
-  final int total;
+  final double taken;
+  final double total;
 
   LeaveBalanceItem({
     required this.type,
     required this.taken,
     required this.total,
   });
+
+  String get takenFormatted => taken % 1 == 0 ? taken.toInt().toString() : taken.toStringAsFixed(1);
+  String get totalFormatted => total % 1 == 0 ? total.toInt().toString() : total.toStringAsFixed(1);
 }
 
 class ProfileLeaveRequestRecord {

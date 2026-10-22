@@ -4,6 +4,7 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import '../../data/models/query_ast.dart';
 import '../../data/models/query_template.dart';
 import '../../providers/query_builder_providers.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class TemplateManagementDialog extends ConsumerStatefulWidget {
   final QueryRequest currentRequest;
@@ -61,30 +62,12 @@ class _TemplateManagementDialogState extends ConsumerState<TemplateManagementDia
       await ref.read(queryTemplatesProvider.notifier).saveTemplate(newTmpl);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Template "$name" saved successfully!')),
-              ],
-            ),
-            backgroundColor: Colors.green.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.success(context, 'Template "$name" saved successfully.');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save template: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error(context, 'Failed to save template', rawError: e);
       }
     } finally {
       if (mounted) {
@@ -98,23 +81,11 @@ class _TemplateManagementDialogState extends ConsumerState<TemplateManagementDia
     try {
       await ref.read(queryTemplatesProvider.notifier).removeTemplate(id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Template "$name" deleted.'),
-            backgroundColor: Colors.blueGrey,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.info(context, 'Template "$name" deleted.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete template: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.error(context, 'Failed to delete template', rawError: e);
       }
     } finally {
       if (mounted) {
@@ -144,16 +115,23 @@ class _TemplateManagementDialogState extends ConsumerState<TemplateManagementDia
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.bookmark_rounded, color: t.primary, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Report Templates',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.surfaceText),
-                      ),
-                    ],
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.bookmark_rounded, color: t.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Report Templates',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: t.surfaceText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 20),
                     onPressed: () => Navigator.pop(context),

@@ -9,6 +9,7 @@ import 'package:hr_management/features/payroll/domain/entities/payroll_record_en
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
 import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
 import 'package:hr_management/features/payroll/presentation/widgets/payslip_detail_modal.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class PayslipScreen extends StatefulWidget {
   const PayslipScreen({super.key});
@@ -115,28 +116,10 @@ class _PayslipScreenState extends State<PayslipScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Payslip downloaded: $fileName')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Payslip downloaded: $fileName');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to download payslip: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, 'Failed to download payslip', rawError: e);
     } finally {
       if (mounted) setState(() => _downloadingRecordId = null);
     }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/network/api_config.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class PermissionRouteTracker extends NavigatorObserver {
@@ -117,25 +118,10 @@ class PermissionSocketService {
         Future.delayed(const Duration(milliseconds: 300), () {
           final context = navigatorKey.currentContext;
           if (context != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.block_rounded, color: Colors.white, size: 24),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Your account has been deactivated by an administrator. You have been logged out.',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: const Color(0xFFDC2626),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                duration: const Duration(seconds: 6),
-              ),
+            AppToast.error(
+              context,
+              'Your account has been deactivated by an administrator. You have been logged out.',
+              duration: const Duration(seconds: 5),
             );
           }
         });
@@ -190,27 +176,12 @@ class PermissionSocketService {
           Future.delayed(const Duration(milliseconds: 300), () {
             final context = navigatorKey.currentContext;
             if (context != null && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.security_update_warning_rounded, color: Colors.white, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          lostPayroll
-                              ? 'Your Payroll permissions were updated by an administrator. You have been redirected to the dashboard.'
-                              : 'Your administrative access was updated. You have been redirected to the dashboard.',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: const Color(0xFFE11D48),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  duration: const Duration(seconds: 5),
-                ),
+              AppToast.warning(
+                context,
+                lostPayroll
+                    ? 'Your payroll permissions were updated. You have been redirected to the dashboard.'
+                    : 'Your administrative access was updated. You have been redirected to the dashboard.',
+                duration: const Duration(seconds: 4),
               );
             }
           });

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 import 'package:hr_management/features/attendance/domain/entities/attendance_calendar_day.dart';
 
 class AttendanceCalendarGrid extends StatelessWidget {
@@ -41,6 +42,8 @@ class AttendanceCalendarGrid extends StatelessWidget {
       case 'HOLIDAY':
         return const Color(0xFF06B6D4); // Cyan Blue
       case 'WEEKEND':
+      case 'PRE_JOINING':
+      case 'RELIEVED':
         return isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1); // Muted Slate
       default:
         return isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
@@ -48,6 +51,14 @@ class AttendanceCalendarGrid extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context, AttendanceCalendarDay day, Offset tapPosition) {
+    if (day.status.toUpperCase() == 'PRE_JOINING') {
+      AppToast.info(context, 'Date is prior to employee joining date.');
+      return;
+    }
+    if (day.status.toUpperCase() == 'RELIEVED') {
+      AppToast.info(context, 'Date is after employee relieving date.');
+      return;
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isAdmin = AuthStorage.isHr;
     final isPendingLeave = day.status == 'PENDING_LEAVE' && day.leaveRequestId != null;
@@ -367,7 +378,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
                           : null,
                       color: dayData.status == 'UPCOMING'
                           ? null
-                          : (dayData.status == 'WEEKEND'
+                          : (dayData.status == 'WEEKEND' || dayData.status == 'PRE_JOINING' || dayData.status == 'RELIEVED'
                               ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.4) : const Color(0xFFF1F5F9))
                               : statusColor.withValues(alpha: isDark ? 0.22 : 0.14)),
                       borderRadius: BorderRadius.circular(6),
@@ -376,7 +387,7 @@ class AttendanceCalendarGrid extends StatelessWidget {
                             ? const Color(0xFF3B82F6)
                             : (dayData.status == 'UPCOMING'
                                 ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
-                                : (dayData.status == 'WEEKEND'
+                                : (dayData.status == 'WEEKEND' || dayData.status == 'PRE_JOINING' || dayData.status == 'RELIEVED'
                                     ? Colors.transparent
                                     : statusColor.withValues(alpha: 0.4))),
                         width: isToday ? 2.0 : 1.0,
@@ -499,6 +510,10 @@ class AttendanceCalendarGrid extends StatelessWidget {
         return isNarrow ? 'Half' : 'Half Day';
       case 'HOLIDAY':
         return isNarrow ? 'Holi' : 'Holiday';
+      case 'PRE_JOINING':
+        return isNarrow ? 'Pre' : 'Pre-Hire';
+      case 'RELIEVED':
+        return isNarrow ? 'Rel' : 'Relieved';
       default:
         return '';
     }

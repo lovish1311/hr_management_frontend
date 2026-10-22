@@ -333,6 +333,66 @@ void main() {
       expect(find.text('4. Preview'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('TC-QB-09: QueryBuilderPage desktop renders 2-column canvas and opens Preview Data modal', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        createTestWidget(
+          surfaceSize: const Size(1280, 800),
+          child: const QueryBuilderPage(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(find.text('Visual AST Filter Tree'), findsOneWidget);
+      final previewBtn = find.byKey(const Key('btn_preview_excel_top'));
+      expect(previewBtn, findsOneWidget);
+
+      await tester.tap(previewBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(find.text('Report Data & Excel Preview'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('TC-QB-10: Preview Data modal renders without RenderFlex overflow on small mobile (360x640)', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        createTestWidget(
+          surfaceSize: const Size(360, 640),
+          child: const QueryBuilderPage(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final previewIconBtn = find.byTooltip('Preview Data / Excel');
+      expect(previewIconBtn, findsOneWidget);
+
+      await tester.tap(previewIconBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(find.text('Report Data & Excel Preview'), findsOneWidget);
+      expect(find.byTooltip('Export Excel (.xlsx)'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Verify close modal works cleanly
+      final closeBtn = find.byTooltip('Close Preview');
+      expect(closeBtn, findsOneWidget);
+      await tester.tap(closeBtn);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 

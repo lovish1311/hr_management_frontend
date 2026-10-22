@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management/features/auth/data/auth_api_service.dart';
 import 'package:hr_management/features/auth/presentation/providers/login_provider.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -12,8 +14,12 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@company.com');
-  final _passwordController = TextEditingController(text: 'admin123');
+  final _emailController = TextEditingController(
+    text: Environment.showDemoPresets ? 'admin@company.com' : '',
+  );
+  final _passwordController = TextEditingController(
+    text: Environment.showDemoPresets ? 'admin123' : '',
+  );
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -311,20 +317,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     _emailController.text = emailCtrl.text.trim();
                                     _passwordController.text = pass;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Row(
-                                        children: [
-                                          Icon(Icons.check_circle, color: Colors.white),
-                                          SizedBox(width: 10),
-                                          Expanded(child: Text('Password updated successfully! Log in to continue.')),
-                                        ],
-                                      ),
-                                      backgroundColor: const Color(0xFF0D9488),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                  );
+                                  AppToast.success(context, 'Password updated successfully! Please sign in.');
                                 } catch (e) {
                                   setDialogState(() {
                                     isDialogLoading = false;
@@ -537,19 +530,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   _passwordController.text = pass;
                                   ref.read(loginProvider.notifier).setAccountActivated(activatedEmail);
                                 }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        const Icon(Icons.check_circle, color: Colors.white),
-                                        const SizedBox(width: 10),
-                                        Expanded(child: Text('Account activated for ${activatedEmail ?? "you"}! Please sign in.')),
-                                      ],
-                                    ),
-                                    backgroundColor: const Color(0xFF0284C7),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
+                                AppToast.success(context, 'Account activated for ${activatedEmail ?? "you"}! Please sign in.');
                               } catch (e) {
                                 setDialogState(() {
                                   isDialogLoading = false;
@@ -591,32 +572,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
     final email = _emailController.text.trim();
     try {
-      final response = await ref.read(loginProvider.notifier).login(
+      await ref.read(loginProvider.notifier).login(
         email: email,
         password: _passwordController.text,
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Welcome back! Logged in as ${response['email']} (${response['role']})',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0D9488),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      AppToast.success(context, 'Welcome back! You are now signed in.');
 
       // Navigate to Dashboard
       Navigator.pushReplacementNamed(context, '/');
@@ -890,8 +853,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       ),
                       const SizedBox(height: 20),
 
-                      // Production / Demo Switch Banner
-                      GestureDetector(
+                      // Production / Demo Switch Banner & Presets (Debug mode only)
+                      if (Environment.showDemoPresets) ...[
+                        GestureDetector(
                         onTap: () => _toggleMode(!loginState.isProductionMode),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 20),
@@ -973,7 +937,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   side: BorderSide(color: const Color(0xFF0D9488).withValues(alpha: 0.5)),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Manager (Harsh)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)))),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Admin (Harsh)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)))),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1010,31 +974,45 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             Expanded(
                               child: OutlinedButton(
                                 key: const Key('preset_probation_btn'),
-                                onPressed: () => _fillDemoCredentials('aarav.sharma@company.com', 'user123'),
+                                onPressed: () => _fillDemoCredentials('aniket@company.com', 'user123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   side: BorderSide(color: const Color(0xFFD97706).withValues(alpha: 0.5)),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Probation (Aarav)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)))),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Probation (Aniket)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)))),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton(
-                                key: const Key('preset_peer_btn'),
-                                onPressed: () => _fillDemoCredentials('priya.patel@company.com', 'user123'),
+                                key: const Key('preset_notice_btn'),
+                                onPressed: () => _fillDemoCredentials('abhishek.g@company.com', 'user123'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(color: const Color(0xFFE11D48).withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Notice (Abhishek)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFE11D48)))),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                key: const Key('preset_approver_btn'),
+                                onPressed: () => _fillDemoCredentials('gurkirat@company.com', 'user123'),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   side: BorderSide(color: const Color(0xFF6366F1).withValues(alpha: 0.5)),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Peer (Priya)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)))),
+                                child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Approver (Gurkirat)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)))),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 24),
+                      ],
                       ],
 
                       // Error Alert Banner

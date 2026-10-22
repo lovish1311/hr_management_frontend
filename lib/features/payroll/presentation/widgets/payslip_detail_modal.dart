@@ -3,6 +3,7 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/utils/file_downloader.dart';
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
 import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_generator.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class PayslipDetailModal extends StatefulWidget {
   final PayrollRecordEntity record;
@@ -60,28 +61,10 @@ class _PayslipDetailModalState extends State<PayslipDetailModal> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Payslip downloaded: $fileName')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Payslip downloaded: $fileName');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate PDF payslip: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, 'Failed to generate PDF payslip', rawError: e);
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }

@@ -4,6 +4,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/payroll/data/repositories/payroll_repository_impl.dart';
 import 'package:hr_management/features/payroll/domain/entities/salary_structure_entity.dart';
 import 'package:hr_management/features/payroll/domain/repositories/payroll_repository.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class SalaryStructureScreen extends StatefulWidget {
   final int? initialEmployeeId;
@@ -159,9 +160,7 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
 
     final basic = parse(_basicController);
     if (basic <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Basic Pay must be greater than zero.'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Basic Pay must be greater than zero.');
       return;
     }
 
@@ -216,18 +215,14 @@ class _SalaryStructureScreenState extends State<SalaryStructureScreen> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Salary structure saved and activated for ${saved.employeeName}.'),
-          backgroundColor: const Color(0xFF10B981),
-        ),
+      AppToast.success(
+        context,
+        'Salary structure saved and activated for ${saved.employeeName}.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
-      );
+      AppToast.error(context, 'Error saving salary structure', rawError: e);
     }
   }
 

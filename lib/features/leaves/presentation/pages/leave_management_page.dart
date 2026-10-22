@@ -12,6 +12,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../../../core/services/auth_storage.dart';
 import '../widgets/apply_leave_dialog.dart';
 import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class QuotaGridCardItem {
   final String title;
@@ -322,31 +323,16 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
         final successMsg = isTimePass && data['startTime'] != null && data['endTime'] != null
             ? 'Applied for $type (${data['startTime']} - ${data['endTime']}) successfully!'
             : 'Applied for $days day(s) of $type successfully!';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(successMsg),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
+        AppToast.success(context, successMsg);
       } else {
         if (!mounted) return;
         final errorMsg = _formatErrorMessage(res);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        AppToast.error(context, errorMsg);
       }
     } catch (e) {
       debugPrint('Apply leave backend call exception: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error applying leave: $e'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -399,33 +385,21 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
         await _fetchLeaveData();
         if (!mounted) return;
         final isApprovedWithdraw = currentStatus == 'APPROVED';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isApprovedWithdraw
-                ? 'Cancellation request for $type submitted for manager approval.'
-                : '$type request withdrawn successfully.'),
-            backgroundColor: isApprovedWithdraw
-                ? const Color(0xFF8B5CF6)
-                : const Color(0xFF10B981),
-          ),
+        AppToast.success(
+          context,
+          isApprovedWithdraw
+              ? 'Cancellation request for $type submitted for manager approval.'
+              : '$type request withdrawn successfully.',
         );
       } else {
         if (!mounted) return;
         final errorMsg = _formatErrorMessage(res);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        AppToast.error(context, errorMsg);
       }
     } catch (e) {
       debugPrint('[WITHDRAW ERROR] $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Error: $e'), backgroundColor: Colors.red.shade700),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -640,31 +614,15 @@ class _LeaveManagementPageState extends State<LeaveManagementPage>
         } else {
           message = 'Leave request $status successfully!';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: (status == 'APPROVED' || status == 'CANCELLED')
-                ? const Color(0xFF10B981)
-                : Colors.red,
-          ),
-        );
+        AppToast.success(context, message);
       } else {
         if (!mounted) return;
         final errorMsg = _formatErrorMessage(res);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update status: $errorMsg'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        AppToast.error(context, errorMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Error updating status: $e'),
-            backgroundColor: Colors.red.shade700),
-      );
+      AppToast.error(context, e);
     }
   }
 

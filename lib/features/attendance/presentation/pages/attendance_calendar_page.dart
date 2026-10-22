@@ -17,6 +17,7 @@ import 'package:hr_management/features/employees/domain/repositories/employee_re
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/attendance/presentation/widgets/attendance_calendar_skeleton.dart';
 import 'package:hr_management/features/attendance/presentation/widgets/today_attendance_card.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class AttendanceCalendarPage extends StatefulWidget {
   final String currentEmployeeId;
@@ -293,12 +294,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       if (!mounted) return;
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully applied for $days day(s) of $type.'),
-            backgroundColor: t.success,
-          ),
-        );
+        AppToast.success(context, 'Successfully applied for $days day(s) of $type.');
         _fetchCalendarData();
         _refreshSelectedEmployee();
       } else {
@@ -310,21 +306,11 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
           }
         } catch (_) {}
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errMsg),
-            backgroundColor: t.danger,
-          ),
-        );
+        AppToast.error(context, errMsg);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Network error applying for leave: $e'),
-          backgroundColor: t.danger,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -346,30 +332,15 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
       if (!mounted) return;
 
       if (res.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Leave request has been $status!'),
-            backgroundColor: status == 'APPROVED' ? t.success : t.danger,
-          ),
-        );
+        AppToast.success(context, status == 'APPROVED' ? 'Leave request approved.' : 'Leave request declined.');
         _fetchCalendarData();
         _refreshSelectedEmployee();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to update leave request status.'),
-            backgroundColor: t.danger,
-          ),
-        );
+        AppToast.error(context, 'Failed to update leave request status.');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating leave status: $e'),
-          backgroundColor: t.danger,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -504,30 +475,15 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
 
       if (res.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully cleared leave data for $targetName!'),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
+        AppToast.success(context, 'Successfully cleared leave data for $targetName.');
         _fetchCalendarData();
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to clear leave data: ${res.statusCode} ${res.body}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'Failed to clear leave data. Please try again.');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error clearing leave data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -558,21 +514,11 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
     try {
       await _repository.clearAllAttendance();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All attendance records successfully cleared!'),
-          backgroundColor: Color(0xFF10B981),
-        ),
-      );
+      AppToast.success(context, 'All attendance records successfully cleared.');
       _fetchCalendarData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to clear attendance: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(context, e);
     }
   }
 
@@ -706,12 +652,7 @@ class _AttendanceCalendarPageState extends State<AttendanceCalendarPage> {
   }
 
   void _setReminderForDate(AttendanceCalendarDay day) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reminder set for ${_formatDate(day.date)} check-in!'),
-        backgroundColor: t.warning,
-      ),
-    );
+    AppToast.info(context, 'Reminder scheduled for ${_formatDate(day.date)} check-in.');
   }
 
   void _showDayDetailsDialog(AttendanceCalendarDay day) {

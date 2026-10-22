@@ -16,6 +16,7 @@ import '../widgets/round_result_dialog.dart';
 import '../widgets/final_results_dialog.dart';
 import '../widgets/draw_guess_restart_settings_dialog.dart';
 import 'draw_guess_leaderboard_screen.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class DrawGuessGameRoomPage extends StatefulWidget {
   final String roomCode;
@@ -483,12 +484,9 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
         break;
 
       case 'DRAWER_DISCONNECTED':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(event['message'] as String? ?? 'Drawer disconnected! Advancing turn...'),
-            backgroundColor: const Color(0xFFF59E0B),
-            duration: const Duration(seconds: 4),
-          ),
+        AppToast.warning(
+          context,
+          event['message'] as String? ?? 'Drawer disconnected! Advancing turn...',
         );
         break;
 
@@ -511,13 +509,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
             );
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Host disconnected. $newHostName is now the host!'),
-            backgroundColor: const Color(0xFF6366F1),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        AppToast.info(context, 'Host disconnected. $newHostName is now the host.');
         break;
 
       case 'ROUND_ENDED':
@@ -582,12 +574,9 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           _secretWord = null;
           _remainingSeconds = event['nextTurnInSeconds'] as int? ?? 4;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(event['reason'] as String? ?? 'Drawer disconnected. Advancing to next turn.'),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 3),
-          ),
+        AppToast.error(
+          context,
+          event['reason'] as String? ?? 'Drawer disconnected. Advancing to next turn.',
         );
         break;
 
@@ -684,13 +673,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
             );
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Game restarted by host! Round 1 is starting...'),
-            backgroundColor: Color(0xFF10B981),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        AppToast.success(context, 'Game restarted by host! Round 1 is starting...');
         break;
     }
   }
@@ -988,12 +971,7 @@ class _DrawGuessGameRoomPageState extends State<DrawGuessGameRoomPage> {
           InkWell(
             onTap: () {
               Clipboard.setData(ClipboardData(text: widget.roomCode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Room code ${widget.roomCode} copied to clipboard!'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              AppToast.success(context, 'Room code ${widget.roomCode} copied to clipboard.');
             },
             borderRadius: BorderRadius.circular(10),
             child: Container(

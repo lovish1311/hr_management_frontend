@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/services/permission_socket_service.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class HrDrawer extends StatelessWidget {
   final VoidCallback? onCollapse;
@@ -57,7 +59,7 @@ class HrDrawer extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'TeamJoy HR',
+                                '${Environment.companyName} HR',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
@@ -108,8 +110,8 @@ class HrDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  if (AuthStorage.isSuperAdmin) ...[
-                    // ── Super Admin Exclusive Navigation ───────────────────
+                  if (AuthStorage.isAdmin) ...[
+                    // ── Admin & Super Admin Management Navigation ───────────
                     _item(context, t, Icons.dashboard_rounded, 'Dashboard', '/', activeRoute),
                     _item(context, t, Icons.sports_esports_rounded, 'Game Zone', '/games', activeRoute),
                     _item(context, t, Icons.people_alt_rounded, 'Employees', '/employees', activeRoute),
@@ -133,6 +135,9 @@ class HrDrawer extends StatelessWidget {
                     // ── HR, Managers, and Employees Navigation ──────────────
                     _item(context, t, Icons.home_rounded, 'Home', '/', activeRoute),
                     _item(context, t, Icons.sports_esports_rounded, 'Game Zone', '/games', activeRoute),
+                    if (AuthStorage.canManageEmployees || AuthStorage.isManager) ...[
+                      _item(context, t, Icons.people_alt_rounded, 'Employees', '/employees', activeRoute),
+                    ],
                     _item(context, t, Icons.group_outlined, 'People', '/people', activeRoute),
                     _item(context, t, Icons.calendar_month_rounded, 'My Attendance', '/attendance', activeRoute),
                     _item(context, t, Icons.beach_access_rounded, 'My Leaves', '/leaves', activeRoute),
@@ -174,9 +179,7 @@ class HrDrawer extends StatelessWidget {
                     child: InkWell(
                       onTap: AuthStorage.isSuperAdmin
                           ? () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Super Admin accounts do not have a personal employee profile.')),
-                              );
+                              AppToast.info(context, 'Super Admin accounts do not have a personal employee profile.');
                             }
                           : () {
                               final scaffold = Scaffold.maybeOf(context);
@@ -218,7 +221,9 @@ class HrDrawer extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AuthStorage.userEmail ?? 'user@company.com',
+                                    (AuthStorage.userName?.trim().isNotEmpty == true)
+                                        ? AuthStorage.userName!.trim()
+                                        : (AuthStorage.userEmail ?? 'user@company.com'),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
@@ -229,18 +234,20 @@ class HrDrawer extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                     decoration: BoxDecoration(
                                       color: t.primary.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      AuthStorage.userRole ?? 'EMPLOYEE',
+                                      AuthStorage.userDesignation,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 9,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.bold,
                                         color: t.primary,
-                                        letterSpacing: 0.5,
+                                        letterSpacing: 0.3,
                                       ),
                                     ),
                                   ),

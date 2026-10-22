@@ -11,7 +11,7 @@ class GameApiService {
     CompanyGame(
       gameKey: 'TAMBOLA',
       title: 'Tambola Housie',
-      description: 'Classic Indian 90-ball multiplayer Housie with live sync caller board, smart ticket daubing, and real-time prize claims.',
+      description: 'Classic 90-ball multiplayer Housie with live sync caller board, smart ticket daubing, and real-time prize claims.',
       category: 'Multiplayer Social',
       iconName: 'confirmation_number_rounded',
       gradientStart: '#312E81',

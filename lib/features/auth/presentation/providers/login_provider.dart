@@ -158,6 +158,7 @@ class LoginNotifier extends Notifier<LoginState> {
           email: response['email'],
           role: response['role'],
           systemRole: response['systemRole'],
+          designation: response['designation'],
           employeeId: response['employeeId'] != null ? (response['employeeId'] as num).toInt() : null,
           authorities: authorities,
         );

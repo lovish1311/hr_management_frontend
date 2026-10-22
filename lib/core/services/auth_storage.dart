@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
 
 class AuthStorage {
   static String? _token;
@@ -8,6 +9,7 @@ class AuthStorage {
   static String? _managerName;
   static String? _userRole;
   static String? _userSystemRole;
+  static String? _userDesignation;
   static int? _employeeId;
   static List<String> _authorities = [];
 
@@ -20,6 +22,7 @@ class AuthStorage {
   static const String _kManagerName = 'auth_manager_name';
   static const String _kRole = 'auth_role';
   static const String _kSystemRole = 'auth_system_role';
+  static const String _kDesignation = 'auth_designation';
   static const String _kEmpId = 'auth_employee_id';
   static const String _kAuthorities = 'auth_authorities';
 
@@ -32,6 +35,7 @@ class AuthStorage {
     _managerName = prefs.getString(_kManagerName);
     _userRole = prefs.getString(_kRole);
     _userSystemRole = prefs.getString(_kSystemRole);
+    _userDesignation = prefs.getString(_kDesignation);
     _employeeId = prefs.getInt(_kEmpId);
     _authorities = prefs.getStringList(_kAuthorities) ?? [];
   }
@@ -43,6 +47,7 @@ class AuthStorage {
     String? managerName,
     String? role,
     String? systemRole,
+    String? designation,
     int? employeeId,
     List<String>? authorities,
   }) async {
@@ -52,6 +57,7 @@ class AuthStorage {
     if (managerName != null) _managerName = managerName;
     _userRole = role;
     _userSystemRole = systemRole;
+    if (designation != null) _userDesignation = designation;
     _employeeId = employeeId;
     if (authorities != null) {
       _authorities = authorities.map((a) => a.toUpperCase()).toList();
@@ -64,6 +70,7 @@ class AuthStorage {
     if (managerName != null) await prefs.setString(_kManagerName, managerName);
     if (role != null) await prefs.setString(_kRole, role);
     if (systemRole != null) await prefs.setString(_kSystemRole, systemRole);
+    if (designation != null) await prefs.setString(_kDesignation, designation);
     if (employeeId != null) await prefs.setInt(_kEmpId, employeeId);
     if (authorities != null) {
       await prefs.setStringList(_kAuthorities, _authorities);
@@ -96,6 +103,36 @@ class AuthStorage {
   static String? get userName => _userName;
   static String? get managerName => _managerName;
   static String? get userRole => _userRole;
+
+  /// Formatted user role for clean UI display (e.g. "Super Admin", "HR Lead", "Employee")
+  static String get userRoleFormatted => TextFormatter.formatRole(_userRole ?? 'Employee');
+
+  /// Returns user's actual designation (e.g. "Software Developer", "Engineering Lead"),
+  /// falling back cleanly to userRoleFormatted if designation is not present.
+  static String get userDesignation {
+    if (_userDesignation != null && _userDesignation!.trim().isNotEmpty) {
+      return _userDesignation!.trim();
+    }
+    return userRoleFormatted;
+  }
+
+  static String? get rawDesignation => _userDesignation;
+
+  static Future<void> setUserDesignation(String designation) async {
+    final clean = designation.trim();
+    _userDesignation = clean;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kDesignation, clean);
+    permissionRevision.value++;
+  }
+
+  /// First name of current user for personalized greetings
+  static String get firstName {
+    if (_userName != null && _userName!.trim().isNotEmpty) {
+      return _userName!.trim().split(' ').first;
+    }
+    return 'Employee';
+  }
   static String? get userSystemRole => _userSystemRole;
   static int? get employeeId => _employeeId;
   static List<String> get authorities => List.unmodifiable(_authorities);
@@ -160,6 +197,7 @@ class AuthStorage {
     _managerName = null;
     _userRole = null;
     _userSystemRole = null;
+    _userDesignation = null;
     _employeeId = null;
     _authorities = [];
 
@@ -170,6 +208,7 @@ class AuthStorage {
     await prefs.remove(_kManagerName);
     await prefs.remove(_kRole);
     await prefs.remove(_kSystemRole);
+    await prefs.remove(_kDesignation);
     await prefs.remove(_kEmpId);
     await prefs.remove(_kAuthorities);
     permissionRevision.value++;

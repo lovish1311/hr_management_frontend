@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 import '../../data/services/draw_guess_api_service.dart';
 
 class DrawGuessLobbyPage extends StatefulWidget {
@@ -56,12 +57,7 @@ class _DrawGuessLobbyPageState extends State<DrawGuessLobbyPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create room: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
+        AppToast.error(context, 'Failed to create room', rawError: e);
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -71,9 +67,7 @@ class _DrawGuessLobbyPageState extends State<DrawGuessLobbyPage> {
   Future<void> _joinRoom() async {
     final code = _joinCodeController.text.trim().toUpperCase();
     if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a 6-character room code.')),
-      );
+      AppToast.warning(context, 'Please enter a 6-character room code.');
       return;
     }
 
@@ -91,12 +85,7 @@ class _DrawGuessLobbyPageState extends State<DrawGuessLobbyPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to join room: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
+        AppToast.error(context, 'Failed to join room', rawError: e);
       }
     } finally {
       if (mounted) setState(() => _isJoining = false);

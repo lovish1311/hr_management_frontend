@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class EmployeeRepositoryImpl implements EmployeeRepository {
 
@@ -305,7 +306,7 @@ class EmployeeRepositoryImpl implements EmployeeRepository {
 
   List<Employee> _getMockEmployeeList() {
     return [
-      Employee(id: '1', employeeCode: 'EMP-001', name: 'Super Admin', role: 'SUPER_ADMIN', department: 'Executive', designation: 'System Admin', status: 'ACTIVE', email: 'admin@company.com', phone: '+91 98123 00001', managerName: 'System', isAttendanceTracked: false, dateOfBirth: '1985-01-10', emergencyContactName: 'Admin Contact', emergencyContactPhone: '+91 98000 00001'),
+      Employee(id: '1', employeeCode: 'EMP-001', name: 'Super Admin', role: 'SUPER_ADMIN', department: 'Executive', designation: 'System Admin', status: 'ACTIVE', email: Environment.masterAdminEmail, phone: '+91 98123 00001', managerName: 'System', isAttendanceTracked: false, dateOfBirth: '1985-01-10', emergencyContactName: 'Admin Contact', emergencyContactPhone: '+91 98000 00001'),
       Employee(id: '2', employeeCode: 'EMP-002', name: 'Aadisha Dhullar', role: 'HR', department: 'Human Resources', designation: 'HR Lead', status: 'ACTIVE', email: 'hr@company.com', phone: '+91 98123 00002', managerName: 'Super Admin', isAttendanceTracked: false, dateOfBirth: '1994-06-18', emergencyContactName: 'Dhullar Family', emergencyContactPhone: '+91 98000 00002'),
       Employee(id: '3', employeeCode: 'EMP-101', name: 'Harsh Kaushal', role: 'MANAGER', department: 'Engineering', designation: 'Engineering Lead', status: 'ACTIVE', email: 'harsh.kaushal@company.com', phone: '+91 98123 00101', managerName: 'Super Admin', isAttendanceTracked: false, dateOfBirth: '1989-03-25', emergencyContactName: 'Kaushal Contact', emergencyContactPhone: '+91 98000 00101'),
       Employee(id: '4', employeeCode: 'EMP-102', name: 'Naveen Chandra Tiwari', role: 'MANAGER', department: 'Product', designation: 'Product Manager', status: 'ACTIVE', email: 'naveen.tiwari@company.com', phone: '+91 98123 00102', managerName: 'Super Admin', isAttendanceTracked: false, dateOfBirth: '1988-11-12', emergencyContactName: 'Tiwari Contact', emergencyContactPhone: '+91 98000 00102'),

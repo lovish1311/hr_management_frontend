@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -23,7 +24,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _isApplying = false;
-  bool _hasChangesCached = false;
 
   void _loadCurrentSettings() {
     final manager = ThemeManager.instance;
@@ -32,19 +32,16 @@ class _SettingsPageState extends State<SettingsPage> {
     _draftFontFamily = manager.fontFamily;
     _draftDensityMode = manager.densityMode;
     _draftUse24HourTime = manager.use24HourTime;
-    _updateHasChanges();
   }
 
-  void _updateHasChanges() {
+  bool get _hasChanges {
     final manager = ThemeManager.instance;
-    _hasChangesCached = _draftTheme != manager.currentTheme ||
+    return _draftTheme != manager.currentTheme ||
         _draftFontSize != manager.fontSizeMultiplier ||
         _draftFontFamily != manager.fontFamily ||
         _draftDensityMode != manager.densityMode ||
         _draftUse24HourTime != manager.use24HourTime;
   }
-
-  bool get _hasChanges => _hasChangesCached;
 
   void _resetToDefaults() {
     setState(() {
@@ -53,7 +50,6 @@ class _SettingsPageState extends State<SettingsPage> {
       _draftFontFamily = 'Default';
       _draftDensityMode = 'Comfortable';
       _draftUse24HourTime = false;
-      _updateHasChanges();
     });
   }
 
@@ -77,13 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Settings applied successfully!'),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppToast.success(context, 'Settings applied successfully.');
     } finally {
       if (mounted) {
         setState(() => _isApplying = false);

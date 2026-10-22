@@ -1,3 +1,6 @@
+import 'package:hr_management/core/utils/text_formatters.dart';
+import 'package:hr_management/core/config/environment.dart';
+
 class Employee {
   final String id;
   final String employeeCode;
@@ -29,6 +32,12 @@ class Employee {
   final String todayAttendanceStatus;
   final List<String> authorities;
 
+  /// Formatted role for clean UI display (e.g. "Super Admin", "UI/UX Designer", "Senior Software Engineer")
+  String get roleFormatted => TextFormatter.formatRole(role);
+
+  /// Formatted status for clean UI display (e.g. "Active", "Probation", "Notice Period")
+  String get statusFormatted => TextFormatter.formatStatus(status);
+
   bool get isSuperAdmin =>
       systemRole == 'SUPER_ADMIN' || role.toUpperCase().contains('SUPER_ADMIN');
   bool get isAdmin =>
@@ -53,6 +62,7 @@ class Employee {
   // Activation & Account State
   final bool isActivated;
   final String accountStatus;
+  final String? biometricName;
 
   Employee({
     required this.id,
@@ -73,7 +83,7 @@ class Employee {
     this.joiningDate = '',
     this.employmentType = 'FULL_TIME',
     this.address = '',
-    this.location = 'Headquarters',
+    this.location = Environment.defaultLocation,
     required this.emergencyContactName,
     required this.emergencyContactPhone,
     this.leaveBalance = 14,
@@ -93,6 +103,7 @@ class Employee {
     this.noticeEndDate,
     this.isActivated = false,
     this.accountStatus = 'PENDING_ACTIVATION',
+    this.biometricName,
     this.authorities = const [],
   });
 
@@ -135,6 +146,7 @@ class Employee {
     String? noticeEndDate,
     bool? isActivated,
     String? accountStatus,
+    String? biometricName,
     List<String>? authorities,
   }) {
     return Employee(
@@ -176,6 +188,7 @@ class Employee {
       noticeEndDate: noticeEndDate ?? this.noticeEndDate,
       isActivated: isActivated ?? this.isActivated,
       accountStatus: accountStatus ?? this.accountStatus,
+      biometricName: biometricName ?? this.biometricName,
       authorities: authorities ?? this.authorities,
     );
   }
@@ -223,7 +236,7 @@ class Employee {
       joiningDate: json['joiningDate'] ?? '',
       employmentType: json['employmentType'] ?? 'FULL_TIME',
       address: json['address'] ?? '',
-      location: json['location'] ?? ((json['address'] != null && json['address'].toString().trim().isNotEmpty) ? json['address'].toString() : 'Headquarters'),
+      location: json['location'] ?? ((json['address'] != null && json['address'].toString().trim().isNotEmpty) ? json['address'].toString() : Environment.defaultLocation),
       emergencyContactName: json['emergencyContactName'] ?? '',
       emergencyContactPhone: json['emergencyContactPhone'] ?? '',
       leaveBalance: json['leaveBalance'] != null ? (json['leaveBalance'] as num).toInt() : 14,
@@ -243,6 +256,7 @@ class Employee {
       noticeEndDate: json['noticeEndDate']?.toString(),
       isActivated: parsedActivated,
       accountStatus: parsedAccountStatus,
+      biometricName: json['biometricName']?.toString(),
       authorities: (json['authorities'] as List<dynamic>?)
               ?.map((e) => e.toString().toUpperCase())
               .toList() ??

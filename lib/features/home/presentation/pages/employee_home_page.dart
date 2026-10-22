@@ -17,6 +17,9 @@ import 'package:hr_management/features/payroll/presentation/utils/payslip_pdf_ge
 import 'package:hr_management/features/holidays/data/services/holiday_service.dart';
 import 'package:hr_management/features/holidays/data/models/holiday_model.dart';
 import 'package:hr_management/features/home/presentation/widgets/home_shimmer.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -111,28 +114,10 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Payslip downloaded: $fileName')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Payslip downloaded: $fileName');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to download payslip: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, 'Failed to download payslip', rawError: e);
     } finally {
       if (mounted) setState(() => _isDownloadingDashboardPayslip = false);
     }
@@ -188,26 +173,21 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
       );
       if (res.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(status == 'APPROVED' ? 'Request Approved Successfully!' : 'Request Rejected.'),
-              backgroundColor: status == 'APPROVED' ? const Color(0xFF10B981) : Colors.red,
-            ),
-          );
+          if (status == 'APPROVED') {
+            AppToast.success(context, 'Leave request approved successfully.');
+          } else {
+            AppToast.info(context, 'Leave request rejected.');
+          }
           _fetchTeamApprovals();
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update request status.')),
-          );
+          AppToast.error(context, 'Failed to update request status.');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating request: $e')),
-        );
+        AppToast.error(context, 'Error updating request status', rawError: e);
       }
     }
   }
@@ -230,7 +210,12 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
 
       final absentDays = days.where((d) {
         final isPastOrToday = d.date.isBefore(now.add(const Duration(days: 1)));
-        return isPastOrToday && (d.status == 'UNEXCUSED_ABSENT' || d.status == 'ABSENT' || d.status == 'LOP_LEAVE');
+        final st = d.status.toUpperCase();
+        return isPastOrToday &&
+            st != 'PRE_JOINING' &&
+            st != 'RELIEVED' &&
+            st != 'UPCOMING' &&
+            (st == 'UNEXCUSED_ABSENT' || st == 'ABSENT' || st == 'LOP_LEAVE');
       }).toList();
 
 
@@ -287,14 +272,18 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final rawName = AuthStorage.userName;
     final userEmail = AuthStorage.userEmail ?? 'Employee';
     final namePart = userEmail.split('@').first;
-    final formattedName = namePart.isNotEmpty
-        ? namePart[0].toUpperCase() + namePart.substring(1)
-        : 'Employee';
-    final initials = formattedName.length >= 2
-        ? formattedName.substring(0, 2).toUpperCase()
-        : 'EM';
+    final formattedName = (rawName != null && rawName.trim().isNotEmpty)
+        ? rawName.trim()
+        : (namePart.isNotEmpty
+            ? namePart[0].toUpperCase() + namePart.substring(1)
+            : 'Employee');
+    final nameTokens = formattedName.split(' ').where((s) => s.isNotEmpty).toList();
+    final initials = nameTokens.length >= 2
+        ? '${nameTokens[0][0]}${nameTokens[1][0]}'.toUpperCase()
+        : (formattedName.length >= 2 ? formattedName.substring(0, 2).toUpperCase() : 'EM');
 
     final t = context.appTheme;
 
@@ -304,30 +293,31 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: t.onBackgroundText),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.spa_rounded, color: Color(0xFF0D9488), size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'TeamJoy',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0D9488),
-                    ),
-                  ),
-                ],
-              ),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.spa_rounded, color: Color(0xFF0D9488), size: 16),
+                SizedBox(width: 6),
+                Text(
+                  Environment.companyName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0D9488),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           CircleAvatar(
@@ -360,7 +350,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 children: [
                   // Greeting header
                   Text(
-                    'Good ${_getGreeting()}, $formattedName! 👋',
+                    TextFormatter.formatGreeting(formattedName),
                     style: TextStyle(
                       fontSize: context.r.font(21),
                       fontWeight: FontWeight.w800,
@@ -410,12 +400,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Morning';
-    if (hour < 17) return 'Afternoon';
-    return 'Evening';
-  }
+
 
   Widget _buildExceptionAlertBar(bool isDark) {
     return Container(
@@ -453,9 +438,7 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
             fit: BoxFit.scaleDown,
             child: TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening Regularization Request Portal...')),
-                );
+                AppToast.info(context, 'Attendance regularization portal is opening soon.');
               },
               child: const Text(
                 'Regularize',

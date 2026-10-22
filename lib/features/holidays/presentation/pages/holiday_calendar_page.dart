@@ -7,6 +7,7 @@ import '../../data/services/holiday_service.dart';
 import 'holiday_management_page.dart';
 import '../widgets/holiday_skeleton.dart';
 import 'package:hr_management/core/services/data_cache.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class HolidayCalendarPage extends StatefulWidget {
   const HolidayCalendarPage({super.key});
@@ -180,22 +181,12 @@ class _HolidayCalendarPageState extends State<HolidayCalendarPage> {
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Applied for '${holiday.name}'! Request sent to manager."),
-              backgroundColor: const Color(0xFF10B981),
-            ),
-          );
+          AppToast.success(context, "Applied for '${holiday.name}'. Request sent to manager.");
           _fetchCalendar();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString().replaceAll('Exception:', '').trim()),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppToast.error(context, 'Failed to apply for holiday', rawError: e);
         }
       }
     }

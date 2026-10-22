@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:hr_management/core/network/api_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/core/services/data_cache.dart';
 import 'package:hr_management/core/widgets/skeleton_loaders.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 /// Domain Model for Payslip Records
 class PayrollRecord {
@@ -198,7 +201,7 @@ class _PayslipPageState extends State<PayslipPage> {
       final regExp = RegExp(r'(\d)(?=(\d{2})+(?!\d))');
       integerPart = '${remaining.replaceAllMapped(regExp, (m) => '${m[1]},')},$lastThree';
     }
-    return '₹$integerPart.$decimalPart';
+    return '${Environment.currencySymbol}$integerPart.$decimalPart';
   }
 
   String _numberToWords(int number) {
@@ -235,7 +238,7 @@ class _PayslipPageState extends State<PayslipPage> {
     if (number > 0) {
       result += convertLessThanOneThousand(number);
     }
-    return 'Rupees ${result.trim()} Only';
+    return '${Environment.currencyName} ${result.trim()} Only';
   }
 
   String _formatPeriodLabel(String period) {
@@ -782,12 +785,9 @@ class _PayslipPageState extends State<PayslipPage> {
   }
 
   void _triggerPrintOrDownload(PayrollRecord record) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Downloaded / Opened print dialog for ${_formatPeriodLabel(record.payPeriod)} Payslip!'),
-        backgroundColor: const Color(0xFF15803D),
-        duration: const Duration(seconds: 4),
-      ),
+    AppToast.success(
+      context,
+      'Opening print dialog for ${_formatPeriodLabel(record.payPeriod)} payslip',
     );
   }
 
@@ -798,7 +798,9 @@ class _PayslipPageState extends State<PayslipPage> {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
-            width: 650,
+            constraints: BoxConstraints(
+              maxWidth: math.min(650.0, MediaQuery.of(context).size.width - 32),
+            ),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(

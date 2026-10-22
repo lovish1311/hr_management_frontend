@@ -4,6 +4,8 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import 'package:hr_management/features/employees/data/repositories/employee_repository_impl.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
 import 'package:hr_management/features/employees/domain/repositories/employee_repository.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
 
 class EmployeeFormPage extends StatefulWidget {
   final Employee? initialEmployee; // If null, mode is Create; if present, mode is Edit
@@ -113,7 +115,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
           ? emp.employeeCode 
           : 'EMP-${(DateTime.now().millisecondsSinceEpoch % 900) + 100}',
     );
-    _designationController = TextEditingController(text: emp?.designation ?? 'Software Engineer');
+    _designationController = TextEditingController(text: emp?.designation ?? '');
     _addressController = TextEditingController(text: emp?.address ?? '');
     _emergencyNameController = TextEditingController(text: emp?.emergencyContactName ?? '');
     _emergencyPhoneController = TextEditingController(text: emp?.emergencyContactPhone ?? '');
@@ -341,31 +343,13 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
 
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Text(isEdit ? 'Employee updated successfully!' : 'Employee created successfully!'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        AppToast.success(context, isEdit ? 'Employee updated successfully.' : 'Employee created successfully.');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving employee: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, e);
       }
     }
   }
@@ -555,7 +539,9 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0D9488)),
                                     ),
                                     Text(
-                                      'Employee will receive a secure welcome email with a one-time key to initialize their password.',
+                                      _firstNameController.text.trim().isNotEmpty
+                                          ? '${_firstNameController.text.trim()} will receive a secure welcome email with a one-time key to initialize their password.'
+                                          : 'Employee will receive a secure welcome email with a one-time key to initialize their password.',
                                       style: TextStyle(fontSize: 11, color: textSecondary),
                                     ),
                                   ],
@@ -629,7 +615,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
-                                      value: _selectedDepartment,
+                                      value: _departments.contains(_selectedDepartment) ? _selectedDepartment : _departments.first,
                                       isExpanded: true,
                                       dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                                       items: _departments.map((d) => DropdownMenuItem(value: d, child: Text(d, style: TextStyle(fontSize: 13.5, color: textColor)))).toList(),
@@ -719,7 +705,9 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
-                                value: _selectedManagerId,
+                                value: (_selectedManagerId != null && _availableManagers.any((m) => m.id == _selectedManagerId))
+                                    ? _selectedManagerId
+                                    : null,
                                 hint: Text('Select Assigned Manager (Optional)', style: TextStyle(fontSize: 13.5, color: textSecondary)),
                                 isExpanded: true,
                                 dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -731,7 +719,7 @@ class _EmployeeFormPageState extends State<EmployeeFormPage> {
                                   ..._availableManagers.map((m) {
                                     return DropdownMenuItem<String>(
                                       value: m.id,
-                                      child: Text('${m.name} (${m.role} • ${m.department})', style: TextStyle(fontSize: 13.5, color: textColor)),
+                                      child: Text('${m.name} (${TextFormatter.formatRole(m.role)} • ${m.department})', style: TextStyle(fontSize: 13.5, color: textColor)),
                                     );
                                   }),
                                 ],

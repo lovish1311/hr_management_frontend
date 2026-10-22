@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:hr_management/features/attendance/data/repositories/attendance_repository_impl.dart';
@@ -118,7 +119,9 @@ class _BiometricImportDialogState extends State<BiometricImportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       child: Container(
-        width: 600,
+        constraints: BoxConstraints(
+          maxWidth: math.min(600.0, MediaQuery.of(context).size.width - 32),
+        ),
         padding: const EdgeInsets.all(18),
         child: SingleChildScrollView(
           child: Column(

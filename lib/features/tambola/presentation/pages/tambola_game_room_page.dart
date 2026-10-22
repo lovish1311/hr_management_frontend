@@ -8,6 +8,7 @@ import '../../data/services/tambola_socket_service.dart';
 import '../widgets/tambola_ticket_widget.dart';
 import '../widgets/tambola_board_widget.dart';
 import '../widgets/party_confetti_overlay.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class TambolaGameRoomPage extends StatefulWidget {
   final String roomCode;
@@ -196,16 +197,13 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
     });
   }
 
-  void _showToast(String message) {
+  void _showToast(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (isError) {
+      AppToast.error(context, message);
+    } else {
+      AppToast.info(context, message);
+    }
   }
 
   void _startRollingAnimation() {
@@ -770,9 +768,7 @@ class _TambolaGameRoomPageState extends State<TambolaGameRoomPage> with TickerPr
           InkWell(
             onTap: () {
               Clipboard.setData(ClipboardData(text: game.roomCode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Room code copied to clipboard!')),
-              );
+              AppToast.success(context, 'Room code copied to clipboard.');
             },
             borderRadius: BorderRadius.circular(10),
             child: Container(

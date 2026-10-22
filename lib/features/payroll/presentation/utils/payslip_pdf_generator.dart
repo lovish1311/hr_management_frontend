@@ -2,13 +2,14 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:hr_management/features/payroll/domain/entities/payroll_record_entity.dart';
+import 'package:hr_management/core/config/environment.dart';
 
 class PayslipPdfGenerator {
   /// Generates a professional, print-ready, official corporate A4 PDF payslip.
   static Future<Uint8List> generatePayslipPdf(PayrollRecordEntity record) async {
     final pdf = pw.Document(
       title: 'Payslip_${record.employeeCode}_${record.payrollMonth}_${record.payrollYear}',
-      author: 'Nexus HR Enterprise System',
+      author: '${Environment.companyName} HR Enterprise System',
     );
 
     final regularFont = pw.Font.helvetica();
@@ -139,7 +140,7 @@ class PayslipPdfGenerator {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'NEXUS ENTERPRISE TECHNOLOGIES',
+                        Environment.companyName.toUpperCase(),
                         style: pw.TextStyle(
                           font: boldFont,
                           fontSize: 18,
@@ -148,7 +149,7 @@ class PayslipPdfGenerator {
                       ),
                       pw.SizedBox(height: 3),
                       pw.Text(
-                        'Corporate Headquarters: Cyber Hub, Tower B, Phase 2, Gurugram, India',
+                        'Corporate Headquarters: ${Environment.companyAddress}',
                         style: pw.TextStyle(font: regularFont, fontSize: 8.5, color: slateGray),
                       ),
                       pw.Text(

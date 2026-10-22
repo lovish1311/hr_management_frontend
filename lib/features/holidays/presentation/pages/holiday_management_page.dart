@@ -4,6 +4,7 @@ import 'package:hr_management/core/widgets/responsive_scaffold.dart';
 import '../../data/models/holiday_model.dart';
 import '../../data/services/holiday_service.dart';
 import '../widgets/add_holiday_dialog.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class HolidayManagementPage extends StatefulWidget {
   const HolidayManagementPage({super.key});
@@ -124,9 +125,7 @@ class _HolidayManagementPageState extends State<HolidayManagementPage> {
                 if (ctx.mounted) Navigator.pop(ctx, true);
               } catch (e) {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-                  );
+                  AppToast.error(ctx, 'Failed to create holiday list', rawError: e);
                 }
               }
             },
@@ -148,21 +147,16 @@ class _HolidayManagementPageState extends State<HolidayManagementPage> {
     try {
       await HolidayService.togglePublishHolidayList(_currentList!.id!, newPublished);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(newPublished
-                ? 'Holiday List published! Eligible employees can now view holidays.'
-                : 'Holiday List unpublished (draft mode).'),
-            backgroundColor: newPublished ? const Color(0xFF10B981) : Colors.amber.shade800,
-          ),
-        );
+        if (newPublished) {
+          AppToast.success(context, 'Holiday list published. Eligible employees can now view holidays.');
+        } else {
+          AppToast.warning(context, 'Holiday list unpublished (draft mode).');
+        }
       }
       _fetchHolidayList();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update publication: $e')),
-        );
+        AppToast.error(context, 'Failed to update publication status', rawError: e);
       }
     }
   }
@@ -189,19 +183,15 @@ class _HolidayManagementPageState extends State<HolidayManagementPage> {
     try {
       await HolidayService.updateHoliday(id: holiday.id!, type: newType);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Changed '${holiday.name}' to ${newType == 'GENERAL' ? 'General Holiday' : 'Restricted Holiday'}"),
-            duration: const Duration(seconds: 2),
-          ),
+        AppToast.success(
+          context,
+          "Changed '${holiday.name}' to ${newType == 'GENERAL' ? 'General Holiday' : 'Restricted Holiday'}.",
         );
       }
       _fetchHolidayList();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to switch type: $e')),
-        );
+        AppToast.error(context, 'Failed to switch holiday type', rawError: e);
       }
     }
   }
@@ -231,12 +221,13 @@ class _HolidayManagementPageState extends State<HolidayManagementPage> {
     if (confirm == true) {
       try {
         await HolidayService.deleteHoliday(holiday.id!);
+        if (mounted) {
+          AppToast.success(context, 'Holiday "${holiday.name}" deleted successfully.');
+        }
         _fetchHolidayList();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete holiday: $e')),
-          );
+          AppToast.error(context, 'Failed to delete holiday', rawError: e);
         }
       }
     }

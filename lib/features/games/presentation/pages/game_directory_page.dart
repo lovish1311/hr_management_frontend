@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/widgets/responsive_scaffold.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 import 'package:hr_management/features/games/data/models/game_models.dart';
 import 'package:hr_management/features/games/data/services/game_api_service.dart';
 
@@ -63,14 +64,11 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
             _games[idx] = updated;
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${game.title} is now ${newValue ? 'Enabled' : 'Disabled'}'),
-            backgroundColor: newValue ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        if (newValue) {
+          AppToast.success(context, '${game.title} is now enabled.');
+        } else {
+          AppToast.warning(context, '${game.title} is now disabled.');
+        }
       }
     } catch (e) {
       // Revert on error
@@ -81,9 +79,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
             _games[idx] = game.copyWith(isEnabled: oldState);
           }
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update game status: $e'), backgroundColor: Colors.red),
-        );
+        AppToast.error(context, 'Failed to update game status', rawError: e);
       }
     }
   }
@@ -95,9 +91,7 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
     } else if (key == 'DRAW_AND_GUESS' || key == 'SCRIBBIL' || key == 'DRAW_GUESS') {
       Navigator.pushNamed(context, '/draw-and-guess');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${game.title} is launching soon!')),
-      );
+      AppToast.info(context, '${game.title} is launching soon.');
     }
   }
 
@@ -611,16 +605,9 @@ class _GameDirectoryPageState extends State<GameDirectoryPage> {
                                   ),
                                   onPressed: () {
                                     HapticFeedback.lightImpact();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text(
-                                          'Access restricted: This game is currently disabled by Admin.',
-                                          style: TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        backgroundColor: const Color(0xFFEF4444),
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
+                                    AppToast.error(
+                                      context,
+                                      'Access restricted: This game is currently disabled by Admin.',
                                     );
                                   },
                                 ),

@@ -4,6 +4,7 @@ import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/features/attendance/domain/entities/attendance_calendar_day.dart';
 import 'package:hr_management/features/attendance/domain/repositories/attendance_repository.dart';
 import 'package:hr_management/features/attendance/data/repositories/attendance_repository_impl.dart';
+import 'package:hr_management/core/widgets/app_toast.dart';
 
 class TodayAttendanceCard extends StatefulWidget {
   final AttendanceCalendarDay? todayAttendance;
@@ -68,29 +69,11 @@ class _TodayAttendanceCardState extends State<TodayAttendanceCard> {
     try {
       final res = await _repository.checkIn();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Punch-In Recorded at ${res['checkInTime'] ?? 'Now'}! Status: ${res['status']}')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Clocked in successfully at ${res['checkInTime'] ?? 'now'}.');
       widget.onPunchCompleted();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _isPunching = false);
     }
@@ -103,29 +86,11 @@ class _TodayAttendanceCardState extends State<TodayAttendanceCard> {
     try {
       final res = await _repository.checkOut();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Punch-Out Recorded! Total worked: ${res['totalWorkingMinutes'] ?? 0} mins (${res['status']})')),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.success(context, 'Clocked out successfully. Total: ${res['totalWorkingMinutes'] ?? 0} mins.');
       widget.onPunchCompleted();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, e);
     } finally {
       if (mounted) setState(() => _isPunching = false);
     }

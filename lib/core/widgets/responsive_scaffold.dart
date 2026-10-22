@@ -200,7 +200,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     final currentRoute = ModalRoute.of(context)?.settings.name ?? '/';
     final r = context.r;
 
-    final List<_NavItem> items = AuthStorage.isHr
+    final List<_NavItem> items = (AuthStorage.isAdmin || AuthStorage.isHr || AuthStorage.canManageEmployees || AuthStorage.isManager)
         ? [
             _NavItem('Dashboard', Icons.dashboard_rounded, '/'),
             _NavItem('Employees', Icons.people_alt_rounded, '/employees'),

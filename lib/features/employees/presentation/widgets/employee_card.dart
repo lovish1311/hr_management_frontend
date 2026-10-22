@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management/core/theme/theme_manager.dart';
 import 'package:hr_management/features/employees/domain/entities/employee.dart';
+import 'package:hr_management/core/utils/text_formatters.dart';
 
 class EmployeeCard extends StatelessWidget {
   final Employee employee;
@@ -50,6 +51,17 @@ class EmployeeCard extends StatelessWidget {
           statusLabel = 'Late';
           statusIcon = Icons.access_time_filled_rounded;
           break;
+        case 'WORK_FROM_HOME':
+        case 'WFH':
+          statusColor = const Color(0xFF0EA5E9);
+          statusLabel = 'Work From Home';
+          statusIcon = Icons.home_work_rounded;
+          break;
+        case 'HALF_DAY':
+          statusColor = const Color(0xFFF97316);
+          statusLabel = 'Half Day';
+          statusIcon = Icons.hourglass_bottom_rounded;
+          break;
         case 'ON_LEAVE':
         case 'PAID_LEAVE':
           statusColor = const Color(0xFF6366F1);
@@ -60,6 +72,11 @@ class EmployeeCard extends StatelessWidget {
           statusColor = const Color(0xFFEF4444);
           statusLabel = 'Absent';
           statusIcon = Icons.cancel_rounded;
+          break;
+        default:
+          if (employee.todayAttendanceStatus.isNotEmpty) {
+            statusLabel = TextFormatter.formatStatus(employee.todayAttendanceStatus);
+          }
           break;
       }
     }
@@ -383,13 +400,6 @@ class EmployeeCard extends StatelessWidget {
   }
 
   static String _formatRole(String role) {
-    if (role.isEmpty) return '';
-    return role
-        .replaceAll('ROLE_', '')
-        .replaceAll('_', ' ')
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .map((w) => w[0].toUpperCase() + w.substring(1).toLowerCase())
-        .join(' ');
+    return TextFormatter.formatRole(role);
   }
 }
