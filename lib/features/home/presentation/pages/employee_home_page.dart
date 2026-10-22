@@ -20,6 +20,7 @@ import 'package:hr_management/features/home/presentation/widgets/home_shimmer.da
 import 'package:hr_management/core/widgets/app_toast.dart';
 import 'package:hr_management/core/utils/text_formatters.dart';
 import 'package:hr_management/core/config/environment.dart';
+import 'package:hr_management/features/banners/presentation/widgets/banner_carousel_widget.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -340,18 +341,31 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 850), // Responsive Max Width for Desktop Web
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: context.r.pageMargin,
-                vertical: context.r.isSmallPhone ? 10.0 : 16.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Greeting header
-                  Text(
-                    TextFormatter.formatGreeting(formattedName),
-                    style: TextStyle(
+            child: Consumer(
+              builder: (context, ref, child) {
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(activeBannersProvider);
+                    await Future.wait([
+                      _fetchEmployeeAttendanceData(),
+                      _fetchUpcomingHolidays(),
+                      _fetchTeamApprovals(),
+                      _fetchLatestPayslip(),
+                    ]);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.r.pageMargin,
+                      vertical: context.r.isSmallPhone ? 10.0 : 16.0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting header
+                        Text(
+                          TextFormatter.formatGreeting(formattedName),
+                          style: TextStyle(
                       fontSize: context.r.font(21),
                       fontWeight: FontWeight.w800,
                       color: t.onBackgroundText,
@@ -367,6 +381,9 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                   ),
                   SizedBox(height: context.r.itemGap),
 
+                  // Promotional & Celebration Live Banners Carousel
+                  const BannerCarouselWidget(),
+                  const SizedBox(height: 12),
 
                   // Isolated Sun Clock Shift Card (0 parent rebuilds, self-contained time ticker)
                   const _LiveSunClockShiftCard(),
@@ -394,10 +411,12 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                 ],
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
-    );
+    ),
+  ),
+);
   }
 
 

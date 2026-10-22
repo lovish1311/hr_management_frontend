@@ -8,7 +8,7 @@ class Environment {
   static const bool isProduction = bool.fromEnvironment('IS_PRODUCTION', defaultValue: kReleaseMode);
 
   /// Brand name of the organization / company.
-  static const String companyName = String.fromEnvironment('COMPANY_NAME', defaultValue: 'HR Management');
+  static const String companyName = String.fromEnvironment('COMPANY_NAME', defaultValue: 'Hr Management');
 
   /// Master administrator email for root-level authority checks.
   static const String masterAdminEmail = String.fromEnvironment('MASTER_ADMIN_EMAIL', defaultValue: 'admin@company.com');

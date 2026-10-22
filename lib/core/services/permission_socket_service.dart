@@ -67,6 +67,9 @@ class PermissionSocketService {
 
     try {
       _channel = WebSocketChannel.connect(uri);
+      _channel!.ready.catchError((err) {
+        debugPrint('Permission WebSocket connection refused or failed: $err');
+      });
       _isConnected = true;
 
       _subscription = _channel!.stream.listen(

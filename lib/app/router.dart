@@ -27,7 +27,34 @@ import 'package:hr_management/features/games/presentation/pages/game_directory_p
 import 'package:hr_management/features/tambola/presentation/pages/tambola_lobby_page.dart';
 import 'package:hr_management/features/tambola/presentation/pages/tambola_game_room_page.dart';
 
+import 'package:hr_management/features/banners/presentation/pages/engage_page.dart';
+
 class AppRouter {
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final uri = Uri.parse(settings.name ?? '');
+    if (uri.path == '/engage') {
+      final queryParams = uri.queryParameters;
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final tab = args['tab']?.toString() ?? queryParams['tab'];
+      final filter = args['filter']?.toString() ?? queryParams['filter'];
+      final highlightIdStr = args['highlightId']?.toString() ?? queryParams['highlightId'];
+      final highlightId = highlightIdStr != null ? int.tryParse(highlightIdStr) : null;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (context) => EngagePage(
+          initialTab: tab,
+          initialFilter: filter,
+          highlightId: highlightId,
+        ),
+      );
+    }
+    final builder = routes[settings.name];
+    if (builder != null) {
+      return MaterialPageRoute(settings: settings, builder: builder);
+    }
+    return null;
+  }
+
   static Map<String, WidgetBuilder> get routes {
     return {
       '/splash': (context) => const SplashScreen(),
@@ -80,6 +107,20 @@ class AppRouter {
         return DrawGuessGameRoomPage(
           roomCode: args is String ? args : (args != null ? args.toString() : ''),
         );
+      },
+      '/engage': (context) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        if (args is Map<String, dynamic>) {
+          final highlightId = args['highlightId'] is int
+              ? args['highlightId'] as int
+              : int.tryParse(args['highlightId']?.toString() ?? '');
+          return EngagePage(
+            initialTab: args['tab']?.toString(),
+            initialFilter: args['filter']?.toString(),
+            highlightId: highlightId,
+          );
+        }
+        return const EngagePage();
       },
     };
   }

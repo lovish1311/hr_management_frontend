@@ -30,15 +30,15 @@ class HrDrawer extends StatelessWidget {
                 children: [
                   // ── Header / Logo ───────────────────────────────────────
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     child: Row(
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: t.primary,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
                                 color: t.primary.withValues(alpha: 0.3),
@@ -50,27 +50,38 @@ class HrDrawer extends StatelessWidget {
                           child: const Icon(
                             Icons.badge_rounded,
                             color: Colors.white,
-                            size: 24,
+                            size: 22,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                '${Environment.companyName} HR',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: t.isDarkTheme ? Colors.white : t.text,
-                                  letterSpacing: -0.5,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  Environment.companyName,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: t.isDarkTheme ? Colors.white : t.text,
+                                    letterSpacing: -0.3,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 'Enterprise Portal',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
                                   color: t.isDarkTheme ? Colors.white70 : t.textSecondary,
                                 ),
                               ),
@@ -83,14 +94,14 @@ class HrDrawer extends StatelessWidget {
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                                 onTap: onCollapse,
                                 child: Container(
-                                  padding: const EdgeInsets.all(7),
+                                  padding: const EdgeInsets.all(6),
                                   margin: const EdgeInsets.only(left: 4),
                                   decoration: BoxDecoration(
                                     color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: (t.isDarkTheme ? Colors.white : Colors.black).withValues(alpha: 0.12),
                                       width: 1,
@@ -98,7 +109,7 @@ class HrDrawer extends StatelessWidget {
                                   ),
                                   child: Icon(
                                     Icons.arrow_back_ios_new_rounded,
-                                    size: 17,
+                                    size: 15,
                                     color: t.isDarkTheme ? Colors.white : Colors.black87,
                                   ),
                                 ),
@@ -113,6 +124,7 @@ class HrDrawer extends StatelessWidget {
                   if (AuthStorage.isAdmin) ...[
                     // ── Admin & Super Admin Management Navigation ───────────
                     _item(context, t, Icons.dashboard_rounded, 'Dashboard', '/', activeRoute),
+                    _item(context, t, Icons.forum_rounded, 'Engage Hub', '/engage', activeRoute),
                     _item(context, t, Icons.sports_esports_rounded, 'Game Zone', '/games', activeRoute),
                     _item(context, t, Icons.people_alt_rounded, 'Employees', '/employees', activeRoute),
                     _item(context, t, Icons.group_outlined, 'People Directory', '/people', activeRoute),
@@ -134,6 +146,7 @@ class HrDrawer extends StatelessWidget {
                   ] else ...[
                     // ── HR, Managers, and Employees Navigation ──────────────
                     _item(context, t, Icons.home_rounded, 'Home', '/', activeRoute),
+                    _item(context, t, Icons.forum_rounded, 'Engage Hub', '/engage', activeRoute),
                     _item(context, t, Icons.sports_esports_rounded, 'Game Zone', '/games', activeRoute),
                     if (AuthStorage.canManageEmployees || AuthStorage.isManager) ...[
                       _item(context, t, Icons.people_alt_rounded, 'Employees', '/employees', activeRoute),

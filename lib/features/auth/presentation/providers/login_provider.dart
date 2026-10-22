@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hr_management/core/services/auth_storage.dart';
 import 'package:hr_management/core/services/permission_socket_service.dart';
+import 'package:hr_management/core/services/push_notification_client_service.dart';
 import 'package:hr_management/features/auth/data/auth_api_service.dart';
 
 /// Immutable State Model for Authentication and Login Page
@@ -163,6 +164,10 @@ class LoginNotifier extends Notifier<LoginState> {
           authorities: authorities,
         );
         PermissionSocketService.instance.init();
+        final fcmToken = PushNotificationClientService.instance.fcmToken;
+        if (fcmToken != null) {
+          PushNotificationClientService.instance.syncTokenWithBackend(fcmToken);
+        }
       }
 
       state = state.copyWith(isLoading: false);

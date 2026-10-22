@@ -833,7 +833,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'HR Management',
+                        Environment.companyName,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 28,

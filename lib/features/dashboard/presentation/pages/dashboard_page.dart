@@ -12,6 +12,7 @@ import 'package:hr_management/features/dashboard/presentation/widgets/dashboard_
 import 'package:hr_management/core/widgets/app_toast.dart';
 import 'package:hr_management/core/utils/text_formatters.dart';
 import 'package:hr_management/core/config/environment.dart';
+import 'package:hr_management/features/banners/presentation/widgets/banner_carousel_widget.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -268,7 +269,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                     ],
                                   ),
                                 ),
-                                SizedBox(height: isMobile ? 14 : 24),
+                                SizedBox(height: isMobile ? 12 : 18),
+
+                                // Promotional & Celebration Live Banners Carousel
+                                const BannerCarouselWidget(),
+                                SizedBox(height: isMobile ? 12 : 20),
 
                                 // KPI Stat Cards (semantic colors from theme)
                                 LayoutBuilder(

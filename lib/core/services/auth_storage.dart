@@ -149,6 +149,9 @@ class AuthStorage {
   static bool get canApproveAllLeaves =>
       isAdmin || isHr || hasAuthority('LEAVE_APPROVE_ALL');
 
+  static bool get canManageBanners =>
+      isAdmin || hasAuthority('BANNER_MANAGE');
+
   static bool get canManageEmployees =>
       isAdmin || isHr || hasAuthority('EMPLOYEE_CREATE') || hasAuthority('EMPLOYEE_MANAGE');
 

@@ -23,6 +23,7 @@ class HRManagementApp extends StatelessWidget {
           navigatorObservers: [PermissionRouteTracker()],
           initialRoute: '/splash',
           routes: AppRouter.routes,
+          onGenerateRoute: AppRouter.onGenerateRoute,
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
             return MediaQuery(

@@ -129,7 +129,17 @@ class UpcomingEventsCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12.0),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    debugPrint('[UpcomingEventsCard] View Celebrations clicked!');
+                    Navigator.pushNamed(
+                      context,
+                      '/engage',
+                      arguments: {
+                        'tab': 'celebrations',
+                        'filter': 'birthday',
+                      },
+                    );
+                  },
                   icon: Icon(Icons.celebration_rounded, size: isNarrow ? 16 : 18),
                   label: Text(
                     'View Celebrations',

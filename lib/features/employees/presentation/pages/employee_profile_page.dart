@@ -1749,6 +1749,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     bool hasPayrollManage = emp.authorities.contains('PAYROLL_MANAGE');
     bool hasLeaveApproveAll = emp.authorities.contains('LEAVE_APPROVE_ALL');
     bool hasSalaryStructureManage = emp.authorities.contains('SALARY_STRUCTURE_MANAGE');
+    bool hasBannerManage = emp.authorities.contains('BANNER_MANAGE');
     bool isSaving = false;
 
     showDialog(
@@ -2256,6 +2257,84 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                         ),
                       ),
 
+                      // Authority 4: BANNER_MANAGE
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: hasBannerManage || effectiveAdmin
+                                ? const Color(0xFFF59E0B)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            width: hasBannerManage || effectiveAdmin ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.campaign_rounded, color: Color(0xFFF59E0B), size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      const Text(
+                                        'Banner & News Management',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'BANNER_MANAGE',
+                                          style: TextStyle(color: Color(0xFFF59E0B), fontSize: 9, fontWeight: FontWeight.w800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Authorizes publishing company-wide announcement banners, spotlighting milestones, and managing the live broadcast feed.',
+                                    style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                  ),
+                                  if (effectiveAdmin) ...[
+                                    const SizedBox(height: 4),
+                                    const Text('Included automatically via Admin access tier', style: TextStyle(fontSize: 10.5, color: Color(0xFFF59E0B), fontWeight: FontWeight.w600)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: effectiveAdmin ? true : hasBannerManage,
+                              activeThumbColor: const Color(0xFFF59E0B),
+                              onChanged: (effectiveAdmin || isSaving || isLocked)
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() => hasBannerManage = val);
+                                    },
+                            ),
+                          ],
+                        ),
+                      ),
+
                       const SizedBox(height: 24),
 
                       // Actions
@@ -2281,6 +2360,9 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                                     }
                                     if (hasLeaveApproveAll || effectiveAdmin) {
                                       targetAuthorities.add('LEAVE_APPROVE_ALL');
+                                    }
+                                    if (hasBannerManage || effectiveAdmin) {
+                                      targetAuthorities.add('BANNER_MANAGE');
                                     }
 
                                     final success = await _repository.elevateRoleAndAuthorities(
